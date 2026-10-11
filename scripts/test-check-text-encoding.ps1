@@ -122,6 +122,13 @@ try {
         -ExpectedOutput "invalid-utf8"
 
     Remove-Item -LiteralPath (Join-Path $TempRoot "mojibake.txt"), (Join-Path $TempRoot "replacement.txt"), (Join-Path $TempRoot "allowed.txt"), (Join-Path $TempRoot "invalid-utf8.txt") -Force
+    # A clean extracted pack has no Git root. In-process success must clear the
+    # failed Git discovery probe rather than leak its exit code to validate-pack.
+    $noGit = Join-Path $TempRoot 'non-git'
+    New-Item -ItemType Directory -Path $noGit | Out-Null
+    [IO.File]::WriteAllText((Join-Path $noGit 'clean.txt'), 'Clean fixture text.', $Utf8NoBom)
+    & $Checker -RepoPath $noGit -All
+    Assert-True ($LASTEXITCODE -eq 0) 'Successful in-process non-Git scan leaked a failed Git probe exit code.'
     $previousErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     try {
@@ -151,7 +158,7 @@ try {
     Assert-True ($defaultExitCode -eq 0) "Default Git changed-file scan failed with exit $defaultExitCode.`n$defaultOutput"
     Assert-True ($defaultOutput -match "Text encoding check passed") "Default Git changed-file scan did not report success.`n$defaultOutput"
 
-    Write-Host "Text encoding checker tests passed: 6 cases."
+    Write-Host "Text encoding checker tests passed: 7 cases, including in-process non-Git use."
 }
 finally {
     if (Test-Path -LiteralPath $TempRoot) {

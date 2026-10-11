@@ -1,0 +1,14 @@
+# Seleção de validação por evidência
+
+Estas orientações descrevem trabalho do agente. O pack instala instruções e scripts de inspeção/reconciliação; não instala SDKs, runners, navegador, emulador, clientes SQL nem serviços. Disponibilidade e autorização precisam ser verificadas no ambiente da tarefa.
+
+| Área | Descoberta | Validação quando aprovada | Limite explícito |
+|---|---|---|---|
+| Backend | Manifest, versão, framework de testes, fixtures, CI | Unitários e integração no framework real, cenários de contrato e falha | xUnit é módulo .NET, não regra para toda stack; serviços reais exigem ambiente autorizado |
+| Web | HTML/CSS/JS, SPA, Razor/MVC/Blazor, Web Forms ou ASP clássico; rotas, scripts e runtime | Cenários reais no navegador com entrada/ação e resultado esperado, estados e persistência; console/rede pertinentes | Playwright é opção. Não instale por padrão nem presuma a mesma integração em todos os agentes; screenshot sozinha não verifica comportamento |
+| SQL/dados | Provider, driver, consultas, objetos e chamadores; modelo e permissões | Consultas no ambiente especificamente autorizado, esperado/observado e resultados mínimos redigidos; mudanças somente no escopo aprovado | Entendimento read-only não autoriza acesso a instância, execução de scripts de mudança ou dados de produção |
+| DevOps | CI, containers, IaC, scripts, variáveis por nome, ambientes | Checks de configuração e runtime relevantes em ambiente autorizado | Inspecionar YAML não comprova deploy; não revelar valores de segredos |
+| Desktop | Framework UI, projeto, driver/harness e sistema suportado | Testes e automação UI nativa com estados/janelas/entrada/resultado | Sem driver ou host compatível, declare pendência e roteiro; navegador não substitui UI nativa |
+| Mobile | Nativo, híbrido ou multiplataforma; plataforma/SDK, app novo/existente, dispositivos e harness | Unitários, integração e UI em emulador/simulador/dispositivo disponível e autorizado, incluindo ciclo de vida/permissões quando pertinentes | Navegador pode validar a parte web híbrida; não prova bridge, sensores, navegação ou execução nativa |
+
+Use o perfil `mobile` para o procedimento de plataforma; preserve especialização .NET/SQL Server quando detectada. Mistura de stacks não exige todos os perfis. Sem ferramenta disponível, reporte o preparo necessário e solicite inclusão quando mudar o envelope. Teste que falhou continua falha; ferramenta ausente continua não verificado. Validação estática do pack e fixtures não comprovam cumprimento por todos os modelos nem execução real de aplicações.

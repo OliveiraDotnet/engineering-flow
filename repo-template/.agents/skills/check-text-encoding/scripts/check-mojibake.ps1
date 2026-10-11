@@ -148,3 +148,6 @@ if ($findings.Count -gt 0) {
 }
 
 Write-Host "Text encoding check passed: $scanned UTF-8 text file(s) scanned."
+# Callers also use this script in-process, including extracted packs outside Git.
+# Do not propagate a failed Git probe's native exit code after a successful scan.
+exit 0

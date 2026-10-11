@@ -21,6 +21,40 @@ try {
 
     & $Installer -RepoPath $Repo -DryRun -Confirm:$false
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo "AGENTS.md"))) "Dry-run wrote AGENTS.md."
+    & $Installer -RepoPath $Repo -WhatIf -Confirm:$false
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo '.agent-pack'))) 'WhatIf created installation state or temporary files.'
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo '.agents'))) 'WhatIf created skills.'
+
+    $grokOnly = Join-Path $TempRoot 'grok-only'
+    New-Item -ItemType Directory -Path $grokOnly | Out-Null
+    & git -C $grokOnly init -q
+    & $Installer -RepoPath $grokOnly -Integration grok -Profile web,sqlserver,quality -Confirm:$false
+    & $Installer -RepoPath $grokOnly -Confirm:$false
+    Assert-True (Test-Path -LiteralPath (Join-Path $grokOnly '.grok/config.toml')) 'Grok-only config missing.'
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $grokOnly '.codex'))) 'Grok-only installed Codex agents.'
+    Assert-True (@(Get-ChildItem -LiteralPath (Join-Path $grokOnly '.agents') -Recurse -Filter openai.yaml).Count -eq 0) 'Grok-only installed Codex metadata.'
+    $grokState = Get-Content -LiteralPath (Join-Path $grokOnly '.agent-pack/state.txt') -Raw
+    Assert-True ($grokState -match '(?m)^integration\|grok$' -and $grokState -notmatch '(?m)^integration\|codex$') 'Grok-only state selected Codex.'
+    & $Installer -RepoPath $grokOnly -Integration codex,grok -Confirm:$false
+    Assert-True (Test-Path -LiteralPath (Join-Path $grokOnly '.codex/agents/frontend-web.toml')) 'Explicit coexistence did not add Codex.'
+
+    foreach ($linkedRelative in @('.agents', '.agent-pack', 'AGENTS.md.agent-pack.new')) {
+        $linkedRepo = Join-Path $TempRoot ('linked-' + [Guid]::NewGuid().ToString('N'))
+        $outside = Join-Path $TempRoot ('outside-' + [Guid]::NewGuid().ToString('N'))
+        New-Item -ItemType Directory -Path $linkedRepo, $outside | Out-Null
+        & git -C $linkedRepo init -q
+        $linkPath = Join-Path $linkedRepo $linkedRelative
+        $linkType = if ($env:OS -eq 'Windows_NT') { 'Junction' } else { 'SymbolicLink' }
+        New-Item -ItemType $linkType -Path $linkPath -Target $outside | Out-Null
+        try {
+            $rejected = $false
+            try { & $Installer -RepoPath $linkedRepo -Profile core -Confirm:$false } catch { $rejected = $_.Exception.Message -match 'Linked installation path' }
+            Assert-True $rejected "Installer accepted linked path $linkedRelative."
+            Assert-True (@(Get-ChildItem -LiteralPath $outside -Force).Count -eq 0) 'Installer wrote through a linked path.'
+            Assert-True (-not (Test-Path -LiteralPath (Join-Path $linkedRepo 'AGENTS.md'))) 'Link validation occurred after writes.'
+        }
+        finally { [IO.Directory]::Delete($linkPath) }
+    }
 
     & $Installer -RepoPath $Repo -IncludeClaude -DryRun -Confirm:$false
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo "CLAUDE.md"))) "Claude dry-run wrote CLAUDE.md."
@@ -37,7 +71,8 @@ try {
     Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\dotnet-xunit-tests\references\xunit-test-checklist.md")) "xUnit test skill was not installed."
     Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agent-pack\state.txt")) "Installer did not write Agent Pack state."
     $coreState = Get-Content -LiteralPath (Join-Path $Repo ".agent-pack\state.txt") -Raw
-    Assert-True ($coreState -match '(?m)^version\|1\.6\.0$') "Installer state version is not 1.6.0."
+    $expectedVersion = (Get-Content -LiteralPath (Join-Path (Split-Path -Parent $ScriptDir) 'pack-version.txt') -Raw).Trim()
+    Assert-True ($coreState -match ('(?m)^version\|' + [regex]::Escape($expectedVersion) + '$')) 'Installer state version does not match pack-version.txt.'
     Assert-True ($coreState -match '(?m)^profile\|core$') "Installer state is missing core."
     Assert-True (-not ($coreState -match '(?m)^profile\|flutter$')) "Installer selected a removed Flutter profile."
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\flutter-tests\SKILL.md"))) "Removed Flutter skill was installed."
@@ -126,6 +161,14 @@ try {
     & $Installer -RepoPath $Repo -Confirm:$false
     Assert-True (Test-Path -LiteralPath (Join-Path $Repo "AGENTS.md.agent-pack.new")) "Conflict sidecar was not created."
 
+    $managedSkill = Join-Path $Repo '.agents/skills/bugfix-dotnet/SKILL.md'
+    Add-Content -LiteralPath $managedSkill -Value '# local customization'
+    & $Installer -RepoPath $Repo -Confirm:$false
+    & $Installer -RepoPath $Repo -Confirm:$false
+    $conflictState = Get-Content -LiteralPath (Join-Path $Repo '.agent-pack/state.txt') -Raw
+    Assert-True ($conflictState -match '(?m)^artifact\|[^|]+\|\.agents/skills/bugfix-dotnet/SKILL.md\|[^|]+\|-\|-\|keep-local\|') 'Repeated sidecar install falsely tracked local customization.'
+    Assert-True ((Get-Content -LiteralPath $managedSkill -Raw) -match 'local customization') 'Sidecar install replaced local customization.'
+
     & $Installer -RepoPath $Repo -Force -Confirm:$false
     Assert-True ((Get-Content -LiteralPath (Join-Path $Repo "AGENTS.md") -Raw) -eq (Get-Content -LiteralPath (Join-Path $Template "AGENTS.md") -Raw)) "Force install did not replace modified file."
     Assert-True ((Get-ChildItem -LiteralPath $Repo -Filter "AGENTS.md.agent-pack.backup-*" -File).Count -gt 0) "Force install did not preserve a backup."
@@ -167,5 +210,10 @@ try {
     Write-Host "Installer smoke test passed."
 }
 finally {
-    if (Test-Path -LiteralPath $TempRoot) { Remove-Item -LiteralPath $TempRoot -Recurse -Force }
+    if (Test-Path -LiteralPath $TempRoot) {
+        $resolvedTestRoot = [IO.Path]::GetFullPath($TempRoot)
+        $tempPrefix = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd([IO.Path]::DirectorySeparatorChar) + [IO.Path]::DirectorySeparatorChar
+        if (-not $resolvedTestRoot.StartsWith($tempPrefix, [StringComparison]::OrdinalIgnoreCase) -or (Split-Path -Leaf $resolvedTestRoot) -notlike 'dotnet-agents-pack-*') { throw 'Unsafe test cleanup path.' }
+        Remove-Item -LiteralPath $resolvedTestRoot -Recurse -Force
+    }
 }

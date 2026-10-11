@@ -64,10 +64,16 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
 }
 
 $excluded = @(".git", "bin", "obj", "node_modules", "packages", ".vs", ".agents", ".claude", ".grok", ".codex", ".agent-pack")
-$files = Get-ChildItem -LiteralPath $repo -File -Recurse -Force | Where-Object {
-    $relative = Get-RelativePath $repo $_.FullName
-    -not ($excluded | Where-Object { $relative -match "(^|/)$([regex]::Escape($_))(/|$)" })
+function Get-ScopedFiles {
+    param([string]$Directory)
+    foreach ($entry in Get-ChildItem -LiteralPath $Directory -Force) {
+        if ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) { continue }
+        if ($entry.PSIsContainer) {
+            if ($entry.Name -notin $excluded) { Get-ScopedFiles $entry.FullName }
+        } else { $entry }
+    }
 }
+$files = @(Get-ScopedFiles $repo)
 
 $byExtension = @{}
 foreach ($file in $files) {
@@ -104,7 +110,20 @@ if (& $contains '(?i)(^|/)pubspec\.ya?ml$') { $applicationTypes += "flutter" }
 
 $profiles = @()
 if ($applicationTypes -contains "web") { $profiles += "web" }
-if ((& $contains '(?i)\.sql$') -or @($allPackages | Where-Object { $_ -match '(?i)(sqlclient|entityframework|dapper)' }).Count -gt 0) { $profiles += "sqlserver" }
+# Inspect only provider metadata and SQL scripts. Never print matching source lines.
+$providerPattern = '(Microsoft\.EntityFrameworkCore\.SqlServer|EntityFramework\.SqlServer|System\.Data\.SqlClient|Microsoft\.Data\.SqlClient)'
+$tsqlPattern = '(SET\s+ANSI_NULLS|SET\s+QUOTED_IDENTIFIER|\bGO\s*$|\bIDENTITY\s*\(|\bsys\.(tables|procedures|sql_modules)\b|\bOBJECT_ID\s*\()'
+$sqlServerDetected = $false
+foreach ($file in $files) {
+    $pattern = if ($file.Extension -eq '.sql') { $tsqlPattern }
+        elseif ($file.Extension -in '.csproj', '.fsproj', '.vbproj', '.props', '.targets', '.sqlproj' -or $file.Name -eq 'packages.config') { $providerPattern }
+        else { $null }
+    if ($pattern -and (Select-String -LiteralPath $file.FullName -Pattern $pattern -Quiet)) {
+        $sqlServerDetected = $true
+        break
+    }
+}
+if ($sqlServerDetected) { $profiles += "sqlserver" }
 
 $ciFiles = @($relativeFiles | Where-Object { $_ -match '(^\.github/workflows/|(^|/)azure-pipelines.*\.ya?ml$|(^|/)\.gitlab-ci\.ya?ml$|(^|/)(build|test)\.(ps1|sh|cmd|bat)$)' })
 $structure = if ($gitRoot) { "git-repository" } elseif (@($projectFiles).Count -gt 1) { "non-git-multi-project" } else { "non-git-folder" }

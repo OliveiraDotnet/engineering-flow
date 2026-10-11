@@ -8,7 +8,9 @@ TEMPLATE="$PACK_ROOT/repo-template"
 TEMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/dotnet-agents-pack.XXXXXX")"
 REPO="$TEMP_ROOT/target"
 
-cleanup() { rm -rf "$TEMP_ROOT"; }
+cleanup() {
+  case "$TEMP_ROOT" in "${TMPDIR:-/tmp}"/dotnet-agents-pack.*) rm -rf -- "$TEMP_ROOT" ;; *) echo 'Unsafe test cleanup path' >&2; return 1 ;; esac
+}
 trap cleanup EXIT
 
 mkdir -p "$REPO"
@@ -16,6 +18,34 @@ git -C "$REPO" init -q
 
 bash "$INSTALLER" "$REPO" --dry-run
 [ ! -e "$REPO/AGENTS.md" ]
+[ ! -e "$REPO/.agent-pack" ]
+
+GROK_ONLY="$TEMP_ROOT/grok-only"
+mkdir -p "$GROK_ONLY"
+git -C "$GROK_ONLY" init -q
+bash "$INSTALLER" "$GROK_ONLY" --integration grok --profile web,sqlserver,quality
+bash "$INSTALLER" "$GROK_ONLY"
+[ -f "$GROK_ONLY/.grok/config.toml" ]
+[ ! -e "$GROK_ONLY/.codex" ]
+[ -z "$(find "$GROK_ONLY/.agents" -name openai.yaml -print)" ]
+grep -q '^integration|grok$' "$GROK_ONLY/.agent-pack/state.txt"
+! grep -q '^integration|codex$' "$GROK_ONLY/.agent-pack/state.txt"
+bash "$INSTALLER" "$GROK_ONLY" --integration codex,grok
+[ -f "$GROK_ONLY/.codex/agents/frontend-web.toml" ]
+
+for linked_relative in .agents .agent-pack AGENTS.md.agent-pack.new; do
+  linked_repo="$(mktemp -d "$TEMP_ROOT/linked.XXXXXX")"
+  outside="$(mktemp -d "$TEMP_ROOT/outside.XXXXXX")"
+  git -C "$linked_repo" init -q
+  ln -s "$outside" "$linked_repo/$linked_relative"
+  if [ -L "$linked_repo/$linked_relative" ]; then
+    if bash "$INSTALLER" "$linked_repo" --profile core; then echo 'Installer accepted linked path' >&2; exit 1; fi
+    [ -z "$(find "$outside" -mindepth 1 -print)" ]
+    [ ! -e "$linked_repo/AGENTS.md" ]
+  else
+    echo 'SKIP: platform did not create a real symbolic link.'
+  fi
+done
 
 bash "$INSTALLER" "$REPO" --include-claude --dry-run
 [ ! -e "$REPO/CLAUDE.md" ]
@@ -32,7 +62,7 @@ bash "$INSTALLER" "$REPO"
 [ -f "$REPO/.agents/skills/dotnet-xunit-tests/references/xunit-test-checklist.md" ]
 [ ! -e "$REPO/.agents/skills/flutter-tests/SKILL.md" ]
 [ -f "$REPO/.agent-pack/state.txt" ]
-grep -q '^version|1.6.0$' "$REPO/.agent-pack/state.txt"
+grep -Fxq "version|$(tr -d '\r\n' < "$PACK_ROOT/pack-version.txt")" "$REPO/.agent-pack/state.txt"
 grep -q '^profile|core$' "$REPO/.agent-pack/state.txt"
 [ -f "$REPO/.agents/skills/update-agent-pack/SKILL.md" ]
 [ -f "$REPO/.agents/skills/check-text-encoding/scripts/check-mojibake.ps1" ]
@@ -112,6 +142,12 @@ bash "$INSTALLER" "$REPO" --profile web,sqlserver,quality --include-grok-build
 echo "# local change" >> "$REPO/AGENTS.md"
 bash "$INSTALLER" "$REPO"
 [ -f "$REPO/AGENTS.md.agent-pack.new" ]
+
+echo '# local customization' >> "$REPO/.agents/skills/bugfix-dotnet/SKILL.md"
+bash "$INSTALLER" "$REPO"
+bash "$INSTALLER" "$REPO"
+grep -Eq '^artifact\|[^|]+\|\.agents/skills/bugfix-dotnet/SKILL.md\|[^|]+\|-\|-\|keep-local\|' "$REPO/.agent-pack/state.txt"
+grep -q 'local customization' "$REPO/.agents/skills/bugfix-dotnet/SKILL.md"
 
 bash "$INSTALLER" "$REPO" --force
 cmp -s "$REPO/AGENTS.md" "$TEMPLATE/AGENTS.md"

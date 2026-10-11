@@ -1,11 +1,11 @@
-# Bootstrap the repository
+# bootstrap-repo
 
-Use `$bootstrap-dotnet-repo` in this workspace.
+Use $bootstrap-repo pelo host ativo. Leia o contrato docs/engineering-flow/workflow.md. Investigue, apresente plano e aguarde aprovação humana antes de implementar; autorização existente persiste.
 
-- Do not change production code, dependencies, databases, or CI.
-- Inspect first: one Git root, a monorepo, or a parent folder of independent repositories.
-- Confirm facts in project files, scripts, CI, README, and tests.
-- Update only confirmed technical memory: `AGENTS.md` and `docs/ai`.
-- Recommend only real pack profiles with evidence (`web`, `sqlserver`).
-- Do not fan out reviewers; use `repo_explorer` only for a bounded gap.
-- When finished, ask for a new task so updated instructions load.
+Demanda: [descreva]
+Atual/esperado e critérios: [preencha]
+Contexto/evidência: [caminhos, ambiente, sem segredos]
+Restrições/não objetivos: [preencha]
+Testes/cenários e ambiente solicitados: [especifique; ausência não autoriza testes]
+
+Retorne plano com componentes, riscos/decisões, ferramentas e evidências. Após aprovação, entregue implementado/verificado/falhou/pendente com links reais; confirme preparo faltante antes de usar outro ambiente.

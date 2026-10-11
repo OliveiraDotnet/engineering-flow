@@ -5,6 +5,7 @@ param(
     [string]$RepoPath,
 
     [string[]]$Profile = @(),
+    [string[]]$Integration = @(),
 
     [switch]$IncludeClaude,
     [switch]$IncludeGrokBuild,
@@ -25,9 +26,9 @@ $ManifestPath = Join-Path $PackRoot "pack-manifest.txt"
 $ArtifactsPath = Join-Path $PackRoot "pack-artifacts.txt"
 $VersionPath = Join-Path $PackRoot "pack-version.txt"
 $GlobalGuidance = Join-Path $PackRoot "global\AGENTS.md"
-$InspectScript = Join-Path $TemplateRoot ".agents\skills\bootstrap-dotnet-repo\scripts\inspect-dotnet-repo.ps1"
-$ValidProfiles = @("core", "web", "sqlserver", "quality")
-$AutoDetectableProfiles = @("web", "sqlserver")
+$InspectScript = Join-Path $TemplateRoot ".agents\skills\bootstrap-repo\scripts\inspect-repo.ps1"
+$ValidProfiles = @("core", "web", "sqlserver", "quality", "mobile")
+$AutoDetectableProfiles = @("web", "sqlserver", "mobile")
 $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 $Utf8Strict = New-Object System.Text.UTF8Encoding($false, $true)
 $PathComparison = if ($env:OS -eq "Windows_NT") { [StringComparison]::OrdinalIgnoreCase } else { [StringComparison]::Ordinal }
@@ -59,6 +60,20 @@ function Test-SameContent {
     }
 
     return (Get-FileHash -LiteralPath $Left -Algorithm SHA256).Hash -eq (Get-FileHash -LiteralPath $Right -Algorithm SHA256).Hash
+}
+
+function Assert-NoLinkedPath {
+    param([Parameter(Mandatory = $true)][string]$Path)
+    $current = [IO.Path]::GetFullPath($Path)
+    while ($current) {
+        $item = Get-Item -LiteralPath $current -Force -ErrorAction SilentlyContinue
+        if ($item -and ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+            throw "Linked installation path is not allowed: $current"
+        }
+        $parent = Split-Path -Parent $current
+        if ($parent -eq $current) { break }
+        $current = $parent
+    }
 }
 
 function Get-NormalizedTextHash {
@@ -156,6 +171,7 @@ function Get-StateRecords {
     )
 
     $statePath = Join-Path $TargetRoot ".agent-pack\state.txt"
+    Assert-NoLinkedPath $statePath
     if (-not (Test-Path -LiteralPath $statePath -PathType Leaf)) {
         return @()
     }
@@ -250,6 +266,14 @@ function Add-CopyAction {
 
     $state = "COPY"
     $effectiveDestination = $Destination
+    Assert-NoLinkedPath $Destination
+    Assert-NoLinkedPath "$Destination.agent-pack.new"
+    if ((Test-Path -LiteralPath $Destination) -and -not (Test-Path -LiteralPath $Destination -PathType Leaf)) {
+        throw "Installation destination is not a file: $Destination"
+    }
+    if ((Test-Path -LiteralPath "$Destination.agent-pack.new") -and -not (Test-Path -LiteralPath "$Destination.agent-pack.new" -PathType Leaf)) {
+        throw "Installation sidecar is not a file: $Destination.agent-pack.new"
+    }
 
     if (Test-Path -LiteralPath $Destination) {
         if (Test-SameContent $Source $Destination) {
@@ -282,6 +306,7 @@ function Add-CopyAction {
         Source = $Source
         Destination = $effectiveDestination
         OriginalDestination = $Destination
+        Completed = ($state -in @("SKIP", "CONFLICT"))
     }) | Out-Null
 }
 
@@ -299,17 +324,20 @@ function Invoke-CopyAction {
     }
 
     $destinationDirectory = Split-Path -Parent $Action.Destination
+    Assert-NoLinkedPath $Action.Destination
     if (-not (Test-Path -LiteralPath $destinationDirectory)) {
         New-Item -ItemType Directory -Force -Path $destinationDirectory | Out-Null
     }
 
     if ($Action.State -eq "REPLACE") {
         $backup = Get-AvailableBackupPath $Action.OriginalDestination
+        Assert-NoLinkedPath $backup
         Copy-Item -LiteralPath $Action.OriginalDestination -Destination $backup -Force
         Write-Host ("BACKUP    {0}" -f $backup)
     }
 
     Copy-Item -LiteralPath $Action.Source -Destination $Action.Destination -Force
+    $Action.Completed = $true
 }
 
 function Write-InstallState {
@@ -344,7 +372,7 @@ function Write-InstallState {
         }
         $originalFull = [IO.Path]::GetFullPath((Join-Path $TargetRoot $artifact.Destination))
         $action = $writtenByOriginal[$originalFull]
-        if (-not $action) {
+        if (-not $action -or -not (Test-Path -LiteralPath $originalFull -PathType Leaf)) {
             continue
         }
 
@@ -361,7 +389,7 @@ function Write-InstallState {
             continue
         }
 
-        if ($action.State -in @("SIDECAR", "CONFLICT")) {
+        if (-not $action.Completed -or $action.Destination -ne $action.OriginalDestination) {
             if (Test-Path -LiteralPath $originalFull -PathType Leaf) {
                 $localHash = Get-NormalizedTextHash -Path $originalFull
                 $lines.Add("artifact|$($artifact.Id)|$($artifact.Destination)|$($artifact.Ownership)|-|-|keep-local|$localHash") | Out-Null
@@ -378,6 +406,9 @@ function Write-InstallState {
         Write-Host "STATE     $statePath (dry-run)"
         return
     }
+    if (-not $PSCmdlet.ShouldProcess($statePath, "Write installation state")) { return }
+    Assert-NoLinkedPath $statePath
+    Assert-NoLinkedPath (Join-Path $stateDirectory "state.txt.tmp")
     if (-not (Test-Path -LiteralPath $stateDirectory)) {
         New-Item -ItemType Directory -Force -Path $stateDirectory | Out-Null
     }
@@ -399,10 +430,18 @@ function Install-ToRepository {
 
     $profiles = Resolve-InstallProfiles -TargetRoot $TargetRoot -RequestedProfile $Profile
     $integrations = New-Object System.Collections.Generic.List[string]
-    $integrations.Add("codex") | Out-Null
+    foreach ($value in $Integration) {
+        foreach ($item in ($value -split ',')) {
+            $selected = $item.Trim().ToLowerInvariant()
+            if ($selected -notin @('codex', 'grok', 'claude')) { throw "Unknown integration: $item" }
+            $integrations.Add($selected) | Out-Null
+        }
+    }
     foreach ($integration in (Get-StateRecords -TargetRoot $TargetRoot -Kind "integration")) {
+        if ($integration -notin @('codex', 'grok', 'claude')) { throw "Unknown integration in state: $integration" }
         $integrations.Add($integration) | Out-Null
     }
+    if ($integrations.Count -eq 0) { $integrations.Add("codex") | Out-Null }
     if ($IncludeClaude) {
         $integrations.Add("claude") | Out-Null
     }
@@ -440,6 +479,7 @@ function Install-ToRepository {
         if ($requestedComponents -notcontains $entry.Component) {
             continue
         }
+        if ($integrations -notcontains 'codex' -and ($entry.Destination -like '.codex/*' -or $entry.Destination -like '*/agents/openai.yaml')) { continue }
         $source = [IO.Path]::GetFullPath((Join-Path $templateRootCanonical $entry.Source))
         $destination = [IO.Path]::GetFullPath((Join-Path $TargetRoot $entry.Destination))
         if (-not (Test-PathWithin $templateRootCanonical $source)) {
@@ -451,11 +491,17 @@ function Install-ToRepository {
         Add-CopyAction -Actions $actions -Source $source -Destination $destination
     }
 
+    Assert-NoLinkedPath (Join-Path $TargetRoot '.agent-pack/state.txt.tmp')
+
+    $ignoreHelper = Join-Path $ScriptDir 'protect-engineering-flow-files.ps1'
+    & $ignoreHelper -RepoPath $TargetRoot -CheckOnly
     foreach ($action in $actions) {
         Invoke-CopyAction -Action $action
     }
 
     Write-InstallState -TargetRoot $TargetRoot -PackVersion $PackVersion -Profiles $profiles -Integrations $integrations -ManifestByDestination $ManifestByDestination -ArtifactEntries $ArtifactEntries -Actions $actions
+    if ($DryRun -or $WhatIfPreference) { & $ignoreHelper -RepoPath $TargetRoot -DryRun }
+    elseif ($PSCmdlet.ShouldProcess($TargetRoot, 'Protect generated Engineering Flow files in .gitignore')) { & $ignoreHelper -RepoPath $TargetRoot }
 
     $summary = $actions | Group-Object State | Sort-Object Name | ForEach-Object { "{0}={1}" -f $_.Name, $_.Count }
     Write-Host ("Summary: {0}" -f ($summary -join ", "))

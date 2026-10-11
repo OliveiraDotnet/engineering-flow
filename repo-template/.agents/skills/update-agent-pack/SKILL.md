@@ -3,6 +3,10 @@ name: update-agent-pack
 description: Inspect and safely reconcile an existing repository installation with a newer Agent Pack, including added, changed, renamed, or retired skills, agents, prompts, and rules. Use when the user asks Codex, Claude, or Grok Build to check, update, migrate, synchronize, or repair an installed Agent Pack without losing repository-specific guidance or local customizations.
 ---
 
+## Engineering Flow 2.0 execution gate
+
+Follow docs/engineering-flow/workflow.md in the target repository. Understand demand, present a technical plan, receive human approval, implement, execute only approved tests, gather criterion-linked evidence, deliver. Existing explicit authorization persists. Investigation/plan do not authorize implementation. Absence of a test request does not automatically authorize tests: highlight missing validation and ask whether to include it. If only implementation is approved, deliver it as unvalidated with pending checks. Material changes in scope, behavior, architecture/contracts, dependencies, security/data or validation return to the human. This gate governs execution steps below; no automatic delegation or second provider is required.
+
 # Update Agent Pack
 
 1. Confirm the repository root, read its applicable `AGENTS.md`, `CLAUDE.md`, `.grok/config.toml`, and `.agent-pack/state.txt` when present, then inspect `git status`. Do not modify production code.
@@ -10,7 +14,7 @@ description: Inspect and safely reconcile an existing repository installation wi
 3. Run the updater in check mode:
    - Windows: `powershell -ExecutionPolicy Bypass -File "$env:AGENT_PACK_HOME\scripts\update-agent-pack.ps1" -RepoPath . -Check`
    - Linux/macOS: `bash "$AGENT_PACK_HOME/scripts/update-agent-pack.sh" . --check`
-   - When intentionally changing providers, pass `-Integration codex,grok` or `--integration codex,grok` (or the required explicit set). Codex is mandatory.
+   - When intentionally changing providers, pass `-Integration codex,grok` or `--integration codex,grok` (or the required explicit set, including grok alone). Neither Codex nor Grok is mandatory.
 4. Review every planned action and its evidence. The deterministic updater owns file selection; do not invent extra files or profiles.
 5. Resolve conflicts by artifact:
    - Preserve confirmed project facts, commands and rules.

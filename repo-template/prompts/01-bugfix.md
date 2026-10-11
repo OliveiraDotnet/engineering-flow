@@ -1,30 +1,11 @@
-# Bugfix
+# bugfix
 
-Use `$bugfix-dotnet` for the bug below.
+Use $bugfix pelo host ativo. Leia o contrato docs/engineering-flow/workflow.md. Investigue, apresente plano e aguarde aprovação humana antes de implementar; autorização existente persiste.
 
-## Bug
+Demanda: [descreva]
+Atual/esperado e critérios: [preencha]
+Contexto/evidência: [caminhos, ambiente, sem segredos]
+Restrições/não objetivos: [preencha]
+Testes/cenários e ambiente solicitados: [especifique; ausência não autoriza testes]
 
-[describe the bug]
-
-## Current behavior
-
-[describe current behavior]
-
-## Expected behavior
-
-[describe expected behavior]
-
-## Evidence
-
-- Logs or stack trace:
-- Affected user or profile:
-- Environment:
-- Approximate date:
-- Branch:
-
-## Expected output
-
-- Root cause with evidence.
-- Changed files.
-- Confirmed validation or the exact blocker.
-- Manual scenario and remaining risks.
+Retorne plano com componentes, riscos/decisões, ferramentas e evidências. Após aprovação, entregue implementado/verificado/falhou/pendente com links reais; confirme preparo faltante antes de usar outro ambiente.

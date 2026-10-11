@@ -9,7 +9,7 @@ REPO="$TEMP_ROOT/repo"
 ADOPTION_REPO="$TEMP_ROOT/adoption-repo"
 
 cleanup() {
-  rm -rf "$TEMP_ROOT"
+  case "$TEMP_ROOT" in "${TMPDIR:-/tmp}"/agent-pack-update.*) rm -rf -- "$TEMP_ROOT" ;; *) echo 'Unsafe cleanup target' >&2; return 1 ;; esac
 }
 trap cleanup EXIT
 
@@ -43,6 +43,7 @@ hash_file() {
 mkdir -p "$FAKE_PACK/scripts" "$FAKE_PACK/repo-template" "$FAKE_PACK/compat/releases"
 mkdir -p "$REPO/.agent-pack" "$ADOPTION_REPO"
 cp "$UPDATER" "$FAKE_PACK/scripts/update-agent-pack.sh"
+cp "$SCRIPT_DIR/protect-engineering-flow-files.sh" "$FAKE_PACK/scripts/protect-engineering-flow-files.sh"
 
 printf '%s\n' "2.0.0" > "$FAKE_PACK/pack-version.txt"
 
@@ -176,12 +177,76 @@ cp "$REPO/.agent-pack/state.txt" "$TEMP_ROOT/state-with-grok.txt"
 bash "$FAKE_PACK/scripts/update-agent-pack.sh" "$REPO" --apply >/dev/null
 cmp -s "$REPO/.agent-pack/state.txt" "$TEMP_ROOT/state-with-grok.txt" ||
   fail "A later update did not preserve the codex,grok selection."
-set +e
-bash "$FAKE_PACK/scripts/update-agent-pack.sh" "$REPO" --check --integration grok >/dev/null 2>&1
-invalid_integration_status=$?
-set -e
-[ "$invalid_integration_status" -ne 0 ] ||
-  fail "An integration override without mandatory Codex was accepted."
+bash "$FAKE_PACK/scripts/update-agent-pack.sh" "$REPO" --apply --integration grok >/dev/null
+assert_file_content "$REPO/update.txt" "new update"
+if grep -q '^integration|codex$' "$REPO/.agent-pack/state.txt"; then
+  fail "Grok-only retained Codex integration."
+fi
+cp "$REPO/.agent-pack/state.txt" "$TEMP_ROOT/grok-only-state.txt"
+bash "$FAKE_PACK/scripts/update-agent-pack.sh" "$REPO" --apply >/dev/null
+cmp -s "$REPO/.agent-pack/state.txt" "$TEMP_ROOT/grok-only-state.txt" || fail "Grok-only was not preserved."
+bash "$FAKE_PACK/scripts/update-agent-pack.sh" "$REPO" --apply --integration codex,grok >/dev/null
+printf '%s' 'active owner' > "$REPO/.agent-pack/.runtime/update.lock"
+if bash "$FAKE_PACK/scripts/update-agent-pack.sh" "$REPO" --apply >/dev/null 2>&1; then
+  fail "Existing cross-shell lock did not block apply."
+fi
+assert_file_content "$REPO/.agent-pack/.runtime/update.lock" "active owner"
+rm "$REPO/.agent-pack/.runtime/update.lock"
+
+# Provider-specific core artifacts are optional, shared core is always retained.
+mkdir -p "$FAKE_PACK/repo-template/.codex/agents" "$FAKE_PACK/repo-template/.agents/skills/example/agents"
+printf '%s\n' "agent" > "$FAKE_PACK/repo-template/.codex/agents/reviewer.toml"
+printf '%s\n' "metadata" > "$FAKE_PACK/repo-template/.agents/skills/example/agents/openai.yaml"
+printf '%s\n' 'core|.codex/agents/reviewer.toml' 'core|.agents/skills/example/agents/openai.yaml' >> "$FAKE_PACK/pack-manifest.txt"
+printf '%s\n' 'codex-agent|.codex/agents/reviewer.toml|managed' 'codex-metadata|.agents/skills/example/agents/openai.yaml|managed' >> "$FAKE_PACK/pack-artifacts.txt"
+bash "$FAKE_PACK/scripts/update-agent-pack.sh" "$REPO" --apply >/dev/null
+[ -f "$REPO/.codex/agents/reviewer.toml" ] || fail "Codex agent not installed."
+bash "$FAKE_PACK/scripts/update-agent-pack.sh" "$REPO" --apply --integration grok >/dev/null
+[ ! -e "$REPO/.codex/agents/reviewer.toml" ] || fail "Grok-only retained Codex agent."
+[ ! -e "$REPO/.agents/skills/example/agents/openai.yaml" ] || fail "Grok-only retained Codex metadata."
+assert_file_content "$REPO/update.txt" "new update"
+bash "$FAKE_PACK/scripts/update-agent-pack.sh" "$REPO" --apply --integration codex,grok >/dev/null
+[ -f "$REPO/.codex/agents/reviewer.toml" ] || fail "Re-enabling Codex failed."
+
+# Inject failures in backup and replacement moves through a local command wrapper.
+# The receipt now describes 2.0 files. Preserve that trusted release before
+# changing the candidate pack; otherwise reconciliation stops before any move.
+while IFS='|' read -r artifact_id artifact_path artifact_owner; do
+  artifact_hash="$(hash_file "$FAKE_PACK/repo-template/$artifact_path")"
+  printf '%s|%s|%s\n' "$artifact_id" "$artifact_path" "$artifact_hash"
+done < "$FAKE_PACK/pack-artifacts.txt" > "$FAKE_PACK/compat/releases/2.0.0.txt"
+FAIL_BIN="$TEMP_ROOT/fail-bin"
+mkdir -p "$FAIL_BIN"
+REAL_MV="$(command -v mv)"
+export REAL_MV
+cat > "$FAIL_BIN/mv" <<'FAIL_MV'
+#!/usr/bin/env bash
+if [ ! -f "$INJECTION_MARKER" ]; then
+  case "$INJECTION_MODE:$1:$2" in
+    backup:*/update.txt:*/backups/*/files/*|replace:*/.staging-*/files/*:*/update.txt)
+      : > "$INJECTION_MARKER"
+      exit 73
+      ;;
+  esac
+fi
+exec "$REAL_MV" "$@"
+FAIL_MV
+chmod +x "$FAIL_BIN/mv"
+for injection_mode in backup replace; do
+  failure_repo="$TEMP_ROOT/failure-$injection_mode"
+  mkdir -p "$failure_repo"
+  cp -R "$REPO/." "$failure_repo/"
+  printf '%s\n' 'newer update for failure test' > "$FAKE_PACK/repo-template/update.txt"
+  export INJECTION_MODE="$injection_mode" INJECTION_MARKER="$TEMP_ROOT/injected-$injection_mode"
+  if failure_output="$(PATH="$FAIL_BIN:$PATH" bash "$FAKE_PACK/scripts/update-agent-pack.sh" "$failure_repo" --apply 2>&1)"; then
+    fail "Injected $injection_mode failure did not abort."
+  fi
+  [ -f "$INJECTION_MARKER" ] || fail "Failure injection was not exercised: $failure_output"
+  assert_file_content "$failure_repo/update.txt" 'new update'
+  cmp -s "$REPO/.agent-pack/state.txt" "$failure_repo/.agent-pack/state.txt" || fail "Failed move changed state."
+  [ ! -e "$failure_repo/.agent-pack/.runtime/update.lock" ] || fail "Failed move left its lock."
+done
+printf '%s\n' 'new update' > "$FAKE_PACK/repo-template/update.txt"
 
 # Once a seed has a receipt, a deliberate local deletion is repository-owned
 # and must not cause the updater to recreate it.
@@ -235,6 +300,10 @@ anchor_new_hash="$(hash_file "$FAKE_PACK/repo-template/anchor.txt")"
   printf 'conflict-file|conflict.txt|%s\n' "$conflict_new_hash"
   printf 'added-file|added.txt|%s\n' "$added_new_hash"
   printf 'anchor-file|anchor.txt|%s\n' "$anchor_new_hash"
+  # Provider fixtures are removed from the candidate manifest below, but their
+  # installed receipts still require trusted historical hashes for retirement.
+  printf 'codex-agent|.codex/agents/reviewer.toml|%s\n' "$(hash_file "$FAKE_PACK/repo-template/.codex/agents/reviewer.toml")"
+  printf 'codex-metadata|.agents/skills/example/agents/openai.yaml|%s\n' "$(hash_file "$FAKE_PACK/repo-template/.agents/skills/example/agents/openai.yaml")"
 } > "$FAKE_PACK/compat/releases/2.0.0.txt"
 printf '%s\n' "2.1.0" > "$FAKE_PACK/pack-version.txt"
 cat > "$FAKE_PACK/pack-manifest.txt" <<'EOF'

@@ -1,11 +1,17 @@
+[CmdletBinding()]
 param(
     [string]$Path = ".",
-    [switch]$SummaryOnly
+    [switch]$SummaryOnly,
+    [ValidateRange(1, 100000)]
+    [int]$MaxResults = 200
 )
 
 $ErrorActionPreference = "Stop"
 
 $resolvedPath = (Resolve-Path -LiteralPath $Path).Path
+if (-not (Test-Path -LiteralPath $resolvedPath -PathType Container)) {
+    throw "Path must be a directory."
+}
 
 $patterns = [ordered]@{
     "EF FromSqlRaw" = "FromSqlRaw"
@@ -30,7 +36,6 @@ $includeExtensions = @(
     ".ps1", ".psm1", ".yml", ".yaml", ".md"
 )
 
-$secretPattern = "(?i)(password|pwd|secret|token|apikey|api_key|connectionstring|connection string|user id|uid=|accountkey)"
 
 $files = Get-ChildItem -LiteralPath $resolvedPath -Recurse -File -Force |
     Where-Object {
@@ -41,18 +46,12 @@ $files = Get-ChildItem -LiteralPath $resolvedPath -Recurse -File -Force |
 $results = foreach ($file in $files) {
     $isSensitiveConfig = $file.Name -match "appsettings.*\.json|.*\.config"
     foreach ($entry in $patterns.GetEnumerator()) {
-        $matches = Select-String -LiteralPath $file.FullName -Pattern $entry.Value -AllMatches -ErrorAction SilentlyContinue
+        $matches = Select-String -LiteralPath $file.FullName -Pattern $entry.Value -AllMatches -ErrorAction Stop
         foreach ($match in $matches) {
-            $lineText = $match.Line.Trim()
-            if ($isSensitiveConfig -or $lineText -match $secretPattern) {
-                $lineText = "[redacted config or secret-like line]"
-            }
-
             [pscustomobject]@{
                 Pattern = $entry.Key
                 Path = $file.FullName
                 LineNumber = $match.LineNumber
-                Line = $lineText
             }
         }
     }
@@ -64,7 +63,10 @@ if ($SummaryOnly) {
         Sort-Object Name |
         Select-Object Name, Count
 } else {
+    if (@($results).Count -gt $MaxResults) {
+        Write-Warning "Results limited to $MaxResults of $(@($results).Count) matches; narrow Path or use SummaryOnly."
+    }
     $results |
         Sort-Object Path, LineNumber, Pattern |
-        Format-Table -AutoSize -Wrap
+        Select-Object -First $MaxResults
 }

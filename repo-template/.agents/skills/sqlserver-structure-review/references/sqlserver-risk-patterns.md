@@ -1,5 +1,7 @@
 # SQL Server Risk Patterns
 
+These are review candidates, not automatic defects or permission to rewrite SQL. Qualify them using engine version, database compatibility, constraints, workload, and execution evidence; recommendations must fit the existing contract and deployment model.
+
 ## SELECT Star
 
 `SELECT *` in views and procedures creates unstable contracts, unnecessary IO, and breaking-change risk when columns are added, removed, or reordered.

@@ -12,9 +12,9 @@ $PackVersionPath = Join-Path $PackRoot "pack-version.txt"
 $ArtifactMetadataPath = Join-Path $PackRoot "pack-artifacts.txt"
 $CompatibilityRoot = Join-Path $PackRoot "compat\releases"
 $ValidComponents = @(
-    "core", "web", "sqlserver", "quality",
-    "claude-core", "claude-web", "claude-sqlserver", "claude-quality",
-    "grok-core", "grok-web", "grok-sqlserver", "grok-quality"
+    "core", "web", "sqlserver", "quality", "mobile",
+    "claude-core", "claude-web", "claude-sqlserver", "claude-quality", "claude-mobile",
+    "grok-core", "grok-web", "grok-sqlserver", "grok-quality", "grok-mobile"
 )
 $errors = New-Object System.Collections.Generic.List[string]
 $manifestEntries = @()
@@ -81,7 +81,7 @@ else {
     if ($packVersion -notmatch '^\d+\.\d+\.\d+$') {
         Add-Error "Invalid semantic version in pack-version.txt: $packVersion"
     }
-    elseif ((Get-Content -LiteralPath $ManifestPath -Raw) -notmatch "(?m)^# \.NET Agents Pack manifest v$([regex]::Escape($packVersion))\s*$") {
+    elseif ((Get-Content -LiteralPath $ManifestPath -Raw) -notmatch "(?m)^# Engineering Flow manifest v$([regex]::Escape($packVersion))\s*$") {
         Add-Error "Manifest header version does not match pack-version.txt ($packVersion)."
     }
 }
@@ -177,7 +177,7 @@ foreach ($agent in $agentFiles) {
         if ($content -notmatch "(?m)^$requiredKey\s*=") { Add-Error "Agent '$($agent.Name)' is missing $requiredKey." }
     }
 
-    $nicknameLine = [regex]::Match($content, '(?m)^nickname_candidates\s*=\s*\[(.+)\]$')
+    $nicknameLine = [regex]::Match($content, '(?m)^nickname_candidates\s*=\s*\[(.+)\]\r?$')
     if ($nicknameLine.Success) {
         foreach ($value in [regex]::Matches($nicknameLine.Groups[1].Value, '"([^"]+)"')) {
             if ($value.Groups[1].Value -notmatch '^[A-Za-z0-9 _-]+$') {
@@ -197,8 +197,8 @@ foreach ($agent in $claudeAgentFiles) {
         continue
     }
 
-    $nameMatch = [regex]::Match($frontmatter.Groups[1].Value, '(?m)^name:\s*([^\r\n]+)$')
-    $descriptionMatch = [regex]::Match($frontmatter.Groups[1].Value, '(?m)^description:\s*([^\r\n]+)$')
+    $nameMatch = [regex]::Match($frontmatter.Groups[1].Value, '(?m)^name:\s*([^\r\n]+?)\r?$')
+    $descriptionMatch = [regex]::Match($frontmatter.Groups[1].Value, '(?m)^description:\s*([^\r\n]+?)\r?$')
     if (-not $nameMatch.Success) { Add-Error "Claude agent '$($agent.Name)' is missing name."; continue }
     if (-not $descriptionMatch.Success) { Add-Error "Claude agent '$($agent.Name)' is missing description." }
 
@@ -245,14 +245,15 @@ if (-not (Test-Path -LiteralPath $grokConfigPath -PathType Leaf)) {
 }
 else {
     $grokConfig = Get-Content -LiteralPath $grokConfigPath -Raw
-    foreach ($command in @("git commit", "git push")) {
+    foreach ($command in @("git reset --hard", "git clean", "rm -rf")) {
         $requiredRule = '{ action = "deny", tool = "bash", pattern = "' + $command + ' *" }'
-        if (-not $grokConfig.Contains($requiredRule)) { Add-Error ".grok/config.toml must deny '$command'." }
+        if (-not $grokConfig.Contains($requiredRule)) { Add-Error ".grok/config.toml must deny destructive command '$command'." }
     }
 }
 
 $governanceFiles = @{
     "AGENTS.md" = Join-Path $TemplateRoot "AGENTS.md"
+    "agent-work-order" = Join-Path $TemplateRoot ".agents\skills\agent-work-order\SKILL.md"
     "delegate-to-grok-build" = Join-Path $TemplateRoot ".agents\skills\delegate-to-grok-build\SKILL.md"
     "execute-codex-work-order" = Join-Path $TemplateRoot ".grok\skills\execute-codex-work-order\SKILL.md"
 }
@@ -263,6 +264,7 @@ foreach ($name in $governanceFiles.Keys) {
 }
 if (@($governanceFiles.Values | Where-Object { -not (Test-Path -LiteralPath $_ -PathType Leaf) }).Count -eq 0) {
     $agentsGovernance = Get-Content -LiteralPath $governanceFiles["AGENTS.md"] -Raw
+    $workOrderContract = Get-Content -LiteralPath $governanceFiles["agent-work-order"] -Raw
     $delegationContract = Get-Content -LiteralPath $governanceFiles["delegate-to-grok-build"] -Raw
     $executionContract = Get-Content -LiteralPath $governanceFiles["execute-codex-work-order"] -Raw
 
@@ -270,11 +272,13 @@ if (@($governanceFiles.Values | Where-Object { -not (Test-Path -LiteralPath $_ -
         if (-not $agentsGovernance.Contains($required)) { Add-Error "AGENTS.md is missing governance marker '$required'." }
     }
     foreach ($required in @("Human-approved scope", "Allowed read areas", "Allowed modification areas", "Decision boundaries", "Escalation conditions", "READY_FOR_MANUAL_VALIDATION", "USER_DECISION_REQUIRED")) {
-        if (-not $delegationContract.Contains($required)) { Add-Error "Codex-to-Grok delegation contract is missing '$required'." }
+        if (-not $workOrderContract.Contains($required)) { Add-Error "Shared agent work-order contract is missing '$required'." }
     }
     foreach ($required in @("COMPLETED", "COMPLETED_WITH_CONCERNS", "BLOCKED_BY_DECISION", "UNABLE_TO_VALIDATE", "material change was not performed")) {
-        if (-not $executionContract.Contains($required)) { Add-Error "Grok execution contract is missing '$required'." }
+        if (-not $workOrderContract.Contains($required)) { Add-Error "Shared agent work-order contract is missing '$required'." }
     }
+    if (-not $delegationContract.Contains("agent work order")) { Add-Error "Codex-to-Grok delegation entrypoint must reference the shared agent work-order contract." }
+    if (-not $executionContract.Contains("agent work order")) { Add-Error "Grok execution entrypoint must reference the shared agent work-order contract." }
 }
 
 $skillFiles = Get-ChildItem -LiteralPath (Join-Path $TemplateRoot ".agents\skills") -File -Filter "SKILL.md" -Recurse -ErrorAction SilentlyContinue
@@ -292,7 +296,7 @@ foreach ($skill in $skillFiles) {
     if ($name -notmatch '^[a-z0-9-]+$') { Add-Error "Skill '$name' violates naming rules." }
 }
 
-$baseComponents = @("core", "web", "sqlserver", "quality")
+$baseComponents = @("core", "web", "sqlserver", "quality", "mobile")
 $canonicalSkillEntries = @($manifestEntries | Where-Object { $_.Component -in $baseComponents -and $_.Destination -like ".agents/skills/*" })
 foreach ($entry in $canonicalSkillEntries) {
     $expectedComponent = "claude-$($entry.Component)"

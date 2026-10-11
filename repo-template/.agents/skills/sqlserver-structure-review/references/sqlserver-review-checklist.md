@@ -22,6 +22,7 @@
 - Prefer generating read-only metadata queries for the user to execute from the VPN-enabled machine.
 - Ask for sanitized outputs, execution plans, Query Store exports, or `STATISTICS IO/TIME` results when runtime evidence is needed.
 - Clearly label findings as static-only when live database metadata is unavailable.
+- Follow [collection guidance](metadata-collection.md) for version, permission, omitted-definition, and incomplete-metadata limitations. A network preflight does not establish authentication or database access.
 
 ## Table Review
 

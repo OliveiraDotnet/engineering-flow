@@ -83,6 +83,7 @@ function New-TestPack {
     $compatibility = Join-Path $Root "compat\releases"
     New-Item -ItemType Directory -Force -Path $scripts, $template, $compatibility | Out-Null
     Copy-Item -LiteralPath $UpdaterSource -Destination (Join-Path $scripts "update-agent-pack.ps1")
+    Copy-Item -LiteralPath (Join-Path $ScriptDir 'protect-engineering-flow-files.ps1') -Destination $scripts
 
     $oldManaged = "managed version 1`n"
     $oldMerge = "merge version 1`n"
@@ -99,17 +100,23 @@ core|managed.txt
 core|merge.txt
 core|seed.txt
 core|added.txt
+core|.codex/agents/reviewer.toml
+core|.agents/skills/example/agents/openai.yaml
 "@
     Write-TestText -Path (Join-Path $Root "pack-artifacts.txt") -Content @"
 managed.asset|managed.txt|managed
 merge.asset|merge.txt|merge
 seed.asset|seed.txt|seed
 added.asset|added.txt|managed
+codex.agent|.codex/agents/reviewer.toml|managed
+codex.metadata|.agents/skills/example/agents/openai.yaml|managed
 "@
     Write-TestText -Path (Join-Path $template "managed.txt") -Content $newManaged
     Write-TestText -Path (Join-Path $template "merge.txt") -Content $newMerge
     Write-TestText -Path (Join-Path $template "seed.txt") -Content $newSeed
     Write-TestText -Path (Join-Path $template "added.txt") -Content $newAdded
+    Write-TestText -Path (Join-Path $template ".codex/agents/reviewer.toml") -Content "model = 'test'`n"
+    Write-TestText -Path (Join-Path $template ".agents/skills/example/agents/openai.yaml") -Content "interface: {display_name: Test}`n"
 
     $compatibilityContent = @(
         "managed.asset|managed.txt|$(Get-TestTextHash $oldManaged)"
@@ -147,6 +154,7 @@ function New-RenameTestPack {
     $compatibility = Join-Path $Root "compat\releases"
     New-Item -ItemType Directory -Force -Path $scripts, $template, $compatibility | Out-Null
     Copy-Item -LiteralPath $UpdaterSource -Destination (Join-Path $scripts "update-agent-pack.ps1")
+    Copy-Item -LiteralPath (Join-Path $ScriptDir 'protect-engineering-flow-files.ps1') -Destination $scripts
 
     $oldContent = "stable artifact at old path`n"
     $newContent = "stable artifact at renamed path`n"
@@ -253,9 +261,22 @@ try {
     $preservedGrokSelection = Get-Content -LiteralPath $statePath -Raw
     Assert-Equal $grokSelectionState $preservedGrokSelection "A later update did not preserve the codex,grok selection."
 
-    Assert-Throws -Message "An integration override without mandatory Codex was accepted." -Action {
-        Invoke-TestUpdater -Updater $pack.Updater -Parameters @{ RepoPath = $repo; Check = $true; Integration = @("grok") }
+    Invoke-TestUpdater -Updater $pack.Updater -Parameters @{ RepoPath = $repo; Apply = $true; Integration = @("grok") }
+    Assert-True (-not (Test-Path (Join-Path $repo ".codex/agents/reviewer.toml"))) "Grok-only retained Codex agent files."
+    Assert-True (-not (Test-Path (Join-Path $repo ".agents/skills/example/agents/openai.yaml"))) "Grok-only retained Codex UI metadata."
+    Assert-Equal $pack.NewManaged (Get-Content (Join-Path $repo "managed.txt") -Raw) "Grok-only removed shared core."
+    Invoke-TestUpdater -Updater $pack.Updater -Parameters @{ RepoPath = $repo; Apply = $true }
+    Assert-True ((Get-Content $statePath -Raw) -notmatch '(?m)^integration\|codex$') "Grok-only was not preserved."
+    Invoke-TestUpdater -Updater $pack.Updater -Parameters @{ RepoPath = $repo; Apply = $true; Integration = @("codex", "grok") }
+    Assert-True (Test-Path (Join-Path $repo ".codex/agents/reviewer.toml")) "Re-enabling Codex did not restore provider files."
+    $lockPath = Join-Path $repo ".agent-pack/.runtime/update.lock"
+    Assert-True (-not (Test-Path $lockPath)) "Apply left its lock behind."
+    Write-TestText -Path $lockPath -Content "active owner"
+    Assert-Throws -Message "Existing cross-shell lock did not block apply." -Action {
+        Invoke-TestUpdater -Updater $pack.Updater -Parameters @{ RepoPath = $repo; Apply = $true }
     }
+    Assert-Equal "active owner" (Get-Content $lockPath -Raw) "Updater deleted another owner's lock."
+    Remove-Item -LiteralPath $lockPath
 
     Remove-Item -LiteralPath (Join-Path $repo "seed.txt") -Force
     Invoke-TestUpdater -Updater $pack.Updater -Parameters @{ RepoPath = $repo; Apply = $true }
@@ -409,7 +430,37 @@ try {
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $renameRollbackRepo "renamed\managed.txt"))) "Rename rollback left the new destination active."
     Assert-Equal ($renameState + "`n") (Get-Content -LiteralPath $renameRollbackStatePath -Raw) "Rename rollback changed previous state."
 
-    Write-Host "Agent Pack updater tests passed: plan-only, add, update, conflict atomicity, removal, seed, adoption, local overrides, rollback and stable-id rename."
+    # Inject a failed backup and a partial destination copy in disposable fixtures.
+    foreach ($failureMode in @("backup", "replace")) {
+        # Capture shared fault state: $script inside the invoked updater refers to
+        # that script's scope, not this test script. A closure keeps the injection observable.
+        $fault = @{ Mode = $failureMode; Injected = $false; Destination = (Join-Path $rollbackRepo 'managed.txt') }
+        $injectCopy = {
+            [CmdletBinding()]
+            param([string]$LiteralPath, [string]$Destination, [switch]$Force)
+            $isBackup = $LiteralPath -eq $fault.Destination -and $Destination -match '[\\/]backups[\\/]'
+            $isReplace = $Destination -eq $fault.Destination -and $LiteralPath -match 'repo-template'
+            if (-not $fault.Injected -and (($fault.Mode -eq "backup" -and $isBackup) -or ($fault.Mode -eq "replace" -and $isReplace))) {
+                $fault.Injected = $true
+                [IO.File]::WriteAllText($Destination, "partial write")
+                throw "Injected $($fault.Mode) failure"
+            }
+            Microsoft.PowerShell.Management\Copy-Item @PSBoundParameters
+        }.GetNewClosure()
+        Set-Item -Path Function:\Copy-Item -Value $injectCopy
+        try {
+            Assert-Throws -Message "Injected copy failure did not abort apply." -Action {
+                Invoke-TestUpdater -Updater $pack.Updater -Parameters @{ RepoPath = $rollbackRepo; Apply = $true }
+            }
+        }
+        finally { Remove-Item Function:\Copy-Item }
+        Assert-True $fault.Injected "Copy failure injection was not exercised."
+        Assert-Equal $pack.OldManaged (Get-Content $fault.Destination -Raw) "Failed copy lost the original destination."
+        Assert-Equal ($initialState + "`n") (Get-Content $rollbackStatePath -Raw) "Failed copy changed state."
+        Assert-True (-not (Test-Path (Join-Path $rollbackRepo '.agent-pack/.runtime/update.lock'))) "Failed copy left its lock."
+    }
+
+    Write-Host "Agent Pack updater tests passed: plan-only, add, update, conflict atomicity, removal, seed, adoption, providers, local overrides, partial-copy rollback, locks and stable-id rename."
 }
 finally {
     if (Test-Path -LiteralPath $TempRoot) {

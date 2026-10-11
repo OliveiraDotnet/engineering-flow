@@ -1,98 +1,43 @@
-# .NET Agents Pack usage manual
+# Manual do Engineering Flow 2.0
 
-## 1. Purpose
+O agente ativo pode investigar, planejar, implementar e entregar sozinho em Codex ou Grok Build. Compatibilidade Claude é opcional. Não é necessário coordenador de outro provedor nem colaboração automática. O fluxo completo está em [workflow.md](repo-template/docs/engineering-flow/workflow.md).
 
-The pack installs guidance, specialized agents, skills, prompts, and technical memory so AI tools can work in modern, legacy, or mixed .NET repositories without inventing architecture, commands, or project rules.
+## Seleção por demanda
 
-Codex is required and is the control plane. Grok Build is an optional execution plane (bounded work, worktrees, parallelism). Claude Code remains optional compatibility.
-
-You are the only decision authority:
-
-1. **Gate 1:** non-trivial work starts only after you approve the plan, scope, risks, and validation.
-2. The approved plan is the **execution envelope**.
-3. **Gate 2:** after execution, Codex reviews the real diff. Commit, push, merge, deploy, release, production migration, and data changes need your explicit authorization.
-
-## 2. What gets installed
-
-| Path | Purpose | Version? |
+| Demanda | Skill | Resultado esperado |
 |---|---|---|
-| `AGENTS.md` | Short persistent rules. | Yes. |
-| `.codex/agents/` | Codex specialists. | Yes. |
-| `.agents/skills/` | Canonical skills. | Yes. |
-| `prompts/` | Ready workflow prompts. | Yes. |
-| `docs/ai/` | Confirmed project memory (seeds). | Yes, no secrets. |
-| `CLAUDE.md`, `.claude/` | Claude bridge, only if requested. | Yes if Claude is in the project. |
-| `.grok/` | Grok policy, agents, skills, only if requested. | Yes. |
-| `.agent-pack/state.txt` | Version, profiles, integrations, baselines. | Yes. |
+| Sistema desconhecido/existente/misto | bootstrap-repo | Mapa confirmado, regras concisas e plano sem produção alterada |
+| Repo vazio/projeto novo | new-project | Requisitos, arquitetura e testes propostos antes do scaffolding aprovado |
+| Defeito | bugfix | Causa observada/hipótese, plano mínimo, fix e regressão aprovada |
+| Funcionalidade | feature-slice | Fatia por critérios e contratos da stack existente |
+| Refatoração/legado | refactor | Limites de comportamento preservado e caracterização aprovada |
+| Revisão | review-change | Achados do diff/novos arquivos e evidência real |
+| Entrega | complete-task | Critérios, resultados, artefatos e pendências |
+| Procedimento recorrente confirmado | create-repo-skill | Skill mínima útil conforme convenções do host |
 
-Do not version worktrees, sessions, transcripts, credentials, or caches.
+Módulos: web-app (navegador e ASP clássico/SPA), web-dotnet (Razor/MVC/Blazor/Web Forms), dotnet-xunit-tests (somente xUnit), sqlserver-structure-review/db-change-sqlserver, mobile-app (nativo/híbrido/multiplataforma), quality (opt-in). Entradas *-dotnet continuam disponíveis para expertise .NET e obedecem ao contrato comum. Não carregar todas as skills em toda tarefa.
 
-## 3. Profiles
+## Bug pequeno
 
-- `core`: always. Discovery, implementation, tests, review, memory, encoding checks.
-- `web`: Razor, MVC, Blazor, Web Forms, .NET 3.1+ and classic Framework UI. Auto-selected when UI evidence exists.
-- `sqlserver`: read-only system understanding, then planned DB changes after approval. Auto-selected when SQL evidence exists.
-- `quality`: security, performance, release review. Never auto-selected.
+Pedido: “Ao salvar preço zero, a tela Web Forms rejeita o formulário”. Investigue binding, validação server-side e chamada SQL. Plano curto: aceitar zero e rejeitar negativo, tocar validator/service afetados, preservar contrato, propor regressão na framework real e cenário navegador salvar/recarregar com ambiente de teste. Aprovação: “implemente e execute esses testes nesse ambiente”. Então execute e registre resultados, inclusive console/rede quando pertinente. Se a resposta aprovar só o fix, implemente e indique não validado, perguntando se os checks devem ser incluídos.
 
-Flutter was removed in 1.6.0. A later mobile pack can cover it. Unchanged 1.5.0 Flutter files that still match the catalog are retired on update.
+## Feature complexa
 
-## 4. New install
+Pedido: “Novo filtro por status com API e listagem”. Plano explicita critérios, rotas/payloads, autenticação, consultas/índices, componentes, riscos e testes unitários/integração/UI. Mudança de contrato ou novo acesso a banco não cabe como detalhe mecânico; retorna ao humano. Não instale runner/browser automaticamente. Cada critério tem cenário e observado. Falha fica como falha até corrigir e reexecutar dentro do envelope.
 
-Point the installer at a Git root **or** a parent folder that contains Git repositories. It inspects first, then installs into each discovered root with the profiles that belong there.
+## Projeto novo e mobile
 
-```powershell
-.\scripts\install-agent-pack.ps1 -RepoPath "C:\src" -DiscoverOnly
-.\scripts\install-agent-pack.ps1 -RepoPath "C:\src"
-.\scripts\install-agent-pack.ps1 -RepoPath "C:\src\MySystem" -Profile web,sqlserver -IncludeGrokBuild
-```
+Repo vazio: confirme usuários, plataformas, dados/offline, integrações, restrições e critérios. Proponha arquitetura/stack/versões e estratégia de validação; escolha pelo problema e ferramentas, não por detector. Só faça scaffolding após aprovação. Para app nativo/híbrido/multiplataforma novo ou existente, confirme SDK e dispositivo/emulador/simulador. Teste UI/lógica nativa no ambiente autorizado. Browser pode cobrir a parte web híbrida, mas não prova bridge/permissões/lifecycle. Sem ambiente nativo, reporte implementação e validação pendente com preparo/roteiro, sem fingir execução.
 
-```bash
-bash ./scripts/install-agent-pack.sh /src --discover-only
-bash ./scripts/install-agent-pack.sh /src
-bash ./scripts/install-agent-pack.sh /src/my-system --profile web,sqlserver --include-grok-build
-```
+## Evidência de aprovação e entrega
 
-If `-Profile` / `--profile` is omitted, the installer uses existing `.agent-pack/state.txt` when present; otherwise it detects `web` and `sqlserver` from the repository. Quality, Claude, and Grok are never implied.
+Registre envelope: “implementação do filtro + unitários no runner existente + UI no localhost; banco externo não incluído”. Autorização persiste nas próximas etapas; ampliação material é nova decisão.
 
-Then bootstrap with `prompts/00-bootstrap-repo.md` or `$bootstrap-dotnet-repo`. `[UNVERIFIED]` is not a fact.
+| Critério | Cenário | Esperado | Observado | Artefato | Status |
+|---|---|---|---|---|---|
+| Zero aceito | Salvar/recarregar preço 0 no ambiente aprovado | Valor permanece 0 | [resultado real] | [relatório/log/clip acessível e redigido] | [verificado/falhou/pendente] |
+| Negativo rejeitado | Teste com -1 | Erro de validação | Não executado, teste não aprovado | Roteiro proposto | não verificado |
 
-## 5. Updating a 1.5.0 install
+A tabela é exemplo, não execução. Reporte comandos/códigos de saída e testes realmente descobertos. Screenshots complementam cenários; não comprovam comportamento sozinhas. Memória durável em docs/ai contém fonte/data; evidência e estado de execução ficam fora do repositório por padrão. Não inclua segredos/dados sensíveis. Publicação/produção dependem de autorização específica, mesmo com testes aprovados.
 
-Do not re-run the installer with `Force`. Use the updater:
-
-```powershell
-.\scripts\update-agent-pack.ps1 -RepoPath "C:\src\MySystem" -Check
-.\scripts\update-agent-pack.ps1 -RepoPath "C:\src\MySystem" -Apply
-```
-
-A conflict blocks the whole apply. Resolve per artifact with `AcceptMerge`, `AcceptPack`, or `KeepLocal`. `docs/ai` stays repository-owned. New profiles are not installed just because 1.6 contains them.
-
-## 6. Daily skills
-
-| Work | Prompt | Skill |
-|---|---|---|
-| Bootstrap / workspace inspect | `00-bootstrap-repo.md` | `$bootstrap-dotnet-repo` |
-| Bugfix | `01-bugfix.md` | `$bugfix-dotnet` |
-| Feature | `02-feature-slice.md` | `$feature-slice-dotnet` |
-| Understand SQL Server | — | `$sqlserver-structure-review` |
-| Change SQL Server | `03-db-change.md` | `$db-change-sqlserver` |
-| .NET web UI | — | `$web-dotnet` |
-| xUnit layer | — | `$dotnet-xunit-tests` |
-| Review | `04-pr-review.md` | `$pr-review-dotnet` |
-| Legacy refactor | `05-refactor-legado.md` | `$legacy-refactor-dotnet` |
-| Memory | `06-update-agent-memory.md` | `$maintain-agent-memory` |
-| Read-only investigation | `07-investigate-only.md` | `repo_explorer` |
-| Pack update | `08-update-agent-pack.md` | `$update-agent-pack` |
-
-`$sqlserver-structure-review` never writes the database. `$db-change-sqlserver` produces a plan first; destructive SQL waits for your approval; execution against a real database needs a named environment and explicit authorization.
-
-## 7. Codex + Grok
-
-Non-trivial work: plan → Gate 1 → work order → Grok worktree → Codex reviews the real diff → Gate 2. Grok must not commit, push, deploy, migrate, or apply onto the main checkout.
-
-## 8. Hygiene
-
-- No secrets in prompts, memory, or logs.
-- Do not invent build or test commands.
-- Run `check-text-encoding` after text edits.
-- Update `docs/ai` only with durable, dated, secret-free facts.
+Pesquisa oficial é sob demanda por incerteza técnica e versões; mapa existente evita redescoberta. Stack desconhecida exige investigar e reportar limites. Desktop/DevOps usam checks adequados ao host e ambiente aprovados. [Grok Bot](GROK_BOT_OPCIONAL.md) é ajuda opcional com handoff limitado, sem integração direta presumida.

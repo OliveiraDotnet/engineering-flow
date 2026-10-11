@@ -150,8 +150,6 @@ if [ "${#requested_integrations[@]}" -gt 0 ]; then
       normalized_integrations+=("$integration")
   done
   requested_integrations=("${normalized_integrations[@]}")
-  contains_value "codex" "${requested_integrations[@]}" ||
-    fail "The Codex integration is mandatory. Include codex when overriding integrations."
 fi
 
 [ -n "$mode" ] || fail "Choose exactly one mode: --check or --apply."
@@ -494,7 +492,10 @@ state_baseline_hashes=()
 state_modes=()
 state_local_hashes=()
 
+state_planning_hash="ABSENT"
 if [ -f "$STATE_FILE" ]; then
+  hash_file "$STATE_FILE"
+  state_planning_hash="$HASH_VALUE"
   state_exists=true
   while IFS= read -r line || [ -n "$line" ]; do
     line="$(trim "$line")"
@@ -655,7 +656,10 @@ if [ "${#requested_integrations[@]}" -gt 0 ]; then
 fi
 
 artifact_is_selected() {
-  local component="$1" profile
+  local component="$1" destination="$2" profile
+  if ! contains_value "codex" "${selected_integrations[@]}"; then
+    case "$destination" in .codex/*|*/agents/openai.yaml) return 1 ;; esac
+  fi
   if [[ "$component" = claude-* ]]; then
     profile="${component#claude-}"
     contains_value "claude" "${selected_integrations[@]}" &&
@@ -665,8 +669,7 @@ artifact_is_selected() {
     contains_value "grok" "${selected_integrations[@]}" &&
       contains_value "$profile" "${selected_profiles[@]}"
   else
-    contains_value "codex" "${selected_integrations[@]}" &&
-      contains_value "$component" "${selected_profiles[@]}"
+    contains_value "$component" "${selected_profiles[@]}"
   fi
 }
 
@@ -783,7 +786,7 @@ add_receipt() {
 
 for index in "${!artifact_ids[@]}"; do
   component="${artifact_components[$index]}"
-  artifact_is_selected "$component" || continue
+  artifact_is_selected "$component" "${artifact_destinations[$index]}" || continue
   artifact_id="${artifact_ids[$index]}"
   destination_relative="${artifact_destinations[$index]}"
   ownership="${artifact_ownerships[$index]}"
@@ -1099,7 +1102,7 @@ for state_index in "${!state_ids[@]}"; do
   still_desired=false
   for current_index in "${!artifact_ids[@]}"; do
     if [ "${artifact_ids[$current_index]}" = "$artifact_id" ] &&
-       artifact_is_selected "${artifact_components[$current_index]}"; then
+       artifact_is_selected "${artifact_components[$current_index]}" "${artifact_destinations[$current_index]}"; then
       still_desired=true
     fi
   done
@@ -1266,7 +1269,7 @@ cleanup_staging() {
 }
 
 release_lock() {
-  [ -d "$lock_dir" ] && rmdir "$lock_dir" 2>/dev/null || true
+  [ -f "$lock_dir" ] && rm -f "$lock_dir" || true
 }
 
 rollback() {
@@ -1291,16 +1294,16 @@ rollback() {
         ;;
       UPDATE|UPDATE_ADOPTED|REPLACE_ACCEPTED|WRITE_PACK)
         backup="$backup_dir/files/$index"
-        [ -f "$destination" ] && rm -f "$destination"
         if [ -f "$backup" ]; then
+          [ -f "$destination" ] && rm -f "$destination"
           mkdir -p "$(dirname "$destination")"
           mv "$backup" "$destination"
         fi
         ;;
       REMOVE|REMOVE_ACCEPTED|RETIRE_RENAMED)
         backup="$retired_dir/files/$index"
-        [ -f "$destination" ] && rm -f "$destination"
         if [ -f "$backup" ]; then
+          [ -f "$destination" ] && rm -f "$destination"
           mkdir -p "$(dirname "$destination")"
           mv "$backup" "$destination"
         fi
@@ -1336,10 +1339,18 @@ trap on_interrupt INT TERM HUP
 trap on_exit EXIT
 
 mkdir -p "$RUNTIME_DIR"
-if ! mkdir "$lock_dir" 2>/dev/null; then
+bash "$SCRIPT_DIR/protect-engineering-flow-files.sh" "$REPO_ROOT" check
+if ! (set -C; : > "$lock_dir") 2>/dev/null; then
   fail "Another update is active or a stale lock exists: $lock_dir"
 fi
 transaction_active=true
+
+locked_state_hash="ABSENT"
+if [ -f "$STATE_FILE" ]; then
+  hash_file "$STATE_FILE"
+  locked_state_hash="$HASH_VALUE"
+fi
+[ "$locked_state_hash" = "$state_planning_hash" ] || fail "Agent Pack state changed after planning; rerun the update."
 
 if [ ! -f "$RUNTIME_DIR/.gitignore" ]; then
   runtime_gitignore_created=true
@@ -1442,6 +1453,12 @@ if [ "$apply_failed" = true ]; then
   exit 1
 fi
 
+before_commit_hash="ABSENT"
+if [ -f "$STATE_FILE" ]; then
+  hash_file "$STATE_FILE"
+  before_commit_hash="$HASH_VALUE"
+fi
+[ "$before_commit_hash" = "$state_planning_hash" ] || fail "Agent Pack state changed during apply; refusing to overwrite it."
 if [ -f "$STATE_FILE" ]; then
   state_had_original=true
   if ! cp "$STATE_FILE" "$backup_dir/state.txt"; then
@@ -1461,5 +1478,6 @@ cleanup_staging
 release_lock
 transaction_active=false
 trap - INT TERM HUP EXIT
+bash "$SCRIPT_DIR/protect-engineering-flow-files.sh" "$REPO_ROOT"
 
 echo "Update applied successfully. Backups: $backup_dir Retired: $retired_dir"

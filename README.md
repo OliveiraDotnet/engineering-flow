@@ -1,75 +1,59 @@
-# .NET Agents Pack
+# Engineering Flow 2.0
 
-Generic pack that steers coding agents in modern and legacy .NET repositories without inventing architecture, commands, or personal preferences. Codex is the default integration and control plane. Claude Code and Grok Build are independent opt-in integrations.
+Workflow de engenharia para descobrir sistemas, planejar e entregar bugs, features, refatorações e projetos novos com aprovação humana e evidência. Funciona independentemente em Codex ou Grok Build, com compatibilidade Claude e extensão por instruções/skills de outros agentes. Mantém expertise .NET moderno/Framework, Web Forms, ASP clássico, HTML/CSS/JavaScript e SQL Server; tecnologias adicionais são investigadas pelo contexto, sem lista fechada de linguagens.
 
-It installs a small core for bootstrap, bugfix, feature work, refactoring, review, `AGENTS.md` generation, and xUnit tests. Optional profiles add web UI, SQL Server, and evidence-based quality review.
+**Entender → plano técnico → aprovação humana → implementar → executar testes aprovados → evidências → entregar.** Testes não pedidos/aprovados não executam automaticamente. Implementação aprovada sem testes é entregue como não validada; autorização existente não precisa ser repetida. Veja o [contrato comum](repo-template/docs/engineering-flow/workflow.md).
 
-Version 1.6.0 inspects the workspace before it copies files: a Git root, a parent folder of independent repositories, or a non-Git folder. It suggests `web` and `sqlserver` from repository evidence. It does not install Flutter; a later mobile pack can cover that.
+Versão `2.0.0`. Nome público Engineering Flow; repositório `engineering-flow`. Suporta instalação inicial e atualização de instalações 1.7.0 e versões anteriores reconhecidas pelos catálogos. O pack contém orientação, configurações e scripts locais, sem instalar runtimes ou afirmar suporte automatizado universal. Mobile inclui apps nativos, híbridos e multiplataforma, novos ou existentes; desktop e DevOps têm procedimentos proporcionais ao ambiente autorizado.
 
-## Components
-
-| Component | Install | Use |
+| Perfil | Seleção | Conteúdo |
 |---|---|---|
-| `core` | always | Repository context, .NET discovery, explore/implement/test/review agents, and core skills. |
-| `web` | optional / auto when UI evidence exists | Razor, MVC, Blazor, Web Forms, and app JavaScript, including .NET 3.1+ and classic Framework. |
-| `sqlserver` | optional / auto when SQL evidence exists | Read-only system understanding from SQL Server, then planned changes only after approval. |
-| `quality` | optional, never auto | Evidence-based security, performance, and release review. |
+| core | sempre | Descoberta, projeto novo, bug, feature, refactor, review, completion, skills recorrentes e contrato. Entradas .NET antigas preservadas por compatibilidade. |
+| web | explícito ou evidência de UI | Procedimento geral de navegador/ASP clássico/SPA e especialização .NET web. |
+| sqlserver | explícito ou provider/T-SQL específico | Entendimento read-only e mudanças SQL Server aprovadas. |
+| mobile | explícito ou evidência de plataforma | Planejamento e validação nativa/híbrida/multiplataforma; não instala SDK/dispositivo. |
+| quality | explícito, nunca automático | Revisões focadas de segurança, desempenho e entrega. |
 
-`pack-manifest.txt` is the source of truth for installed files. `pack-artifacts.txt` records stable ids and ownership. `pack-version.txt` is the pack version. `compat/releases/` stores trusted fingerprints so 1.5.0 (and earlier) installs can update without losing project-owned files.
+## Instalação
 
-The installer never copies a profile that was not selected or detected. An upgrade never installs a profile that the destination did not already have.
-
-## Install
-
-Run from the pack root. Point at a Git root **or** a workspace folder that contains Git repositories.
+Execute na raiz do pack, apontando para Git root, monorepo ou pasta com repos independentes. Um repo Git vazio pode receber core e planejar scaffolding depois. Para pasta deliberadamente não Git use AllowNonGit.
 
 ```powershell
-# Inspect a workspace with more than one repository, then install into each Git root
-.\scripts\install-agent-pack.ps1 -RepoPath "C:\src" -DiscoverOnly
-.\scripts\install-agent-pack.ps1 -RepoPath "C:\src"
-
-# Explicit profiles (skips auto-detection)
-.\scripts\install-agent-pack.ps1 -RepoPath "C:\src\MySystem" -Profile web,sqlserver
-
-# Preview without writing
-.\scripts\install-agent-pack.ps1 -RepoPath "C:\src\MySystem" -Profile quality -DryRun
-
-# Codex + Grok Build
-.\scripts\install-agent-pack.ps1 -RepoPath "C:\src\MySystem" -IncludeGrokBuild
+.\scripts\install-engineering-flow.ps1 -RepoPath 'C:\src' -DiscoverOnly
+.\scripts\install-engineering-flow.ps1 -RepoPath 'C:\src\Sistema' -Integration grok -Profile web,sqlserver -DryRun
+.\scripts\install-engineering-flow.ps1 -RepoPath 'C:\src\Sistema' -Integration grok -Profile web,sqlserver
+.\scripts\install-engineering-flow.ps1 -RepoPath 'C:\src\NovoApp' -Integration codex -Profile mobile
 ```
 
 ```bash
-bash ./scripts/install-agent-pack.sh /src --discover-only
-bash ./scripts/install-agent-pack.sh /src
-bash ./scripts/install-agent-pack.sh /src/my-system --profile web,sqlserver
-bash ./scripts/install-agent-pack.sh /src/my-system --profile quality --dry-run
-bash ./scripts/install-agent-pack.sh /src/my-system --include-grok-build
+bash ./scripts/install-engineering-flow.sh /src --discover-only
+bash ./scripts/install-engineering-flow.sh /src/sistema --integration grok --profile web,sqlserver --dry-run
+bash ./scripts/install-engineering-flow.sh /src/sistema --integration grok --profile web,sqlserver
+bash ./scripts/install-engineering-flow.sh /src/novo-app --integration codex --profile mobile
 ```
 
-Without integration flags, only Codex is installed. `IncludeClaude` / `--include-claude` adds the Claude bridge. `IncludeGrokBuild` / `--include-grok-build` adds Grok project files. New installs write `.agent-pack/state.txt` so later updates do not depend only on fingerprints.
+Sem seleção inicial, Codex é o padrão. `Integration grok` instala Grok independente; `codex,grok` permite coexistência; `claude` é compatibilidade opcional. IncludeClaude/IncludeGrokBuild continuam disponíveis. Em instalação existente, seleção registrada é preservada. Perfil explícito evita autodetecção; não prepara ferramentas por inferência. InstallGlobal é exemplo pessoal opt-in.
 
-Use `-AllowNonGit` / `--allow-non-git` only for a folder that is intentionally not Git. `-InstallGlobal` / `--install-global` copies the optional personal Codex example; it is not installed by default.
-
-## Safe update of an existing 1.5.0 install
-
-Use the updater, not the installer's `Force` switch.
+## Atualização segura
 
 ```powershell
-.\scripts\update-agent-pack.ps1 -RepoPath "C:\src\MySystem" -Check
-.\scripts\update-agent-pack.ps1 -RepoPath "C:\src\MySystem" -Apply
+.\scripts\update-engineering-flow.ps1 -RepoPath 'C:\src\Sistema' -Check
+.\scripts\update-engineering-flow.ps1 -RepoPath 'C:\src\Sistema' -Apply
 ```
 
 ```bash
-bash ./scripts/update-agent-pack.sh /src/my-system --check
-bash ./scripts/update-agent-pack.sh /src/my-system --apply
+bash ./scripts/update-engineering-flow.sh /src/sistema --check
+bash ./scripts/update-engineering-flow.sh /src/sistema --apply
 ```
 
-Unchanged Flutter files from 1.5.0 are retired automatically when they still match the 1.5.0 catalog. Customized Flutter files require `AcceptPack` or `KeepLocal`. `docs/ai` stays repository-owned. `AGENTS.md` uses merge ownership.
+Use updater, não Force. `pack-manifest.txt`, `pack-artifacts.txt` e `pack-version.txt` definem arquivos, IDs estáveis/propriedade e versão. `.agent-pack/state.txt` e nomes antigos de scripts/skills permanecem compatíveis. Perfis/integrações previamente selecionados são preservados; atualizar não adiciona mobile/quality não selecionados. `managed` atualizado somente pela reconciliação, `merge` exige revisão humana das diferenças, `seed` pertence ao projeto. Conflitos mantêm customização e precisam de AcceptPack, AcceptMerge (após merge) ou KeepLocal; confira o [guia detalhado](INSTRUCOES_DETALHADAS.md).
 
-## First use
+Catálogos históricos são preservados. `compat/releases/1.7.0.txt` identifica arquivos da pré-release 1.7, sem alegar release publicado. Artifacts Flutter antigos de 1.5 podem ser aposentados se intactos; customizados exigem decisão. O novo perfil mobile é um procedimento geral, sem substituir silenciosamente aqueles arquivos.
 
-Open the installed repository and run `prompts/00-bootstrap-repo.md` or `$bootstrap-dotnet-repo`. The skill inspects without changing production code, then fills confirmed facts. Start a new task afterward so persistent instructions reload.
+## Uso diário
 
-For SQL Server, `$sqlserver-structure-review` is read-only. `$db-change-sqlserver` writes scripts only after you approve the plan. For .NET UI, use `$web-dotnet`.
+Comece com `$bootstrap-repo` ou prompts/00-bootstrap-repo.md quando faltar contexto. Escolha `$bugfix`, `$feature-slice`, `$refactor`, `$review-change` ou `$new-project`; conclua com `$complete-task`. Skills são selecionáveis por nome/tarefa e invocadas pelo host ativo. Especialistas são opcionais; segundo provedor não é requisito. Use módulos somente quando pertinentes. Uma skill por repo só se justifica por procedimento recorrente confirmado.
 
-See the [usage manual](MANUAL_DE_USO.md), [detailed instructions](INSTRUCOES_DETALHADAS.md), [changelog](CHANGELOG.md), and the official Codex, Claude, and Grok Build source notes before rolling the pack out widely.
+Veja [manual e exemplos](MANUAL_DE_USO.md), [adoção/migração e limites](INSTRUCOES_DETALHADAS.md), [capacidades de validação](repo-template/docs/engineering-flow/capabilities.md), [Grok Bot opcional](GROK_BOT_OPCIONAL.md) e [changelog](CHANGELOG.md).
+
+A instalação/update preserva .gitignore e acrescenta proteção de resíduos operacionais. Skills/configuração e .agent-pack/state.txt permanecem versionáveis; veja higiene Git no guia detalhado. Regras próprias e arquivos já rastreados exigem revisão quando incompatíveis.

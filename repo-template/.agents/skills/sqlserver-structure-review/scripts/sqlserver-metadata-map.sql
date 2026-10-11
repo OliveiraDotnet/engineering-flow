@@ -5,10 +5,16 @@ Read-only metadata collection script for authorized databases.
 Run only against a database you are allowed to inspect, preferably local/dev/test.
 If the database is reachable only through a corporate VPN, run this from the VPN-enabled machine or approved company tooling.
 This script does not modify data or schema.
-Review output before sharing because module definitions may contain business logic.
+Requires SQL Server 2016+ (temporal/Query Store columns). Confirm engine before running.
+Metadata visibility depends on permissions: missing rows are not proof of absent objects.
+Row counts are approximate. Definitions are omitted by default because they may contain
+secrets or personal literals. Enable only for necessary local inspection, then sanitize
+before sharing. This is not a complete map of dynamic SQL, jobs, or external callers.
 */
 
 SET NOCOUNT ON;
+
+DECLARE @IncludeDefinitions bit = 0; -- Opt-in only; sanitize all enabled text before sharing.
 
 SELECT
     DB_NAME() AS database_name,
@@ -33,10 +39,10 @@ SELECT
     t.create_date,
     t.modify_date,
     t.temporal_type_desc,
-    SUM(CASE WHEN p.index_id IN (0, 1) THEN p.row_count ELSE 0 END) AS row_count
+    SUM(CASE WHEN p.index_id IN (0, 1) THEN p.rows ELSE 0 END) AS approximate_row_count
 FROM sys.tables AS t
 JOIN sys.schemas AS s ON s.schema_id = t.schema_id
-LEFT JOIN sys.dm_db_partition_stats AS p ON p.object_id = t.object_id
+LEFT JOIN sys.partitions AS p ON p.object_id = t.object_id
 GROUP BY s.name, t.name, t.object_id, t.create_date, t.modify_date, t.temporal_type_desc
 ORDER BY s.name, t.name;
 
@@ -53,7 +59,8 @@ SELECT
     c.is_identity,
     c.is_computed,
     dc.name AS default_constraint_name,
-    cc.definition AS computed_definition
+    CASE WHEN @IncludeDefinitions = 1 THEN dc.definition END AS default_definition,
+    CASE WHEN @IncludeDefinitions = 1 THEN cc.definition END AS computed_definition
 FROM sys.tables AS t
 JOIN sys.schemas AS s ON s.schema_id = t.schema_id
 JOIN sys.columns AS c ON c.object_id = t.object_id
@@ -111,7 +118,7 @@ SELECT
     i.is_primary_key,
     i.is_unique_constraint,
     i.has_filter,
-    i.filter_definition,
+    CASE WHEN @IncludeDefinitions = 1 THEN i.filter_definition END AS filter_definition,
     ic.key_ordinal,
     ic.is_included_column,
     c.name AS column_name
@@ -127,7 +134,7 @@ SELECT
     s.name AS schema_name,
     t.name AS table_name,
     chk.name AS check_constraint_name,
-    chk.definition,
+    CASE WHEN @IncludeDefinitions = 1 THEN chk.definition END AS check_definition,
     chk.is_disabled,
     chk.is_not_trusted
 FROM sys.check_constraints AS chk
@@ -166,7 +173,10 @@ SELECT
     m.uses_ansi_nulls,
     m.uses_quoted_identifier,
     m.is_schema_bound,
-    m.definition
+    CASE WHEN @IncludeDefinitions = 1 THEN m.definition END AS definition,
+    CASE WHEN @IncludeDefinitions = 0 THEN 'omitted by default'
+         WHEN m.definition IS NULL THEN 'unavailable: encryption or visibility'
+         ELSE 'included: sanitize before sharing' END AS definition_status
 FROM sys.sql_modules AS m
 JOIN sys.objects AS o ON o.object_id = m.object_id
 JOIN sys.schemas AS s ON s.schema_id = o.schema_id
