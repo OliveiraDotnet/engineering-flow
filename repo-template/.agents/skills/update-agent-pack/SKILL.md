@@ -3,6 +3,10 @@ name: update-agent-pack
 description: Inspect and safely reconcile an existing repository installation with a newer Agent Pack, including added, changed, renamed, or retired skills, agents, prompts, and rules. Use when the user asks Codex, Claude, or Grok Build to check, update, migrate, synchronize, or repair an installed Agent Pack without losing repository-specific guidance or local customizations.
 ---
 
+## Engineering Flow 2.0 execution gate
+
+Follow docs/engineering-flow/workflow.md in the target repository. Understand demand, present a technical plan, receive human approval, implement, execute only approved tests, gather criterion-linked evidence, deliver. Existing explicit authorization persists. Investigation/plan do not authorize implementation. Absence of a test request does not automatically authorize tests: highlight missing validation and ask whether to include it. If only implementation is approved, deliver it as unvalidated with pending checks. Material changes in scope, behavior, architecture/contracts, dependencies, security/data or validation return to the human. This gate governs execution steps below; no automatic delegation or second provider is required.
+
 # Update Agent Pack
 
 1. Confirm the repository root, read its applicable `AGENTS.md`, `CLAUDE.md`, `.grok/config.toml`, and `.agent-pack/state.txt` when present, then inspect `git status`. Do not modify production code.

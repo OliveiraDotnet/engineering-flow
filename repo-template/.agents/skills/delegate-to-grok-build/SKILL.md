@@ -3,6 +3,10 @@ name: delegate-to-grok-build
 description: Hand a bounded task to an available Grok Build session or native subagent with explicit scope and independent diff review. Use when Grok delegation is requested or useful, not as a prerequisite for standalone work.
 ---
 
+## Engineering Flow 2.0 execution gate
+
+Follow docs/engineering-flow/workflow.md in the target repository. Understand demand, present a technical plan, receive human approval, implement, execute only approved tests, gather criterion-linked evidence, deliver. Existing explicit authorization persists. Investigation/plan do not authorize implementation. Absence of a test request does not automatically authorize tests: highlight missing validation and ask whether to include it. If only implementation is approved, deliver it as unvalidated with pending checks. Material changes in scope, behavior, architecture/contracts, dependencies, security/data or validation return to the human. This gate governs execution steps below; no automatic delegation or second provider is required.
+
 # Delegate to Grok Build
 
 Read the shared [agent work order](../agent-work-order/SKILL.md) and follow its coordinator contract. Codex, Grok Build, or another authorized agent can coordinate; user authorization establishes the execution envelope.

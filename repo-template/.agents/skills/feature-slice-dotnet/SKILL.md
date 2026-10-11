@@ -3,6 +3,10 @@ name: feature-slice-dotnet
 description: Implement a bounded .NET feature by following the repository's existing flow, validation pattern, data boundaries, and acceptance criteria. Use for modern or legacy .NET feature work.
 ---
 
+## Engineering Flow 2.0 execution gate
+
+Follow docs/engineering-flow/workflow.md in the target repository. Understand demand, present a technical plan, receive human approval, implement, execute only approved tests, gather criterion-linked evidence, deliver. Existing explicit authorization persists. Investigation/plan do not authorize implementation. Absence of a test request does not automatically authorize tests: highlight missing validation and ask whether to include it. If only implementation is approved, deliver it as unvalidated with pending checks. Material changes in scope, behavior, architecture/contracts, dependencies, security/data or validation return to the human. This gate governs execution steps below; no automatic delegation or second provider is required.
+
 # Feature slice .NET
 
 1. Confirm objective, acceptance criteria, exclusions and expected user-visible behavior.

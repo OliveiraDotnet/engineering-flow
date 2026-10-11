@@ -26,9 +26,9 @@ $ManifestPath = Join-Path $PackRoot "pack-manifest.txt"
 $ArtifactsPath = Join-Path $PackRoot "pack-artifacts.txt"
 $VersionPath = Join-Path $PackRoot "pack-version.txt"
 $GlobalGuidance = Join-Path $PackRoot "global\AGENTS.md"
-$InspectScript = Join-Path $TemplateRoot ".agents\skills\bootstrap-dotnet-repo\scripts\inspect-dotnet-repo.ps1"
-$ValidProfiles = @("core", "web", "sqlserver", "quality")
-$AutoDetectableProfiles = @("web", "sqlserver")
+$InspectScript = Join-Path $TemplateRoot ".agents\skills\bootstrap-repo\scripts\inspect-repo.ps1"
+$ValidProfiles = @("core", "web", "sqlserver", "quality", "mobile")
+$AutoDetectableProfiles = @("web", "sqlserver", "mobile")
 $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 $Utf8Strict = New-Object System.Text.UTF8Encoding($false, $true)
 $PathComparison = if ($env:OS -eq "Windows_NT") { [StringComparison]::OrdinalIgnoreCase } else { [StringComparison]::Ordinal }
@@ -493,11 +493,15 @@ function Install-ToRepository {
 
     Assert-NoLinkedPath (Join-Path $TargetRoot '.agent-pack/state.txt.tmp')
 
+    $ignoreHelper = Join-Path $ScriptDir 'protect-engineering-flow-files.ps1'
+    & $ignoreHelper -RepoPath $TargetRoot -CheckOnly
     foreach ($action in $actions) {
         Invoke-CopyAction -Action $action
     }
 
     Write-InstallState -TargetRoot $TargetRoot -PackVersion $PackVersion -Profiles $profiles -Integrations $integrations -ManifestByDestination $ManifestByDestination -ArtifactEntries $ArtifactEntries -Actions $actions
+    if ($DryRun -or $WhatIfPreference) { & $ignoreHelper -RepoPath $TargetRoot -DryRun }
+    elseif ($PSCmdlet.ShouldProcess($TargetRoot, 'Protect generated Engineering Flow files in .gitignore')) { & $ignoreHelper -RepoPath $TargetRoot }
 
     $summary = $actions | Group-Object State | Sort-Object Name | ForEach-Object { "{0}={1}" -f $_.Name, $_.Count }
     Write-Host ("Summary: {0}" -f ($summary -join ", "))

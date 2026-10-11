@@ -3,6 +3,10 @@ name: bootstrap-dotnet-repo
 description: Inspect and bootstrap a .NET workspace without changing production code. Use for first-run discovery of one Git repository, a parent folder of independent repositories, or a monorepo. Do not use to rewrite an already bootstrapped AGENTS.md; use agents-md-generator for that short file only.
 ---
 
+## Engineering Flow 2.0 execution gate
+
+Follow docs/engineering-flow/workflow.md in the target repository. Understand demand, present a technical plan, receive human approval, implement, execute only approved tests, gather criterion-linked evidence, deliver. Existing explicit authorization persists. Investigation/plan do not authorize implementation. Absence of a test request does not automatically authorize tests: highlight missing validation and ask whether to include it. If only implementation is approved, deliver it as unvalidated with pending checks. Material changes in scope, behavior, architecture/contracts, dependencies, security/data or validation return to the human. This gate governs execution steps below; no automatic delegation or second provider is required.
+
 # Bootstrap a .NET repository
 
 1. Classify the workspace from Git evidence: one repository, one Git root with multiple apps (monorepo), a parent folder of independent Git repositories, or a non-Git folder.

@@ -1,6 +1,6 @@
 # Fontes oficiais do Grok Build
 
-Este arquivo registra as decisões específicas do Grok Build usadas pelo Agent Pack. Consulte novamente as fontes antes de alterar caminhos, formatos ou políticas.
+Este arquivo registra as decisões específicas do Grok Build usadas pelo Engineering Flow. Consulte novamente as fontes antes de alterar caminhos, formatos ou políticas.
 
 ## Regras e contexto do projeto
 
@@ -14,7 +14,7 @@ Este arquivo registra as decisões específicas do Grok Build usadas pelo Agent 
 - [Settings](https://docs.x.ai/build/settings): configuração de projeto usa `.grok/config.toml`.
 - [Permissions](https://docs.x.ai/build/features/permissions): regras de permissão podem permitir, perguntar ou negar comandos específicos.
 
-O pack instala em `.grok/config.toml` somente uma política mínima do projeto que nega commit, push e operações Git destrutivas. Autenticação, modelo, sandbox e preferências pessoais continuam sob responsabilidade da configuração do usuário.
+O pack instala em `.grok/config.toml` somente uma política mínima do projeto que nega operações destrutivas. Commit/push dependem de autorização humana aplicável e permissões nativas. Autenticação, modelo, sandbox e preferências pessoais continuam sob responsabilidade da configuração do usuário.
 
 ## Worktrees e execução não interativa
 
@@ -32,6 +32,8 @@ O Agent Pack usa essas capacidades com a seguinte divisão:
 2. Grok Build executa trabalho mecânico ou paralelizável em worktree nativo.
 3. Codex revisa o diff real, julga riscos, valida de forma independente e recomenda o próximo passo; o usuário decide e autoriza a integração.
 
+Veja também [Grok Bot opcional](GROK_BOT_OPCIONAL.md), sem dependência ou integração direta assumida.
+
 ## Decisões deliberadas do pack
 
 - `IncludeGrokBuild` e `--include-grok-build` são opt-in e independentes de `IncludeClaude`.
@@ -40,5 +42,5 @@ O Agent Pack usa essas capacidades com a seguinte divisão:
 - Não se cria `.ai-collab`, `.grok-worktrees` ou outro diretório de coordenação no repositório.
 - Não se ignora `.grok/` inteira: agentes, skills e configuração de projeto instalados ali são parte intencional e versionável da integração.
 - A automação padrão não usa `--yolo`; permissões amplas exigem decisão explícita do usuário.
-- Grok Build não recebe autorização para commit, push, deploy, migration ou aplicação direta na branch principal.
-- O usuário é a única autoridade decisória; planos não triviais e ações de integração ou produção passam por gates humanos explícitos.
+- A tarefa não concede automaticamente commit, push, deploy, migração ou integração na branch principal. Autorização explícita específica persiste para qualquer provedor.
+- O usuário é a única autoridade decisória; plano/aprovação precedem implementação e somente testes aprovados executam. Integração/produção exigem autorização aplicável.

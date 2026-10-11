@@ -3,6 +3,10 @@ name: check-text-encoding
 description: Detect invalid UTF-8 and likely mojibake in changed or repository text files. Use after editing source, documentation, prompts, rules, or skills, or when text appears corrupted.
 ---
 
+## Engineering Flow 2.0 execution gate
+
+Follow docs/engineering-flow/workflow.md in the target repository. Understand demand, present a technical plan, receive human approval, implement, execute only approved tests, gather criterion-linked evidence, deliver. Existing explicit authorization persists. Investigation/plan do not authorize implementation. Absence of a test request does not automatically authorize tests: highlight missing validation and ask whether to include it. If only implementation is approved, deliver it as unvalidated with pending checks. Material changes in scope, behavior, architecture/contracts, dependencies, security/data or validation return to the human. This gate governs execution steps below; no automatic delegation or second provider is required.
+
 # Check text encoding
 
 1. Resolve scripts relative to this SKILL.md, whether loaded from .agents, .grok, or .claude. Run scripts/check-mojibake.ps1 with RepoPath on Windows, or scripts/check-mojibake.sh with --repo on Linux/macOS, using the actual repository path.

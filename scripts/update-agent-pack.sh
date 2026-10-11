@@ -1339,6 +1339,7 @@ trap on_interrupt INT TERM HUP
 trap on_exit EXIT
 
 mkdir -p "$RUNTIME_DIR"
+bash "$SCRIPT_DIR/protect-engineering-flow-files.sh" "$REPO_ROOT" check
 if ! (set -C; : > "$lock_dir") 2>/dev/null; then
   fail "Another update is active or a stale lock exists: $lock_dir"
 fi
@@ -1477,5 +1478,6 @@ cleanup_staging
 release_lock
 transaction_active=false
 trap - INT TERM HUP EXIT
+bash "$SCRIPT_DIR/protect-engineering-flow-files.sh" "$REPO_ROOT"
 
 echo "Update applied successfully. Backups: $backup_dir Retired: $retired_dir"

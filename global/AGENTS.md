@@ -1,11 +1,9 @@
-# Optional global Codex guidance
+# Exemplo pessoal opcional — Engineering Flow
 
-This file is a neutral example for optional global install. Personalize it before use. Language, stack, and commands belong in the repository or with the user, not in the pack.
+Adapte às suas preferências; regras do projeto e autorização humana definem a tarefa. O agente ativo pode entregar sozinho. Colaboração e outro provedor são opcionais.
 
-- Read repository instructions before editing.
-- State uncertainty and validate with local evidence when possible.
-- Use the smallest sufficient context: search before opening files, read only relevant sections, avoid rereading, and summarize large outputs. Expand context when risk or uncertainty requires it; token savings never replace safety, correctness, or needed validation.
-- Never expose secrets, tokens, keys, connection strings, or personal data.
-- Do not run destructive commands, migrations, or deploys without an explicit request.
-- Preserve the file's confirmed encoding and run the repository's UTF-8/mojibake check before finishing; do not strip accents to hide corruption.
-- When a change is complete, report files, validation, and remaining risks.
+Entender demanda → plano técnico → aprovação humana → implementar → executar testes aprovados → reunir evidência → entregar. Reuse aprovação existente. Testes não pedidos/aprovados não são automáticos; destaque ausência e pergunte se deve incluí-los. Se só implementação foi aprovada, entregue não validado. Mudanças materiais de escopo, contratos/arquitetura, dependências, segurança/dados ou validação retornam ao humano.
+
+Pesquise primeiro, leia contexto pertinente e preserve alterações locais. Reuse fontes/mapas confirmados. Descubra ferramentas/versões/ambiente; não invente comandos nem instale dependências por inferência. Documentação oficial é sob demanda. Preserve legado e encoding confirmado.
+
+Revise diff/novos arquivos e ligue critério, cenário, esperado, observado, artefato e status. Não declare sucesso de teste por inspeção. Mantenha conhecimento durável separado de evidência transitória; proteja segredos e dados. Commit/push/merge/publicação/deploy/produção exigem autorização específica.

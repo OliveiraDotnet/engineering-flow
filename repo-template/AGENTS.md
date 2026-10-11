@@ -1,67 +1,39 @@
-# Project guidance
+# Engineering Flow — orientação do projeto
 
-> Active template: [UNVERIFIED] text is not repository evidence. Run bootstrap-dotnet-repo before the first substantial change when context is missing; reuse an already verified map. Reload the agent session after persistent instructions change when required by the host.
+Template ativo: [UNVERIFIED] não é evidência do repo. Use bootstrap-repo quando faltar contexto; reuse mapa confirmado. Recarregue instruções quando o host exigir.
 
-## Facts to confirm
+## Fatos a confirmar
 
-- Repository shape: [UNVERIFIED]
-- Solution/project files and toolchain: [UNVERIFIED]
-- Confirmed build, test, and run commands: [UNVERIFIED]
-- Test strategy and CI evidence: [UNVERIFIED]
-- Data access, integrations, and authorization boundaries: [UNVERIFIED]
+- Git roots, projetos, stack/toolchain/versões: [UNVERIFIED]
+- Comandos build/run/test e ambiente: [UNVERIFIED]
+- Frameworks de testes, CI, dados/integrações e limites: [UNVERIFIED]
 
-Use docs/ai/project-map.md for confirmed context. Project files, CI, scripts, and tests take precedence over unverified template examples.
+Confirme em código, manifests, scripts e CI. Registre fontes/data em docs/ai/project-map.md somente quando útil; preserve regras próprias.
 
-## Working rules
+## Contrato e autorização
 
-- Inspect applicable instructions, Git status, relevant diffs, and the affected execution path. Preserve existing user changes.
-- Keep changes within the user-authorized scope. Preserve public behavior outside the requested change; separate bugfixes and refactoring.
-- Reuse confirmed commands. If none exist, inspect actual tooling and help, identify derived commands as inferred, and validate before recording them as confirmed. Do not fabricate a command or block solely because documentation is absent.
-- For bugs, reproduce or characterize the failure when viable; distinguish observed root cause from a working hypothesis.
-- Use sqlserver-structure-review for read-only understanding and db-change-sqlserver for authorized change planning/implementation, only when those skills are installed.
-- Use web-dotnet for UI inside .NET web projects when installed; follow the actual stack.
-- Do not expose secrets, connection strings, credentials, personal data, or sensitive payloads.
-- Commit, push, merge, deploy, release, production migration/data changes and destructive operations require explicit applicable user authorization. Task completion alone does not grant it.
-- Before completion use the installed check-text-encoding skill on changed text. Preserve confirmed encoding; inspect findings before editing and never strip accents to hide corruption.
-- Run focused validation and verify relevant tests actually executed. If unavailable, give the precise gap and a controlled manual scenario.
+Leia docs/engineering-flow/workflow.md para a demanda; capabilities.md somente para a área afetada. O usuário é a sole decision authority.
 
-## Independent and collaborative operation
+Entender → plano técnico → aprovação humana → implementar → testes aprovados → evidências → entrega. Gate 1 define o execution envelope: objetivo, critérios, escopo/não objetivos, componentes, riscos/decisões, testes/ferramentas/ambiente e evidências. Investigação/plano não autorizam implementar. Autorização explícita existente persiste; não peça novamente por passos cobertos.
 
-Codex and Grok Build are peers. Either can independently investigate, plan, implement, test, review, and report. Neither requires the other to be installed, authenticated, or involved. Claude compatibility follows the same project rules.
+Ausência de pedido de testes não autoriza execução automática. Destaque a validação faltante e pergunte se deve incluí-la. Se só implementação foi aprovada, entregue como não validado com checks pendentes. Mudança material de escopo, comportamento, arquitetura/contratos, dependências, segurança/dados ou validação retorna ao humano (BLOCKED_BY_DECISION).
 
-The user is the sole decision authority. The agent receiving the task owns delivery unless the user assigns another coordinator. Collaboration is optional; roles follow the task, not the provider.
+Gate 2 separa entrega/evidência de commit, push, merge, publicação, deploy, migrações/dados de produção e operações destrutivas, que precisam de autorização aplicável à ação/alvo. Preserve mudanças existentes, encoding e contratos fora do escopo; não exponha segredos/dados pessoais.
 
-- Gate 1 establishes the execution envelope: objective, scope, material constraints, risks, and validation. For non-trivial work present a concise plan; existing explicit authorization for that work remains valid across turns. Ask again only for a missing material decision or scope expansion, not to repeat approval.
-- Routine reversible implementation and tests within the envelope can proceed. Stop for material deviations in behavior, contracts, architecture, production dependencies, security, data, or validation; return BLOCKED_BY_DECISION with evidence, options, and a recommendation.
-- In standalone mode the active agent completes all necessary roles itself. A missing companion tool is not a blocker.
-- For an actual handoff use the shared agent-work-order skill. Either tool can coordinate or execute. Use only available native delegation tools or verified CLI capabilities; never invent a cross-provider API.
-- Delegate only independent bounded work when useful. Concurrent modifying agents need isolated worktrees/checkouts and non-overlapping ownership; a single standalone agent can use the authorized working tree.
-- Preserve uncommitted context: do not delegate from a clean ref that omits required local changes. Include the needed context safely or keep that work local.
-- The receiving agent may implement within the envelope; a delegated task does not authorize committing, publishing, or applying to the caller's checkout.
-- The coordinator reviews the actual diff, new files, and validation evidence before integrating within scope. In standalone mode perform that review yourself; no mandatory second provider.
-- Gate 2 separates validated work from separately authorized integration/production actions. Report results and remaining gaps; do not wait for another provider to approve. Prior user authorization for a specific action remains valid unless its target or material conditions changed.
-- Keep transient sessions, handoffs, and worktrees outside tracked source. Store only durable verified knowledge in docs/ai.
+## Operação e seleção
 
-## Native discovery and role names
+Codex e Grok Build operam independentemente; compatibilidade Claude segue o mesmo contrato. O agente ativo conduz a entrega. Colaboração é opcional; não lance subagentes automaticamente nem presuma API entre provedores. Handoff real usa agent-work-order, contexto local preservado, ferramentas verificadas e isolamento para escritores concorrentes.
 
-Shared skills use the same names and content. Codex discovers .agents/skills; Grok uses the mirrored .grok/skills; Claude uses .claude/skills. Resolve scripts/references relative to the skill actually loaded. A copied prompt's $skill-name means use the named skill through the active tool's native invocation, not a shell command.
+Skills gerais: bootstrap-repo, new-project, bugfix, feature-slice, refactor, review-change, complete-task. Crie skill específica só para procedimento recorrente confirmado via create-repo-skill. Nomes $skill são invocação nativa, não shell. Leia só skills/referências pertinentes.
 
-| Role | Codex | Grok Build / Claude |
-| --- | --- | --- |
-| Explore | repo_explorer | repo-explorer |
-| Implement | dotnet_implementer | dotnet-implementer |
-| Tests | test_guardian | test-guardian |
-| Review | change_reviewer | change-reviewer |
-| Web | frontend_web | frontend-web |
-| SQL | database_sqlserver | database-sqlserver |
-| Security | security_reviewer | security-reviewer |
-| Performance | performance_reviewer | performance-reviewer |
-| Release | release_reviewer | release-reviewer |
+Módulos mantêm expertise: .NET moderno/Framework e xUnit quando aplicável; web-app e web-dotnet; SQL Server read-only com sqlserver-structure-review e mudanças aprovadas com db-change-sqlserver; mobile-app para nativo/híbrido/multiplataforma. Desktop e DevOps seguem capabilities.md. Nomes antigos *-dotnet e scripts *-agent-pack permanecem compatíveis. Detecção não autoriza migrar legado ou instalar dependências.
 
-Use only installed roles supported by the active tool. If a role is unavailable, perform the bounded work yourself. Do not launch every reviewer.
+Especialistas são opcionais: repo_explorer, implementer, dotnet_implementer, test_guardian, change_reviewer e perfis instalados. Grok/Claude usam nomes com hífen. Se indisponível, execute o papel localmente dentro do envelope.
 
-## Context and completion
+## Contexto e conclusão
 
-Search before opening files; read relevant context once, summarize large output, and expand only for actual risk or uncertainty. Read docs/ai when relevant; revalidate stale facts against their sources. Use maintain-agent-memory for durable lessons, not transcripts.
+Pesquise antes de abrir arquivos; reuse fatos confirmados e revalide memória obsoleta. Consulte docs oficiais da versão apenas por incerteza/decisão concreta. Detectores são pistas e tecnologias desconhecidas exigem investigação, sem inventar capacidades.
 
-Return motivation/root cause, changed files, actual validation, manual checks when needed, and residual risk. State uncertainty and unexecuted checks; never claim passing tests from code inspection.
+Detecte ferramentas/runners antes de executar somente testes aprovados. Checks de encoding também entram no envelope; preserve encoding legado confirmado e reporte limitações. Vincule critério → cenário → esperado → observado → artefato → status. Separe implementado, verificado, falhou e pendente/não verificado. Revise diff/novos arquivos; não declare teste aprovado por leitura de código ou resumo.
+
+Mantenha evidências/sessões/estado transitório fora de memória versionada. Em docs/ai guarde só conhecimento durável verificado, fonte/data e dados mínimos redigidos. Entregue causa/motivação, arquivos, resultados reais, links, decisões e riscos.

@@ -83,6 +83,7 @@ function New-TestPack {
     $compatibility = Join-Path $Root "compat\releases"
     New-Item -ItemType Directory -Force -Path $scripts, $template, $compatibility | Out-Null
     Copy-Item -LiteralPath $UpdaterSource -Destination (Join-Path $scripts "update-agent-pack.ps1")
+    Copy-Item -LiteralPath (Join-Path $ScriptDir 'protect-engineering-flow-files.ps1') -Destination $scripts
 
     $oldManaged = "managed version 1`n"
     $oldMerge = "merge version 1`n"
@@ -153,6 +154,7 @@ function New-RenameTestPack {
     $compatibility = Join-Path $Root "compat\releases"
     New-Item -ItemType Directory -Force -Path $scripts, $template, $compatibility | Out-Null
     Copy-Item -LiteralPath $UpdaterSource -Destination (Join-Path $scripts "update-agent-pack.ps1")
+    Copy-Item -LiteralPath (Join-Path $ScriptDir 'protect-engineering-flow-files.ps1') -Destination $scripts
 
     $oldContent = "stable artifact at old path`n"
     $newContent = "stable artifact at renamed path`n"
@@ -430,29 +432,30 @@ try {
 
     # Inject a failed backup and a partial destination copy in disposable fixtures.
     foreach ($failureMode in @("backup", "replace")) {
-        $script:FailureMode = $failureMode
-        $script:FailureInjected = $false
-        $script:FailureDestination = Join-Path $rollbackRepo "managed.txt"
-        function Copy-Item {
+        # Capture shared fault state: $script inside the invoked updater refers to
+        # that script's scope, not this test script. A closure keeps the injection observable.
+        $fault = @{ Mode = $failureMode; Injected = $false; Destination = (Join-Path $rollbackRepo 'managed.txt') }
+        $injectCopy = {
             [CmdletBinding()]
             param([string]$LiteralPath, [string]$Destination, [switch]$Force)
-            $isBackup = $LiteralPath -eq $script:FailureDestination -and $Destination -match '[\\/]backups[\\/]'
-            $isReplace = $Destination -eq $script:FailureDestination -and $LiteralPath -match 'repo-template'
-            if (-not $script:FailureInjected -and (($script:FailureMode -eq "backup" -and $isBackup) -or ($script:FailureMode -eq "replace" -and $isReplace))) {
-                $script:FailureInjected = $true
+            $isBackup = $LiteralPath -eq $fault.Destination -and $Destination -match '[\\/]backups[\\/]'
+            $isReplace = $Destination -eq $fault.Destination -and $LiteralPath -match 'repo-template'
+            if (-not $fault.Injected -and (($fault.Mode -eq "backup" -and $isBackup) -or ($fault.Mode -eq "replace" -and $isReplace))) {
+                $fault.Injected = $true
                 [IO.File]::WriteAllText($Destination, "partial write")
-                throw "Injected $($script:FailureMode) failure"
+                throw "Injected $($fault.Mode) failure"
             }
             Microsoft.PowerShell.Management\Copy-Item @PSBoundParameters
-        }
+        }.GetNewClosure()
+        Set-Item -Path Function:\Copy-Item -Value $injectCopy
         try {
             Assert-Throws -Message "Injected copy failure did not abort apply." -Action {
                 Invoke-TestUpdater -Updater $pack.Updater -Parameters @{ RepoPath = $rollbackRepo; Apply = $true }
             }
         }
         finally { Remove-Item Function:\Copy-Item }
-        Assert-True $script:FailureInjected "Copy failure injection was not exercised."
-        Assert-Equal $pack.OldManaged (Get-Content $script:FailureDestination -Raw) "Failed copy lost the original destination."
+        Assert-True $fault.Injected "Copy failure injection was not exercised."
+        Assert-Equal $pack.OldManaged (Get-Content $fault.Destination -Raw) "Failed copy lost the original destination."
         Assert-Equal ($initialState + "`n") (Get-Content $rollbackStatePath -Raw) "Failed copy changed state."
         Assert-True (-not (Test-Path (Join-Path $rollbackRepo '.agent-pack/.runtime/update.lock'))) "Failed copy left its lock."
     }

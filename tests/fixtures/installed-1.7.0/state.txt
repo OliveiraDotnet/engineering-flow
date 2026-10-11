@@ -1,0 +1,9 @@
+version|1.7.0
+profile|core
+profile|web
+integration|grok
+artifact|guidance.agents|AGENTS.md|merge|1.7.0|ad8cca2515e3d64cdb3bf0b4121895be6b32c01c44b70085acecbc72d5c786ec|tracked|-
+artifact|config.grok.project|.grok/config.toml|merge|1.7.0|edaf315a68fae741d75684fdc52cd50fd9ac5c166b77269421acd6ef28c4ae2c|tracked|-
+artifact|skill.shared.bugfix-dotnet|.agents/skills/bugfix-dotnet/SKILL.md|managed|1.7.0|7e10917b04949b2c1dde76b5d55425537777365fcf9762fc6d68bfc73785be14|tracked|-
+artifact|skill.grok.web-dotnet|.grok/skills/web-dotnet/SKILL.md|managed|1.7.0|1f64c4f2df667c202788ac6f8ca5f7303bf45a51ba895cf181ad1d91764f1561|tracked|-
+artifact|memory.runbook|docs/ai/runbook.md|seed|1.7.0|bcdac38c41030eba10e4ea972506f7592af200441503ab23ed8dd045f9a23105|tracked|-

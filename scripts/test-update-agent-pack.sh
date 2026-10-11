@@ -9,7 +9,7 @@ REPO="$TEMP_ROOT/repo"
 ADOPTION_REPO="$TEMP_ROOT/adoption-repo"
 
 cleanup() {
-  rm -rf "$TEMP_ROOT"
+  case "$TEMP_ROOT" in "${TMPDIR:-/tmp}"/agent-pack-update.*) rm -rf -- "$TEMP_ROOT" ;; *) echo 'Unsafe cleanup target' >&2; return 1 ;; esac
 }
 trap cleanup EXIT
 
@@ -43,6 +43,7 @@ hash_file() {
 mkdir -p "$FAKE_PACK/scripts" "$FAKE_PACK/repo-template" "$FAKE_PACK/compat/releases"
 mkdir -p "$REPO/.agent-pack" "$ADOPTION_REPO"
 cp "$UPDATER" "$FAKE_PACK/scripts/update-agent-pack.sh"
+cp "$SCRIPT_DIR/protect-engineering-flow-files.sh" "$FAKE_PACK/scripts/protect-engineering-flow-files.sh"
 
 printf '%s\n' "2.0.0" > "$FAKE_PACK/pack-version.txt"
 
@@ -208,6 +209,12 @@ bash "$FAKE_PACK/scripts/update-agent-pack.sh" "$REPO" --apply --integration cod
 [ -f "$REPO/.codex/agents/reviewer.toml" ] || fail "Re-enabling Codex failed."
 
 # Inject failures in backup and replacement moves through a local command wrapper.
+# The receipt now describes 2.0 files. Preserve that trusted release before
+# changing the candidate pack; otherwise reconciliation stops before any move.
+while IFS='|' read -r artifact_id artifact_path artifact_owner; do
+  artifact_hash="$(hash_file "$FAKE_PACK/repo-template/$artifact_path")"
+  printf '%s|%s|%s\n' "$artifact_id" "$artifact_path" "$artifact_hash"
+done < "$FAKE_PACK/pack-artifacts.txt" > "$FAKE_PACK/compat/releases/2.0.0.txt"
 FAIL_BIN="$TEMP_ROOT/fail-bin"
 mkdir -p "$FAIL_BIN"
 REAL_MV="$(command -v mv)"
@@ -231,10 +238,10 @@ for injection_mode in backup replace; do
   cp -R "$REPO/." "$failure_repo/"
   printf '%s\n' 'newer update for failure test' > "$FAKE_PACK/repo-template/update.txt"
   export INJECTION_MODE="$injection_mode" INJECTION_MARKER="$TEMP_ROOT/injected-$injection_mode"
-  if PATH="$FAIL_BIN:$PATH" bash "$FAKE_PACK/scripts/update-agent-pack.sh" "$failure_repo" --apply >/dev/null 2>&1; then
+  if failure_output="$(PATH="$FAIL_BIN:$PATH" bash "$FAKE_PACK/scripts/update-agent-pack.sh" "$failure_repo" --apply 2>&1)"; then
     fail "Injected $injection_mode failure did not abort."
   fi
-  [ -f "$INJECTION_MARKER" ] || fail "Failure injection was not exercised."
+  [ -f "$INJECTION_MARKER" ] || fail "Failure injection was not exercised: $failure_output"
   assert_file_content "$failure_repo/update.txt" 'new update'
   cmp -s "$REPO/.agent-pack/state.txt" "$failure_repo/.agent-pack/state.txt" || fail "Failed move changed state."
   [ ! -e "$failure_repo/.agent-pack/.runtime/update.lock" ] || fail "Failed move left its lock."
@@ -293,6 +300,10 @@ anchor_new_hash="$(hash_file "$FAKE_PACK/repo-template/anchor.txt")"
   printf 'conflict-file|conflict.txt|%s\n' "$conflict_new_hash"
   printf 'added-file|added.txt|%s\n' "$added_new_hash"
   printf 'anchor-file|anchor.txt|%s\n' "$anchor_new_hash"
+  # Provider fixtures are removed from the candidate manifest below, but their
+  # installed receipts still require trusted historical hashes for retirement.
+  printf 'codex-agent|.codex/agents/reviewer.toml|%s\n' "$(hash_file "$FAKE_PACK/repo-template/.codex/agents/reviewer.toml")"
+  printf 'codex-metadata|.agents/skills/example/agents/openai.yaml|%s\n' "$(hash_file "$FAKE_PACK/repo-template/.agents/skills/example/agents/openai.yaml")"
 } > "$FAKE_PACK/compat/releases/2.0.0.txt"
 printf '%s\n' "2.1.0" > "$FAKE_PACK/pack-version.txt"
 cat > "$FAKE_PACK/pack-manifest.txt" <<'EOF'

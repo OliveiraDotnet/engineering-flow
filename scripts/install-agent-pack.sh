@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: bash ./scripts/install-agent-pack.sh REPO_PATH [--profile core,web,sqlserver,quality] [--integration codex,grok,claude] [--include-claude] [--include-grok-build] [--install-global] [--allow-non-git] [--force] [--dry-run] [--discover-only]"
+  echo "Usage: bash ./scripts/install-agent-pack.sh REPO_PATH [--profile core,web,sqlserver,quality,mobile] [--integration codex,grok,claude] [--include-claude] [--include-grok-build] [--install-global] [--allow-non-git] [--force] [--dry-run] [--discover-only]"
 }
 
 if [ "$#" -lt 1 ]; then
@@ -60,7 +60,7 @@ MANIFEST="$PACK_ROOT/pack-manifest.txt"
 ARTIFACTS="$PACK_ROOT/pack-artifacts.txt"
 VERSION_FILE="$PACK_ROOT/pack-version.txt"
 GLOBAL_GUIDANCE="$PACK_ROOT/global/AGENTS.md"
-INSPECTOR="$TEMPLATE_ROOT/.agents/skills/bootstrap-dotnet-repo/scripts/inspect-dotnet-repo.sh"
+INSPECTOR="$TEMPLATE_ROOT/.agents/skills/bootstrap-repo/scripts/inspect-repo.sh"
 
 [ -d "$repo_input" ] || { echo "Repo path is not a directory: $repo_input" >&2; exit 1; }
 [ -d "$TEMPLATE_ROOT" ] || { echo "Template root is missing: $TEMPLATE_ROOT" >&2; exit 1; }
@@ -109,7 +109,7 @@ discover_git_roots() {
 }
 
 valid_profile() {
-  case "$1" in core|web|sqlserver|quality) return 0 ;; *) return 1 ;; esac
+  case "$1" in core|web|sqlserver|quality|mobile) return 0 ;; *) return 1 ;; esac
 }
 
 detect_profiles() {
@@ -119,7 +119,7 @@ detect_profiles() {
   suggested="$(bash "$INSPECTOR" "$target" 2>/dev/null | sed -n 's/^- Suggested profiles: //p' | tail -n 1)"
   for profile in $suggested; do
     case "$profile" in
-      web|sqlserver) detected_profiles+=("$profile") ;;
+      web|sqlserver|mobile) detected_profiles+=("$profile") ;;
     esac
   done
 }
@@ -247,7 +247,7 @@ write_state() {
   if [ "$dry_run" = true ]; then
     printf '%-9s %s\n' "STATE" "$state_path (dry-run)"
     return
-  }
+  fi
   assert_no_linked_path "$state_path"
   assert_no_linked_path "$state_path.tmp"
   mkdir -p "$state_dir"
@@ -399,6 +399,7 @@ install_one() {
   assert_no_linked_path "$REPO_ROOT/.agent-pack/state.txt.tmp"
 
   copy_count=0
+  bash "$SCRIPT_DIR/protect-engineering-flow-files.sh" "$REPO_ROOT" check
   skip_count=0
   conflict_count=0
   for index in "${!action_state[@]}"; do
@@ -425,6 +426,8 @@ install_one() {
   done
 
   write_state "$REPO_ROOT"
+  if [ "$dry_run" = true ]; then bash "$SCRIPT_DIR/protect-engineering-flow-files.sh" "$REPO_ROOT" dry-run
+  else bash "$SCRIPT_DIR/protect-engineering-flow-files.sh" "$REPO_ROOT"; fi
   echo "Summary: copied=$copy_count skipped=$skip_count conflicts=$conflict_count"
   [ "$conflict_count" -eq 0 ] || echo "Warning: conflicting .agent-pack.new files were preserved; review them before retrying." >&2
 }

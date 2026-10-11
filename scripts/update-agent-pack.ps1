@@ -1409,5 +1409,8 @@ if (-not $PSCmdlet.ShouldProcess($repoRoot, "Apply Agent Pack reconciliation $pa
     return
 }
 
+$ignoreHelper = Join-Path $ScriptDir 'protect-engineering-flow-files.ps1'
+& $ignoreHelper -RepoPath $repoRoot -CheckOnly
 Invoke-ReconcilePlan -RepositoryRoot $repoRoot -CurrentVersion $packVersion -Plan $plan -StatePath $statePathInfo.Full
+& $ignoreHelper -RepoPath $repoRoot
 Write-Host "Agent Pack reconciliation applied successfully. State: $StateRelativePath"

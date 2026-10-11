@@ -12,9 +12,9 @@ $PackVersionPath = Join-Path $PackRoot "pack-version.txt"
 $ArtifactMetadataPath = Join-Path $PackRoot "pack-artifacts.txt"
 $CompatibilityRoot = Join-Path $PackRoot "compat\releases"
 $ValidComponents = @(
-    "core", "web", "sqlserver", "quality",
-    "claude-core", "claude-web", "claude-sqlserver", "claude-quality",
-    "grok-core", "grok-web", "grok-sqlserver", "grok-quality"
+    "core", "web", "sqlserver", "quality", "mobile",
+    "claude-core", "claude-web", "claude-sqlserver", "claude-quality", "claude-mobile",
+    "grok-core", "grok-web", "grok-sqlserver", "grok-quality", "grok-mobile"
 )
 $errors = New-Object System.Collections.Generic.List[string]
 $manifestEntries = @()
@@ -81,7 +81,7 @@ else {
     if ($packVersion -notmatch '^\d+\.\d+\.\d+$') {
         Add-Error "Invalid semantic version in pack-version.txt: $packVersion"
     }
-    elseif ((Get-Content -LiteralPath $ManifestPath -Raw) -notmatch "(?m)^# \.NET Agents Pack manifest v$([regex]::Escape($packVersion))\s*$") {
+    elseif ((Get-Content -LiteralPath $ManifestPath -Raw) -notmatch "(?m)^# Engineering Flow manifest v$([regex]::Escape($packVersion))\s*$") {
         Add-Error "Manifest header version does not match pack-version.txt ($packVersion)."
     }
 }
@@ -296,7 +296,7 @@ foreach ($skill in $skillFiles) {
     if ($name -notmatch '^[a-z0-9-]+$') { Add-Error "Skill '$name' violates naming rules." }
 }
 
-$baseComponents = @("core", "web", "sqlserver", "quality")
+$baseComponents = @("core", "web", "sqlserver", "quality", "mobile")
 $canonicalSkillEntries = @($manifestEntries | Where-Object { $_.Component -in $baseComponents -and $_.Destination -like ".agents/skills/*" })
 foreach ($entry in $canonicalSkillEntries) {
     $expectedComponent = "claude-$($entry.Component)"

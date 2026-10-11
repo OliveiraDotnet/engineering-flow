@@ -1,4 +1,19 @@
-# Changelog
+# Engineering Flow changelog
+
+## 2.0.0 — 2026-10-11
+
+- Nome público Engineering Flow e repositório engineering-flow; instalação inicial e migração de versões anteriores.
+- Núcleo geral de descoberta, projeto novo, bug, feature, refatoração, review e completion; aprovação humana e testes somente no envelope aprovado.
+- Evidência por critério/cenário/esperado/observado/artefato/status, limites explícitos e memória durável separada.
+- Expertise .NET/Framework/Web Forms/SQL Server preservada, web/ASP clássico ampliado, mobile nativo/híbrido/multiplataforma opcional e procedimentos desktop/DevOps.
+- Codex/Grok Build independentes, Claude compatível, handoff e Grok Bot opcionais; sem integração direta presumida ou nova dependência.
+- Aliases install/update-engineering-flow, IDs/ownership e estado antigos preservados, catálogo da base 1.7.0 e regressões de migração/seleção.
+- Testes de scripts/fixtures e checks estáticos não comprovam execução de apps nem cumprimento universal por modelos.
+
+## 1.7.0 — compatibilidade de pré-release
+
+Independência Codex/Grok, seleções de integração preservadas, agent-work-order compartilhado e salvaguardas de instalação/update. Seleções, customizações e IDs estáveis são preservados nas atualizações.
+
 
 ## 1.6.0
 

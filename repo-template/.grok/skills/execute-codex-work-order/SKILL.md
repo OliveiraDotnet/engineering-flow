@@ -10,3 +10,4 @@ The historical name is retained for installed workflows; the coordinator can be 
 If no work order was supplied and the user directly requested ordinary implementation, use the relevant project skill and complete the task yourself. Do not demand a Codex session or fabricate approval.
 
 Return the shared status and evidence contract. Escalate material unresolved decisions before executing them; report that the material change was not performed.
+Read docs/engineering-flow/workflow.md. Plan and human approval precede implementation; execute only approved tests. Missing test approval means unvalidated delivery and a question about including tests. Existing authorization persists; no automatic second provider or delegation.

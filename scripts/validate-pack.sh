@@ -27,7 +27,7 @@ while IFS='|' read -r component source_relative destination_relative extra; do
   [[ "$component" = \#* ]] && continue
   [ -z "$extra" ] || { fail "Invalid manifest line with too many fields: $component"; continue; }
   case "$component" in
-    core|web|sqlserver|quality|claude-core|claude-web|claude-sqlserver|claude-quality|grok-core|grok-web|grok-sqlserver|grok-quality) ;;
+    core|web|sqlserver|quality|claude-core|claude-web|claude-sqlserver|claude-quality|grok-core|grok-web|grok-sqlserver|grok-quality|mobile|claude-mobile|grok-mobile) ;;
     *) fail "Unknown component in manifest: $component"; continue ;;
   esac
   [ -n "$source_relative" ] || { fail "Empty manifest source."; continue; }
@@ -48,7 +48,7 @@ else
   [[ "$pack_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "Invalid semantic version in pack-version.txt: $pack_version"
   IFS= read -r manifest_header < "$MANIFEST" || true
   manifest_header="${manifest_header%$'\r'}"
-  [ "$manifest_header" = "# .NET Agents Pack manifest v$pack_version" ] || fail "Manifest header version does not match pack-version.txt"
+  [ "$manifest_header" = "# Engineering Flow manifest v$pack_version" ] || fail "Manifest header version does not match pack-version.txt"
 fi
 
 artifact_ids=()
@@ -220,7 +220,7 @@ for index in "${!manifest_destinations[@]}"; do
   canonical_destination="${manifest_destinations[$index]}"
   [[ "$canonical_destination" = .agents/skills/* ]] || continue
   case "${manifest_components[$index]}" in
-    core|web|sqlserver|quality) ;;
+    core|web|sqlserver|quality|mobile) ;;
     *) continue ;;
   esac
   expected_component="claude-${manifest_components[$index]}"

@@ -15,7 +15,10 @@ printf '%s\n' "$legacy_output" | grep -q 'Suggested profiles: web'
 printf '%s\n' "$legacy_output" | grep -qv 'legacy-framework'
 
 scratch="$(mktemp -d "${TMPDIR:-/tmp}/pack-inspector.XXXXXX")"
-trap 'rm -rf -- "$scratch"' EXIT
+cleanup() {
+  case "$scratch" in "${TMPDIR:-/tmp}"/pack-inspector.*) rm -rf -- "$scratch" ;; *) echo 'Unsafe cleanup target' >&2; return 1 ;; esac
+}
+trap cleanup EXIT
 for provider in EntityFramework Dapper Npgsql.EntityFrameworkCore.PostgreSQL Microsoft.EntityFrameworkCore.Sqlite Pomelo.EntityFrameworkCore.MySql; do
   printf '<Project><ItemGroup><PackageReference Include="%s" /></ItemGroup></Project>' "$provider" > "$scratch/App.csproj"
   output="$(bash "$INSPECTOR" "$scratch")"

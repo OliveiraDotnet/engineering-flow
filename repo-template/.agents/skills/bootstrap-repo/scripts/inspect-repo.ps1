@@ -1,0 +1,212 @@
+param(
+    [string]$RepoPath = (Get-Location).Path,
+    [ValidateSet("json", "markdown")]
+    [string]$Format = "json"
+)
+
+$ErrorActionPreference = "Stop"
+
+function Get-RelativePath {
+    param([string]$BasePath, [string]$Path)
+
+    $baseFull = [IO.Path]::GetFullPath($BasePath)
+    if (-not $baseFull.EndsWith([IO.Path]::DirectorySeparatorChar)) {
+        $baseFull += [IO.Path]::DirectorySeparatorChar
+    }
+    $baseUri = New-Object System.Uri($baseFull)
+    $pathUri = New-Object System.Uri([IO.Path]::GetFullPath($Path))
+    return [Uri]::UnescapeDataString($baseUri.MakeRelativeUri($pathUri).ToString()).Replace('\', '/')
+}
+
+function Get-ProjectMetadata {
+    param([string]$ProjectPath, [string]$RepoRoot)
+
+    $metadata = [ordered]@{
+        path = Get-RelativePath $RepoRoot $ProjectPath
+        style = "unknown"
+        targetFrameworks = @()
+        packageReferences = @()
+        testFrameworks = @()
+    }
+
+    try {
+        [xml]$project = Get-Content -LiteralPath $ProjectPath -Raw
+        if ($project.DocumentElement.GetAttribute("Sdk")) { $metadata.style = "sdk" }
+        elseif ($project.SelectSingleNode("//*[local-name()='TargetFrameworkVersion']")) { $metadata.style = "classic" }
+
+        $tfms = @($project.SelectNodes("//*[local-name()='TargetFramework' or local-name()='TargetFrameworks' or local-name()='TargetFrameworkVersion']") | ForEach-Object { $_.InnerText.Trim() } | Where-Object { $_ })
+        $metadata.targetFrameworks = @($tfms | Sort-Object -Unique)
+
+        $packages = @($project.SelectNodes("//*[local-name()='PackageReference']") | ForEach-Object { if ($_.Include) { $_.Include } elseif ($_.Update) { $_.Update } } | Where-Object { $_ } | Sort-Object -Unique)
+        $metadata.packageReferences = $packages
+
+        $testNames = @($packages | Where-Object { $_ -match '(^|\.)(xunit|nunit|mstest|microsoft\.net\.test\.sdk)(\.|$)' })
+        if ($metadata.path -match '(?i)(^|/)(test|tests|spec)(/|$)|(\.|-)(test|tests|spec)(\.|-|$)') { $testNames += "project-name" }
+        $metadata.testFrameworks = @($testNames | Sort-Object -Unique)
+    }
+    catch {
+        $metadata.style = "unreadable"
+    }
+
+    return [pscustomobject]$metadata
+}
+
+$repo = (Resolve-Path -LiteralPath $RepoPath).Path
+$gitRoot = $null
+if (Get-Command git -ErrorAction SilentlyContinue) {
+    try {
+        $candidate = & git -C $repo rev-parse --show-toplevel 2>$null
+    }
+    catch {
+        $candidate = $null
+    }
+    if ($LASTEXITCODE -eq 0 -and $candidate) { $gitRoot = (Resolve-Path -LiteralPath $candidate.Trim()).Path }
+}
+
+$excluded = @(".git", "bin", "obj", "node_modules", "packages", ".vs", ".agents", ".claude", ".grok", ".codex", ".agent-pack", ".dart_tool", ".gradle", "Pods", "DerivedData", ".venv", ".next")
+function Get-ScopedFiles {
+    param([string]$Directory)
+    foreach ($entry in Get-ChildItem -LiteralPath $Directory -Force) {
+        if ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) { continue }
+        if ($entry.PSIsContainer) {
+            if ($entry.Name -notin $excluded) { Get-ScopedFiles $entry.FullName }
+        } else { $entry }
+    }
+}
+$files = @(Get-ScopedFiles $repo)
+
+$byExtension = @{}
+foreach ($file in $files) {
+    $extension = $file.Extension.ToLowerInvariant()
+    if (-not $extension) { $extension = '(no-extension)' }
+    if (-not $byExtension.ContainsKey($extension)) { $byExtension[$extension] = 0 }
+    $byExtension[$extension]++
+}
+
+function Get-ExtensionCount {
+    param([string]$Extension)
+    if ($byExtension.ContainsKey($Extension)) { return $byExtension[$Extension] }
+    return 0
+}
+
+$projectFiles = @($files | Where-Object { $_.Extension -in ".csproj", ".fsproj", ".vbproj" })
+$projects = @($projectFiles | ForEach-Object { Get-ProjectMetadata $_.FullName $repo })
+$allPackages = @($projects | ForEach-Object { $_.packageReferences } | Sort-Object -Unique)
+$allTfms = @($projects | ForEach-Object { $_.targetFrameworks } | Sort-Object -Unique)
+
+$relativeFiles = @($files | ForEach-Object { Get-RelativePath $repo $_.FullName })
+$contains = {
+    param([string]$Pattern)
+    return @($relativeFiles | Where-Object { $_ -match $Pattern }).Count -gt 0
+}
+
+$applicationTypes = @()
+if (& $contains '(?i)(\.cshtml$|\.razor$|\.aspx$|web\.config$|wwwroot/)') { $applicationTypes += "web" }
+if (& $contains '(?i)(\.xaml$|\.resx$)') { $applicationTypes += "desktop-or-xaml" }
+if (& $contains '(?i)(\.svc$|\.asmx$)') { $applicationTypes += "legacy-service" }
+if (& $contains '(?i)(worker|service)') { $applicationTypes += "worker-or-service" }
+if ((& $contains '(?i)(^|/)packages\.config$|\.aspx$') -or @($projects | Where-Object { $_.style -eq "classic" }).Count -gt 0) { $applicationTypes += "classic-framework" }
+if ((& $contains '(?i)(^|/)angular\.json$') -or (& $contains '(?i)(^|/)package\.json$') -and (& $contains '(?i)(^|/)(src[/\\].*\.(tsx|jsx)$)')) { $applicationTypes += "spa" }
+if (& $contains '(?i)(^|/)pubspec\.ya?ml$') { $applicationTypes += "flutter" }
+
+$manifests = @($relativeFiles | Where-Object { $_ -match '(?i)(^|/)(package\.json|[^/]*lock[^/]*|pubspec\.ya?ml|Cargo\.toml|go\.mod|pom\.xml|build\.gradle(\.kts)?|requirements[^/]*\.txt|pyproject\.toml|composer\.json|Gemfile|.*\.(csproj|fsproj|vbproj|sqlproj))$' })
+$runtimeEvidence = @($relativeFiles | Where-Object { $_ -match '(?i)(^|/)(Dockerfile[^/]*|compose[^/]*\.ya?ml|.*\.tf|.*\.xcodeproj/.*|AndroidManifest\.xml|.*\.(html|css|js|ts|tsx|jsx|asp|swift|kt|dart))$' })
+if (& $contains '(?i)\.(html?|css|js|ts|tsx|jsx|asp)$') { $applicationTypes += 'web' }
+$mobileEvidence = (& $contains '(?i)(^|/)(pubspec\.ya?ml|AndroidManifest\.xml)$') -or ($allPackages -match 'Microsoft\.Maui|Xamarin')
+foreach ($file in @($files | Where-Object { $_.Extension -eq '.pbxproj' })) {
+    if (Select-String -LiteralPath $file.FullName -Pattern 'SDKROOT\s*=\s*iphoneos|SUPPORTED_PLATFORMS\s*=.*iphoneos|IPHONEOS_DEPLOYMENT_TARGET' -Quiet) { $mobileEvidence = $true }
+}
+foreach ($projectFile in $projectFiles) {
+    if (Select-String -LiteralPath $projectFile.FullName -Pattern '<UseMaui>\s*true|net[0-9.]+-(android|ios)' -Quiet) { $mobileEvidence = $true }
+}
+if ($mobileEvidence) { $applicationTypes += 'mobile-candidate' }
+$packageMetadata = @()
+foreach ($file in @($files | Where-Object { $_.Name -eq 'package.json' })) {
+    try {
+        $package = Get-Content -LiteralPath $file.FullName -Raw | ConvertFrom-Json
+        # Return dependency names and runner names only; never script bodies, URLs or environment values.
+        $dependencyNames = @()
+        foreach ($section in @('dependencies','devDependencies')) {
+            $prop = $package.PSObject.Properties[$section]
+            if ($prop) { $dependencyNames += @($prop.Value.PSObject.Properties.Name) }
+        }
+        $scriptsProp = $package.PSObject.Properties['scripts']
+        $packageMetadata += [pscustomobject]@{ path = Get-RelativePath $repo $file.FullName; dependencies = @($dependencyNames | Sort-Object -Unique); scriptNames = @($(if ($scriptsProp) { $scriptsProp.Value.PSObject.Properties.Name })) }
+    } catch { $packageMetadata += [pscustomobject]@{ path = Get-RelativePath $repo $file.FullName; status = 'unreadable' } }
+}
+$toolHints = @('git','dotnet','node','npm','pwsh','bash','flutter','dart','java','adb','xcodebuild','python','docker','sqlcmd')
+if (@($packageMetadata | Where-Object { $_.PSObject.Properties['dependencies'] -and $_.dependencies -match '^(react-native|@capacitor/core|@ionic/react|@ionic/angular|expo)$' }).Count -gt 0) {
+    $mobileEvidence = $true
+    $applicationTypes += 'mobile-candidate'
+}
+$availableTools = @($toolHints | Where-Object { Get-Command $_ -ErrorAction SilentlyContinue })
+$profiles = @()
+if ($mobileEvidence) { $profiles += 'mobile' }
+if ($applicationTypes -contains "web") { $profiles += "web" }
+# Inspect only provider metadata and SQL scripts. Never print matching source lines.
+$providerPattern = '(Microsoft\.EntityFrameworkCore\.SqlServer|EntityFramework\.SqlServer|System\.Data\.SqlClient|Microsoft\.Data\.SqlClient)'
+$tsqlPattern = '(SET\s+ANSI_NULLS|SET\s+QUOTED_IDENTIFIER|\bGO\s*$|\bIDENTITY\s*\(|\bsys\.(tables|procedures|sql_modules)\b|\bOBJECT_ID\s*\()'
+$sqlServerDetected = $false
+foreach ($file in $files) {
+    $pattern = if ($file.Extension -eq '.sql') { $tsqlPattern }
+        elseif ($file.Extension -in '.csproj', '.fsproj', '.vbproj', '.props', '.targets', '.sqlproj' -or $file.Name -eq 'packages.config') { $providerPattern }
+        else { $null }
+    if ($pattern -and (Select-String -LiteralPath $file.FullName -Pattern $pattern -Quiet)) {
+        $sqlServerDetected = $true
+        break
+    }
+}
+if ($sqlServerDetected) { $profiles += "sqlserver" }
+
+$ciFiles = @($relativeFiles | Where-Object { $_ -match '(^\.github/workflows/|(^|/)azure-pipelines.*\.ya?ml$|(^|/)\.gitlab-ci\.ya?ml$|(^|/)(build|test)\.(ps1|sh|cmd|bat)$)' })
+$structure = if ($gitRoot) { "git-repository" } elseif (@($projectFiles).Count -gt 1) { "non-git-multi-project" } else { "non-git-folder" }
+
+$result = [ordered]@{
+    discoveryMode = $(if ($files.Count -eq 0) { 'empty' } else { 'existing' })
+    manifestFiles = $manifests
+    runtimeAndPlatformEvidence = $runtimeEvidence
+    packageMetadata = $packageMetadata
+    availableTools = $availableTools
+    extensionInventory = $byExtension
+    limitations = @('Detection suggests evidence; versions, commands and environments require confirmation.', 'No runtime, browser, database or device execution performed.', 'Tool inventory is host-local availability, not project compatibility.')
+    inspectedPath = $repo
+    gitRoot = $gitRoot
+    repositoryShape = $structure
+    solutionFiles = @($relativeFiles | Where-Object { $_ -match '(?i)\.slnx?$' })
+    projectFiles = $projects
+    targetFrameworks = $allTfms
+    applicationTypes = @($applicationTypes | Sort-Object -Unique)
+    packagesConfigFiles = @($relativeFiles | Where-Object { $_ -match '(?i)(^|/)packages\.config$' })
+    buildMetadata = @($relativeFiles | Where-Object { $_ -match '(?i)(^|/)(global\.json|directory\.build\.(props|targets)|directory\.packages\.props)$' })
+    testProjects = @($projects | Where-Object { $_.testFrameworks.Count -gt 0 } | ForEach-Object { $_.path })
+    ciAndScripts = $ciFiles
+    optionalProfilesSuggested = @($profiles | Sort-Object -Unique)
+    fileExtensionCounts = [ordered]@{
+        csproj = Get-ExtensionCount ".csproj"
+        fsproj = Get-ExtensionCount ".fsproj"
+        vbproj = Get-ExtensionCount ".vbproj"
+        cshtml = Get-ExtensionCount ".cshtml"
+        razor = Get-ExtensionCount ".razor"
+        aspx = Get-ExtensionCount ".aspx"
+        sql = Get-ExtensionCount ".sql"
+        xaml = Get-ExtensionCount ".xaml"
+    }
+}
+
+if ($Format -eq "markdown") {
+    "# Engineering Flow repository fingerprint"
+    ""
+    "- Shape: $($result.repositoryShape)"
+    "- Discovery mode: $($result.discoveryMode)"
+    "- Manifests: $($result.manifestFiles -join ', ')"
+    "- Available tools (unverified compatibility): $($result.availableTools -join ', ')"
+    "- Git root: $($result.gitRoot)"
+    "- Solutions: $($result.solutionFiles -join ', ')"
+    "- Target frameworks: $($result.targetFrameworks -join ', ')"
+    "- Application types: $($result.applicationTypes -join ', ')"
+    "- Suggested profiles: $($result.optionalProfilesSuggested -join ', ')"
+    "- CI/scripts: $($result.ciAndScripts -join ', ')"
+}
+else {
+    $result | ConvertTo-Json -Depth 6
+}
