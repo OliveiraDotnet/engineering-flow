@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: bash ./scripts/install-agent-pack.sh REPO_PATH [--profile core,web,sqlserver,quality] [--include-claude] [--include-grok-build] [--install-global] [--allow-non-git] [--force] [--dry-run] [--discover-only]"
+  echo "Usage: bash ./scripts/install-agent-pack.sh REPO_PATH [--profile core,web,sqlserver,quality] [--integration codex,grok,claude] [--include-claude] [--include-grok-build] [--install-global] [--allow-non-git] [--force] [--dry-run] [--discover-only]"
 }
 
 if [ "$#" -lt 1 ]; then
@@ -13,6 +13,7 @@ fi
 repo_input="$1"
 shift
 requested_profiles=()
+requested_integrations=()
 include_claude=false
 include_grok_build=false
 install_global=false
@@ -23,6 +24,15 @@ discover_only=false
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
+    --integration)
+      [ "$#" -ge 2 ] || { echo "Missing value for --integration" >&2; exit 1; }
+      IFS=',' read -r -a requested <<< "$2"
+      [ "${#requested[@]}" -gt 0 ] || { echo "Empty integration selection" >&2; exit 1; }
+      for integration in "${requested[@]}"; do
+        case "$integration" in codex|grok|claude) requested_integrations+=("$integration") ;; *) echo "Unknown integration: $integration" >&2; exit 1 ;; esac
+      done
+      shift 2
+      ;;
     --profile)
       [ "$#" -ge 2 ] || { echo "Missing value for --profile" >&2; exit 1; }
       IFS=',' read -r -a requested <<< "$2"
@@ -66,6 +76,18 @@ is_within() {
   [ "$child" != "$parent" ] && [[ "$child" == "$parent/"* ]]
 }
 
+assert_no_linked_path() {
+  local current="$1"
+  while [ -n "$current" ] && [ "$current" != / ] && [ "$current" != . ]; do
+    [ ! -L "$current" ] || { echo "Linked installation path is not allowed: $current" >&2; exit 1; }
+    # Git Bash represents Windows junctions as directories; compare their physical path.
+    if [ -d "$current" ]; then
+      [ "$(cd "$current" && pwd -P)" = "$current" ] || { echo "Linked installation path is not allowed: $current" >&2; exit 1; }
+    fi
+    current="$(dirname "$current")"
+  done
+}
+
 if is_within "$TEMPLATE_ROOT" "$WORKSPACE_ROOT" || is_within "$WORKSPACE_ROOT" "$TEMPLATE_ROOT" || [ "$WORKSPACE_ROOT" = "$TEMPLATE_ROOT" ]; then
   echo "Repo path must not overlap the pack template." >&2
   exit 1
@@ -104,6 +126,7 @@ detect_profiles() {
 
 read_state_values() {
   local target="$1" kind="$2" state_path="$target/.agent-pack/state.txt" line
+  assert_no_linked_path "$state_path"
   state_values=()
   [ -f "$state_path" ] || return 0
   while IFS= read -r line || [ -n "$line" ]; do
@@ -163,7 +186,7 @@ backup_path() {
   timestamp="$(date +%Y%m%d%H%M%S)"
   candidate="$path.agent-pack.backup-$timestamp"
   index=1
-  while [ -e "$candidate" ]; do
+  while [ -e "$candidate" ] || [ -L "$candidate" ]; do
     candidate="$path.agent-pack.backup-$timestamp-$index"
     index=$((index + 1))
   done
@@ -225,13 +248,15 @@ write_state() {
     printf '%-9s %s\n' "STATE" "$state_path (dry-run)"
     return
   }
+  assert_no_linked_path "$state_path"
+  assert_no_linked_path "$state_path.tmp"
   mkdir -p "$state_dir"
   {
     printf 'version|%s\n' "$PACK_VERSION"
     for profile in "${resolved_profiles[@]}"; do
       printf 'profile|%s\n' "$profile"
     done
-    printf 'integration|codex\n'
+    [ "$include_codex_effective" = true ] && printf 'integration|codex\n'
     [ "$include_claude_effective" = true ] && printf 'integration|claude\n'
     [ "$include_grok_effective" = true ] && printf 'integration|grok\n'
     while IFS= read -r line || [ -n "$line" ]; do
@@ -244,13 +269,14 @@ write_state() {
       ownership="$(trim "$ownership")"
       source="${destination_sources[$dest]:-}"
       [ -n "$source" ] || continue
+      [ -n "${installed_destinations[$dest]:-}" ] || continue
       dest_full="$target/$dest"
       source_full="$TEMPLATE_ROOT/$source"
       [ -f "$source_full" ] || continue
       [ -e "$dest_full" ] || continue
-      if [ "$ownership" = "seed" ]; then
+      if [ "$ownership" = "seed" ] || ! same_content "$source_full" "$dest_full"; then
         hash_file "$dest_full"
-        printf 'artifact|%s|%s|seed|-|-|keep-local|%s\n' "$id" "$dest" "$HASH_VALUE"
+        printf 'artifact|%s|%s|%s|-|-|keep-local|%s\n' "$id" "$dest" "$ownership" "$HASH_VALUE"
       else
         hash_file "$source_full"
         printf 'artifact|%s|%s|%s|%s|%s|tracked|-\n' "$id" "$dest" "$ownership" "$PACK_VERSION" "$HASH_VALUE"
@@ -277,8 +303,12 @@ install_one() {
 
   include_claude_effective="$include_claude"
   include_grok_effective="$include_grok_build"
+  include_codex_effective=false
   read_state_values "$REPO_ROOT" integration
-  for integration in "${state_values[@]+"${state_values[@]}"}"; do
+  if [ "${#requested_integrations[@]}" -eq 0 ] && [ "${#state_values[@]}" -eq 0 ]; then include_codex_effective=true; fi
+  for integration in "${state_values[@]+"${state_values[@]}"}" "${requested_integrations[@]+"${requested_integrations[@]}"}"; do
+    case "$integration" in codex|grok|claude) ;; *) echo "Unknown integration in state: $integration" >&2; exit 1 ;; esac
+    [ "$integration" = "codex" ] && include_codex_effective=true
     [ "$integration" = "claude" ] && include_claude_effective=true
     [ "$integration" = "grok" ] && include_grok_effective=true
   done
@@ -301,10 +331,15 @@ install_one() {
   action_source=()
   action_destination=()
   action_original=()
+  declare -A installed_destinations=()
 
   add_action() {
     local source="$1" destination="$2" state="COPY" effective="$2" sidecar
     [ -f "$source" ] || { echo "Manifest source is missing: $source" >&2; exit 1; }
+    assert_no_linked_path "$destination"
+    assert_no_linked_path "$destination.agent-pack.new"
+    if [ -e "$destination" ] && [ ! -f "$destination" ]; then echo "Installation destination is not a file: $destination" >&2; exit 1; fi
+    if [ -e "$destination.agent-pack.new" ] && [ ! -f "$destination.agent-pack.new" ]; then echo "Installation sidecar is not a file: $destination.agent-pack.new" >&2; exit 1; fi
     if [ -e "$destination" ]; then
       if same_content "$source" "$destination"; then
         state="SKIP"
@@ -347,6 +382,9 @@ install_one() {
     [ -n "$source_relative" ] || { echo "Invalid manifest line: $line" >&2; exit 1; }
     [ -n "$destination_relative" ] || { echo "Invalid manifest line: $line" >&2; exit 1; }
     contains_component "$component" || continue
+    if [ "$include_codex_effective" != true ]; then
+      case "$destination_relative" in .codex/*|*/agents/openai.yaml) continue ;; esac
+    fi
     valid_relative_path "$source_relative" || { echo "Manifest source path escapes template: $source_relative" >&2; exit 1; }
     valid_relative_path "$destination_relative" || { echo "Manifest destination path escapes repository: $destination_relative" >&2; exit 1; }
     source="$TEMPLATE_ROOT/$source_relative"
@@ -354,7 +392,11 @@ install_one() {
     is_within "$TEMPLATE_ROOT" "$source" || { echo "Manifest source path escapes template: $source_relative" >&2; exit 1; }
     is_within "$REPO_ROOT" "$destination" || { echo "Manifest destination path escapes repository: $destination_relative" >&2; exit 1; }
     add_action "$source" "$destination"
+    installed_destinations["$destination_relative"]=1
   done < "$MANIFEST"
+
+  assert_no_linked_path "$REPO_ROOT/.agent-pack/state.txt"
+  assert_no_linked_path "$REPO_ROOT/.agent-pack/state.txt.tmp"
 
   copy_count=0
   skip_count=0
@@ -370,9 +412,11 @@ install_one() {
       CONFLICT) conflict_count=$((conflict_count + 1)); continue ;;
     esac
     [ "$dry_run" = true ] && continue
+    assert_no_linked_path "$destination"
     mkdir -p "$(dirname "$destination")"
     if [ "$state" = REPLACE ]; then
       backup="$(backup_path "$original")"
+      assert_no_linked_path "$backup"
       cp "$original" "$backup"
       printf '%-9s %s\n' "BACKUP" "$backup"
     fi
@@ -435,6 +479,8 @@ if [ "$install_global" = true ] && [ "$discover_only" != true ]; then
   add_global() {
     local source="$1" destination="$2" state="COPY" effective="$2" sidecar
     [ -f "$source" ] || { echo "Manifest source is missing: $source" >&2; exit 1; }
+    assert_no_linked_path "$destination"
+    assert_no_linked_path "$destination.agent-pack.new"
     if [ -e "$destination" ]; then
       if same_content "$source" "$destination"; then
         state="SKIP"
@@ -466,7 +512,7 @@ if [ "$install_global" = true ] && [ "$discover_only" != true ]; then
       cp "$destination" "$backup"
       printf '%-9s %s\n' "BACKUP" "$backup"
     fi
-    cp "$source" "$destination"
+    cp "$source" "$effective"
   }
   add_global "$GLOBAL_GUIDANCE" "$CODEX_HOME_RESOLVED/AGENTS.md"
 fi

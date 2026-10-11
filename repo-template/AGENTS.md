@@ -1,59 +1,67 @@
 # Project guidance
 
-> Este arquivo é um template ativo. Texto marcado como `[UNVERIFIED]` não é fato do repositório e não deve orientar implementação. Execute `$bootstrap-dotnet-repo` antes da primeira alteração relevante e inicie uma nova tarefa depois dele.
+> Active template: [UNVERIFIED] text is not repository evidence. Run bootstrap-dotnet-repo before the first substantial change when context is missing; reuse an already verified map. Reload the agent session after persistent instructions change when required by the host.
 
 ## Facts to confirm
 
-- Repository shape: `[UNVERIFIED]`
-- Solution and project files: `[UNVERIFIED]`
-- Target frameworks and toolchain: `[UNVERIFIED]`
-- Confirmed build, test and run commands: `[UNVERIFIED]`
-- Test strategy and CI evidence: `[UNVERIFIED]`
-- Data access, external integrations and authorization boundaries: `[UNVERIFIED]`
+- Repository shape: [UNVERIFIED]
+- Solution/project files and toolchain: [UNVERIFIED]
+- Confirmed build, test, and run commands: [UNVERIFIED]
+- Test strategy and CI evidence: [UNVERIFIED]
+- Data access, integrations, and authorization boundaries: [UNVERIFIED]
 
-Use `docs/ai/project-map.md` for the latest confirmed map. Prefer evidence in project files, CI, scripts and existing tests over this template.
+Use docs/ai/project-map.md for confirmed context. Project files, CI, scripts, and tests take precedence over unverified template examples.
 
 ## Working rules
 
-- Inspect the repository shape and the affected execution path before changing code.
-- Classify a change as trivial only when it stays in one area and does not change public contracts, data, authorization, production dependencies, or unconfirmed commands. Otherwise present a plan and wait for Gate 1 approval.
-- Use `sqlserver-structure-review` for read-only database understanding and `db-change-sqlserver` only after an approved schema or data plan.
-- Use `web-dotnet` / `frontend_web` for UI that lives in the .NET web project (Razor, MVC, Blazor, Web Forms, app JavaScript).
-- Do not invent build, test, run or deployment commands. Record only commands confirmed by repository evidence.
-- Preserve observed conventions and public behavior. Keep bugfixes and refactors separate.
-- Keep changes limited to the requested scope; explain impacts to contracts, data, configuration and users.
-- Do not expose secrets, connection strings, credentials, personal data or sensitive payloads.
-- Do not run destructive commands, migrations, database changes or deploys without explicit authorization.
-- Before completion, scan changed text files for invalid UTF-8 or likely mojibake with the installed `check-text-encoding` skill. Confirm suspicious text in context; never hide corruption by stripping accents or blindly transcoding a whole file.
-- For a bug, reproduce or characterize the failure before the fix when viable, then add the smallest relevant regression coverage.
-- If automation is unavailable, provide a controlled manual validation scenario with input, action and expected result.
+- Inspect applicable instructions, Git status, relevant diffs, and the affected execution path. Preserve existing user changes.
+- Keep changes within the user-authorized scope. Preserve public behavior outside the requested change; separate bugfixes and refactoring.
+- Reuse confirmed commands. If none exist, inspect actual tooling and help, identify derived commands as inferred, and validate before recording them as confirmed. Do not fabricate a command or block solely because documentation is absent.
+- For bugs, reproduce or characterize the failure when viable; distinguish observed root cause from a working hypothesis.
+- Use sqlserver-structure-review for read-only understanding and db-change-sqlserver for authorized change planning/implementation, only when those skills are installed.
+- Use web-dotnet for UI inside .NET web projects when installed; follow the actual stack.
+- Do not expose secrets, connection strings, credentials, personal data, or sensitive payloads.
+- Commit, push, merge, deploy, release, production migration/data changes and destructive operations require explicit applicable user authorization. Task completion alone does not grant it.
+- Before completion use the installed check-text-encoding skill on changed text. Preserve confirmed encoding; inspect findings before editing and never strip accents to hide corruption.
+- Run focused validation and verify relevant tests actually executed. If unavailable, give the precise gap and a controlled manual scenario.
 
-## Context and delegation
+## Independent and collaborative operation
 
-- Use the smallest sufficient context: search before opening files, read only relevant sections, avoid rereading unchanged content and summarize large outputs instead of copying them into the conversation. Expand context when uncertainty or risk justifies it; never trade correctness, security or necessary validation for token savings.
-- Read `docs/ai` only when it is relevant to the task. Treat documents without source and verification date, or whose solution/CI fingerprint changed, as hypotheses and revalidate with `maintain-agent-memory`.
-- Use `repo_explorer` for bounded read-only mapping. Add at most the specialist justified by the detected stack or diff.
-- Core agents: `repo_explorer`, `dotnet_implementer`, `test_guardian` and `change_reviewer`.
-- Optional profiles add `frontend_web`, `database_sqlserver` or the quality reviewers. Do not request every reviewer by default.
+Codex and Grok Build are peers. Either can independently investigate, plan, implement, test, review, and report. Neither requires the other to be installed, authenticated, or involved. Claude compatibility follows the same project rules.
 
-## Codex and Grok Build collaboration
+The user is the sole decision authority. The agent receiving the task owns delivery unless the user assigns another coordinator. Collaboration is optional; roles follow the task, not the provider.
 
-- The user is the sole decision authority. Codex and Grok Build may analyze, challenge assumptions, recommend and execute, but neither may approve material choices or final integration on the user's behalf.
-- Codex is the control plane for requirements, architecture, design, risk analysis, review and validation. Grok Build is the execution plane for bounded work that benefits from parallelism.
-- Gate 1: before non-trivial implementation or delegation, Codex must present a plan with scope, risks and validation and obtain explicit user approval. The approved plan is the execution envelope.
-- Within that envelope, agents may make trivial mechanical choices. A material deviation in scope, behavior, architecture, contracts, dependencies, security, data or validation must stop and return to the user with evidence, options, trade-offs and a recommendation.
-- Before delegating, Codex must issue the complete work order required by the installed `delegate-to-grok-build` skill, including the actual human-approved scope and decision boundaries.
-- Use Grok Build subagents only for independent workstreams. Any subagent that edits files must use native `worktree` isolation; read-only exploration may share the parent context.
-- Grok Build must not commit, push, deploy, run migrations, alter production data, apply worktree changes to the main checkout or broaden the agreed scope.
-- Grok Build must return a structured status, worktree path, changed files, technical decisions, validation evidence, deviations and risks. `BLOCKED_BY_DECISION` is a normal return state, not a failure to hide or work around.
-- Codex must inspect the complete worktree diff, check scope and security, and independently rerun relevant validation. A Grok summary is never a substitute for the actual diff.
-- Gate 2: Codex may recommend `ready for manual validation`, `revise`, `discard` or `user decision required`. Commit, push, merge, deploy, release, production migration or data change requires the user's explicit manual approval and authorization.
-- Keep transient handoff data, Grok sessions and worktrees outside the repository. Store only durable, verified project knowledge in tracked files.
+- Gate 1 establishes the execution envelope: objective, scope, material constraints, risks, and validation. For non-trivial work present a concise plan; existing explicit authorization for that work remains valid across turns. Ask again only for a missing material decision or scope expansion, not to repeat approval.
+- Routine reversible implementation and tests within the envelope can proceed. Stop for material deviations in behavior, contracts, architecture, production dependencies, security, data, or validation; return BLOCKED_BY_DECISION with evidence, options, and a recommendation.
+- In standalone mode the active agent completes all necessary roles itself. A missing companion tool is not a blocker.
+- For an actual handoff use the shared agent-work-order skill. Either tool can coordinate or execute. Use only available native delegation tools or verified CLI capabilities; never invent a cross-provider API.
+- Delegate only independent bounded work when useful. Concurrent modifying agents need isolated worktrees/checkouts and non-overlapping ownership; a single standalone agent can use the authorized working tree.
+- Preserve uncommitted context: do not delegate from a clean ref that omits required local changes. Include the needed context safely or keep that work local.
+- The receiving agent may implement within the envelope; a delegated task does not authorize committing, publishing, or applying to the caller's checkout.
+- The coordinator reviews the actual diff, new files, and validation evidence before integrating within scope. In standalone mode perform that review yourself; no mandatory second provider.
+- Gate 2 separates validated work from separately authorized integration/production actions. Report results and remaining gaps; do not wait for another provider to approve. Prior user authorization for a specific action remains valid unless its target or material conditions changed.
+- Keep transient sessions, handoffs, and worktrees outside tracked source. Store only durable verified knowledge in docs/ai.
 
-## Definition of done
+## Native discovery and role names
 
-- Root cause or change motivation is identified.
-- Scope, contracts, data and authorization impacts are assessed.
-- Relevant confirmed validation command ran, or the precise blocker is documented.
-- Changed text files pass the encoding check, or each remaining finding is documented as intentional.
-- Remaining risks and manual validation are stated in the final response.
+Shared skills use the same names and content. Codex discovers .agents/skills; Grok uses the mirrored .grok/skills; Claude uses .claude/skills. Resolve scripts/references relative to the skill actually loaded. A copied prompt's $skill-name means use the named skill through the active tool's native invocation, not a shell command.
+
+| Role | Codex | Grok Build / Claude |
+| --- | --- | --- |
+| Explore | repo_explorer | repo-explorer |
+| Implement | dotnet_implementer | dotnet-implementer |
+| Tests | test_guardian | test-guardian |
+| Review | change_reviewer | change-reviewer |
+| Web | frontend_web | frontend-web |
+| SQL | database_sqlserver | database-sqlserver |
+| Security | security_reviewer | security-reviewer |
+| Performance | performance_reviewer | performance-reviewer |
+| Release | release_reviewer | release-reviewer |
+
+Use only installed roles supported by the active tool. If a role is unavailable, perform the bounded work yourself. Do not launch every reviewer.
+
+## Context and completion
+
+Search before opening files; read relevant context once, summarize large output, and expand only for actual risk or uncertainty. Read docs/ai when relevant; revalidate stale facts against their sources. Use maintain-agent-memory for durable lessons, not transcripts.
+
+Return motivation/root cause, changed files, actual validation, manual checks when needed, and residual risk. State uncertainty and unexecuted checks; never claim passing tests from code inspection.

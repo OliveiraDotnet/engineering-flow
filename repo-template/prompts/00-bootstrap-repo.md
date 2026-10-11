@@ -7,5 +7,5 @@ Use `$bootstrap-dotnet-repo` in this workspace.
 - Confirm facts in project files, scripts, CI, README, and tests.
 - Update only confirmed technical memory: `AGENTS.md` and `docs/ai`.
 - Recommend only real pack profiles with evidence (`web`, `sqlserver`).
-- Do not fan out reviewers; use `repo_explorer` only for a bounded gap.
+- Do not fan out reviewers; use the native explorer role from AGENTS.md only for a bounded gap.
 - When finished, ask for a new task so updated instructions load.

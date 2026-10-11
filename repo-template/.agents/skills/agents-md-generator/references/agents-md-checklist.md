@@ -14,7 +14,8 @@
 - One repository: create or improve root `AGENTS.md`.
 - Monorepo: create or improve root `AGENTS.md`; add nested files only for areas with genuinely different rules.
 - Multiple independent repositories: list repositories and ask for a target unless the user explicitly asked to apply to all.
-- Normal folder: create guidance only if the user wants folder-level Codex instructions.
+- Normal folder: create guidance only if the user wants folder-level agent instructions.
+- Preserve existing Git diffs; a worktree's `.git` can be a file. Do not infer repository boundaries from folder names alone.
 
 ## Preserve Existing Guidance
 
@@ -31,7 +32,7 @@
 - Context, delegation, and definition of done.
 - Durable database or security operating constraints only when confirmed.
 
-Put detailed maps, commands, and architecture in `docs/ai`. Do not generate a long coding-standards document as `AGENTS.md`.
+Link detailed maps and architecture in their existing documentation location; use `docs/ai` only if already adopted. Keep short confirmed operational commands in AGENTS.md where useful. Agent Pack and companion skills are optional, not prerequisites.
 
 ## Avoid
 

@@ -755,7 +755,11 @@ function Get-ReconcilePlan {
         }
     }
     $desiredArtifacts = @(
-        $CurrentArtifacts.Entries | Where-Object { $desiredComponents.ContainsKey($_.Component) }
+        $CurrentArtifacts.Entries | Where-Object {
+            $desiredComponents.ContainsKey($_.Component) -and
+            (($Selection.Integrations -contains "codex") -or
+             ($_.Destination -notlike '.codex/*' -and $_.Destination -notlike '*/agents/openai.yaml'))
+        }
     )
     $desiredIds = @{}
     foreach ($artifact in $desiredArtifacts) {
@@ -1202,10 +1206,15 @@ function Invoke-ReconcilePlan {
     $completed = New-Object System.Collections.Generic.List[object]
     try {
         try {
-            $lockStream = [IO.File]::Open($lockPath, [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+            $lockStream = [IO.File]::Open($lockPath, [IO.FileMode]::CreateNew, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
         }
         catch {
-            throw "Another Agent Pack update is already running for this repository."
+            throw "Another Agent Pack update is active or a stale lock exists: $lockPath"
+        }
+
+        $lockedState = Get-CurrentFileStatus -Path $StatePath -RepositoryRoot $RepositoryRoot
+        if ($lockedState.Kind -ne $stateAtPlanning.Kind -or $lockedState.Hash -ne $stateAtPlanning.Hash) {
+            throw "Agent Pack state changed after planning; rerun the update."
         }
 
         $backupRoot = Join-Path $runtimeRoot (Join-Path "backups" $CurrentVersion)
@@ -1250,17 +1259,29 @@ function Invoke-ReconcilePlan {
                     New-Item -ItemType Directory -Force -Path $backupDirectory | Out-Null
                 }
                 Copy-Item -LiteralPath $action.DestinationFull -Destination $backup -Force
-                Copy-Item -LiteralPath $action.SourceFull -Destination $action.DestinationFull -Force
                 $completed.Add([pscustomobject]@{ Kind = "replace"; Destination = $action.DestinationFull; Backup = $backup; DesiredHash = $action.NextState.BaselineHash }) | Out-Null
+                Copy-Item -LiteralPath $action.SourceFull -Destination $action.DestinationFull -Force
             }
             else {
-                Copy-Item -LiteralPath $action.SourceFull -Destination $action.DestinationFull
                 $addedHash = if ($action.NextState.Mode -eq "tracked") { $action.NextState.BaselineHash } else { $action.NextState.LocalHash }
-                $completed.Add([pscustomobject]@{ Kind = "add"; Destination = $action.DestinationFull; Backup = ""; DesiredHash = $addedHash }) | Out-Null
+                # Stage first: a failed copy cannot leave a partial new destination.
+                $staged = Join-Path $runtimeRoot ([Guid]::NewGuid().ToString("N") + ".tmp")
+                try {
+                    Copy-Item -LiteralPath $action.SourceFull -Destination $staged
+                    Move-Item -LiteralPath $staged -Destination $action.DestinationFull
+                    $completed.Add([pscustomobject]@{ Kind = "add"; Destination = $action.DestinationFull; Backup = ""; DesiredHash = $addedHash }) | Out-Null
+                }
+                finally {
+                    if (Test-Path -LiteralPath $staged) { Remove-Item -LiteralPath $staged -Force }
+                }
             }
         }
 
         $stateContent = Get-StateContent -Version $CurrentVersion -Profiles $Plan.Profiles -Integrations $Plan.Integrations -Actions $Plan.Actions
+        $beforeCommit = Get-CurrentFileStatus -Path $StatePath -RepositoryRoot $RepositoryRoot
+        if ($beforeCommit.Kind -ne $stateAtPlanning.Kind -or $beforeCommit.Hash -ne $stateAtPlanning.Hash) {
+            throw "Agent Pack state changed during apply; refusing to overwrite it."
+        }
         Write-StateAtomic -Path $StatePath -Content $stateContent
     }
     catch {
@@ -1302,6 +1323,7 @@ function Invoke-ReconcilePlan {
     finally {
         if ($lockStream) {
             $lockStream.Dispose()
+            Remove-Item -LiteralPath $lockPath -Force
         }
     }
 }
@@ -1332,6 +1354,7 @@ $manifest = Read-PackManifest -Path $ManifestPath -TemplateRootPath $templateRoo
 $currentArtifacts = Read-PackArtifacts -Path $ArtifactsPath -Manifest $manifest -RepositoryRoot $repoRoot
 $compatibility = Read-CompatibilityCatalog -Root $CompatibilityRoot -RepositoryRoot $repoRoot
 $statePathInfo = Resolve-SafeRelativePath -Root $repoRoot -RelativePath $StateRelativePath -Label "Agent Pack state"
+$stateAtPlanning = Get-CurrentFileStatus -Path $statePathInfo.Full -RepositoryRoot $repoRoot
 $state = Read-AgentPackState -Path $statePathInfo.Full -RepositoryRoot $repoRoot -CurrentVersion $packVersion -CurrentArtifacts $currentArtifacts -Compatibility $compatibility
 $selection = Get-EffectiveSelection -State $state -CurrentArtifacts $currentArtifacts -Compatibility $compatibility -RepositoryRoot $repoRoot
 $requestedIntegrations = New-Object System.Collections.Generic.List[string]
@@ -1350,9 +1373,6 @@ foreach ($value in $Integration) {
 }
 
 if ($requestedIntegrations.Count -gt 0) {
-    if ($requestedIntegrations -notcontains "codex") {
-        throw "The Codex integration is mandatory. Include 'codex' when overriding integrations."
-    }
     $selection = [pscustomobject]@{
         Profiles = @($selection.Profiles)
         Integrations = $requestedIntegrations.ToArray()

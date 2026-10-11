@@ -1,6 +1,6 @@
 ---
 name: agents-md-generator
-description: Create or improve a short pack-format AGENTS.md from repository evidence. Use when the user wants AGENTS.md created or rewritten. Do not use for full bootstrap, docs/ai memory, or inventing commands; use bootstrap-dotnet-repo and maintain-agent-memory for those.
+description: Create or improve concise AGENTS.md guidance from repository evidence. Use when project instructions need to be created or rewritten, in any repository or explicitly selected folder.
 ---
 
 # AGENTS.md Generator
@@ -12,11 +12,11 @@ Create or improve `AGENTS.md` files from the actual repository shape. Inspect fi
 ## Workflow
 
 1. Read any existing `AGENTS.md` and `AGENTS.override.md` files that apply to the target path.
-2. Inspect the workspace before writing: Git roots, `README*`, `docs/`, solution/project files, package manifests, CI files, Docker files, and major folders.
+2. Inspect Git status and relevant staged/unstaged diffs before editing; preserve existing user changes. Inspect the workspace selectively: Git roots, `README*`, `docs/`, solution/project files, package manifests, CI files, Docker files, and major folders.
 3. Classify the workspace as one repository, a monorepo, multiple independent repositories, or a normal folder without Git metadata.
 4. Infer stack, architecture, commands, conventions, and dominant documentation language only from real files.
 5. Decide the target: root `AGENTS.md` for one repository, root plus selective nested files for monorepos, per-repository files for multiple independent repositories, or no write until the user confirms a target.
-6. Propose the action before editing when the target is ambiguous or multiple repositories are detected.
+6. Ask only when the target remains ambiguous after using the request and available context; existing authorization for a selected repository or all repositories is sufficient.
 7. Write a concise, practical `AGENTS.md` with TODO markers where facts cannot be confirmed.
 8. Report workspace detection, existing status, proposed action, files changed, assumptions or TODOs, and final summary.
 
@@ -51,7 +51,7 @@ When `AGENTS.md` does not exist:
 
 ## Content Standard
 
-Match the installed Agent Pack `AGENTS.md` template. Keep the file short and always-relevant:
+Follow existing repository guidance. If Agent Pack is installed, reuse its template; otherwise create concise standalone guidance without requiring the pack or its skills. Keep the file short and always-relevant:
 
 - Facts to confirm, or confirmed facts after bootstrap
 - Working rules
@@ -59,7 +59,7 @@ Match the installed Agent Pack `AGENTS.md` template. Keep the file short and alw
 - Codex and Grok Build collaboration when that integration is present
 - Definition of done
 
-Put architecture, commands, database notes, and domain vocabulary in `docs/ai`, not in long `AGENTS.md` sections. Do not add generic coding-standards filler. Include database rules in `AGENTS.md` only when they are durable operating constraints confirmed by the repository.
+Link existing detailed documentation in the repository's chosen location (`docs/ai` only when that convention exists). Retain short, confirmed build/test commands that agents need regularly. Do not create a documentation tree or relocate manual notes merely to match a template. Include database rules only when they are durable, confirmed operating constraints.
 
 ## Safety Rules
 

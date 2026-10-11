@@ -30,7 +30,7 @@ Quando `IncludeClaude` está habilitado, o `CLAUDE.md` da raiz importa `AGENTS.m
 
 Quando `IncludeGrokBuild` está habilitado, o Grok lê `AGENTS.md` diretamente. Skills compartilhadas são espelhadas de `.agents/skills` para `.grok/skills`, e os agentes Markdown equivalentes ficam em `.grok/agents`. Não existe `GROK.md` no pack.
 
-A configuração `.grok/config.toml` nega commit, push, reset destrutivo e limpeza destrutiva. Configurações pessoais, autenticação, sandbox, sessões e worktrees pertencem ao diretório do usuário; não devem ser versionadas nem redirecionadas para dentro do projeto.
+A configuração `.grok/config.toml` nega reset destrutivo, limpeza destrutiva e remoção recursiva. Commit e push dependem de autorização explícita do usuário e da política nativa do provedor. Configurações pessoais, autenticação, sandbox, sessões e worktrees pertencem ao diretório do usuário; não devem ser versionadas nem redirecionadas para dentro do projeto.
 
 ## Uso eficiente de contexto e tokens
 

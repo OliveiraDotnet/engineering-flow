@@ -1,6 +1,6 @@
 # SQL Server change gates
 
-Do not write SQL, migrations, or database commands until the plan is approved. Never execute against a real database in the same turn as the plan.
+Write SQL/migrations only within the user-authorized plan. Execution against a database requires explicit authorization for the actual target and operations; prior authorization remains valid when scope and conditions are unchanged. A plan alone is not execution permission.
 
 ## Classify every object change
 

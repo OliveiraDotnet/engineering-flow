@@ -1,6 +1,6 @@
 # Understand the system from SQL Server
 
-Read-only. Build an application picture from schema, programmable objects, and .NET consumers. Do not emit `ALTER`, `DROP`, or data-changing SQL.
+Read-only. Build an application picture from schema, programmable objects, and application consumers where available. Do not emit `ALTER`, `DROP`, or data-changing SQL.
 
 ## What to reconstruct
 
@@ -17,7 +17,7 @@ Read-only. Build an application picture from schema, programmable objects, and .
 2. User-supplied sanitized metadata from `scripts/sqlserver-metadata-map.sql`.
 3. Execution plans or Query Store only when provided.
 
-If live metadata is required, run `scripts/sqlserver-access-preflight.ps1` at most once, then give the user the read-only script. Do not retry VPN/DNS failures.
+For live metadata, follow [collection guidance](metadata-collection.md). Preflight is optional for an authorized direct-access path, not a requirement for user-run exports. Do not retry known VPN/DNS failures without a relevant environment change.
 
 ## Output
 
@@ -25,4 +25,4 @@ If live metadata is required, run `scripts/sqlserver-access-preflight.ps1` at mo
 - Dependency map (SQL object ↔ C# consumer).
 - Risks labeled static, metadata-backed, or runtime-backed.
 - Gaps that need a human (unknown jobs, undocumented result sets).
-- Optional `docs/ai/database.md` update **proposed** through `maintain-agent-memory` only; do not edit production code.
+- Propose a context-document update only when useful; write only when requested, in the existing documentation location. Use maintain-agent-memory if available, never as a prerequisite; do not edit production code.

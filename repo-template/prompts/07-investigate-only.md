@@ -1,6 +1,6 @@
 # Investigate without changing files
 
-Investigate the problem below without editing files. Use `repo_explorer` only if the flow needs independent mapping.
+Investigate the problem below without editing files. Use the native explorer role from AGENTS.md only if the flow needs independent mapping.
 
 ## Problem
 

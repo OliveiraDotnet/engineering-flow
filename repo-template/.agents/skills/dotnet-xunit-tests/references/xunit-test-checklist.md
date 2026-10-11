@@ -4,7 +4,8 @@
 
 - Read applicable `AGENTS.md` and `AGENTS.override.md`.
 - Read README and testing docs.
-- Locate `.sln`, `.csproj`, `src/`, `tests/`, `test/`, and `spec/`.
+- Locate solution/project files (including `.slnx` when present), `global.json`, central package/build settings, runner configuration, and relevant test directories.
+- Match the installed xUnit generation and test platform; do not mix runner/SDK conventions or hardcode package versions from another project.
 - Identify whether xUnit is already used.
 - Identify packages: `xunit`, `xunit.runner.visualstudio`, `Microsoft.NET.Test.Sdk`, `Moq`, `NSubstitute`, `FakeItEasy`, `FluentAssertions`, `Shouldly`, `Microsoft.AspNetCore.Mvc.Testing`, `Testcontainers`, and `coverlet.collector`.
 - Identify naming conventions, folder conventions, assertion style, mock library, fixtures, builders, fakes, factories, `WebApplicationFactory`, and integration fixtures.
@@ -22,7 +23,8 @@
 
 - Use existing integration infrastructure when present.
 - Avoid production databases and production secrets.
-- Ensure test data isolation.
+- Ensure test data isolation, including parallel runs. Clean up only test-owned resources; await async operations and use the fixture lifecycle supported by the installed xUnit version.
+- Verify endpoint/database configuration points to the intended test environment before executing integration setup or migrations.
 - Prefer realistic persistence tests when query behavior is the risk.
 - Propose heavy dependencies such as Testcontainers before adding them when the repository does not already use them.
 
@@ -38,7 +40,7 @@
 ## Regression Workflow
 
 1. Reproduce the bug with a failing test.
-2. Apply the minimal production fix.
+2. Apply the minimal production fix only if fixing behavior is authorized; for a tests-only task, preserve production code and report the reproduced failure.
 3. Run the focused test.
 4. Run broader relevant tests when the touched code has shared behavior.
 5. Report any untested risk.

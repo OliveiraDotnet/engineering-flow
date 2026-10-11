@@ -1,18 +1,17 @@
 ---
 name: sqlserver-structure-review
-description: Read-only SQL Server review that reconstructs system behavior from schema, procedures, and .NET data access. Use to understand or review the database. Do not use to write migrations, DROP objects, or execute schema changes; use db-change-sqlserver after an approved plan.
+description: Review SQL Server schema, programmable objects, and application data access read-only. Reconstruct system behavior and dependencies from repository evidence or authorized metadata.
 ---
 
 # SQL Server structure review
 
-Use only when the `sqlserver` profile is installed. Stay read-only.
+This skill is distributed with the sqlserver profile. Codex or Grok Build can run it directly; map any delegated database role through project instructions. Keep analysis read-only.
 
-1. Read applicable `AGENTS.md` and confirmed database notes in `docs/ai`.
-2. Identify the schema source of truth and whether static files are enough.
-3. Map tables, constraints, indexes, procs, views, functions, triggers, and C# consumers. Use `scripts/find-sqlserver-references.ps1` when the tree is large.
-4. Reconstruct runtime behavior from the database: tenancy, audit, status, jobs, reports, and overlapping app versions. Read `references/sqlserver-system-understanding.md`.
-5. If live metadata is required, use `scripts/sqlserver-access-preflight.ps1` once, then give the user `scripts/sqlserver-metadata-map.sql`. Do not ask for secrets or connect to production unless explicitly instructed.
-6. Classify findings with evidence type (static, metadata-backed, runtime-backed) using `references/sqlserver-review-checklist.md` and `references/sqlserver-risk-patterns.md`.
-7. Recommend the smallest safe next step. Do not emit destructive SQL. Hand approved change work to `db-change-sqlserver`.
+1. Read applicable project instructions and existing database notes; identify the requested scope, source of truth, SQL Server version/compatibility when available, and relevant application consumers. Do not require .NET source for a database-only review.
+2. Start with static evidence. Map relevant tables, constraints, indexes, procs, views, functions, triggers, and callers. For a large tree use [reference finder](scripts/find-sqlserver-references.ps1) with an explicit target path and preferably SummaryOnly first; results are candidate locations, not proven dependencies.
+3. For a system-level map read [system understanding](references/sqlserver-system-understanding.md). Use only relevant sections of [review checklist](references/sqlserver-review-checklist.md) and [risk patterns](references/sqlserver-risk-patterns.md); do not treat a pattern alone as a proven defect.
+4. If metadata is needed, prefer sanitized user-supplied results. Read [collection guidance](references/metadata-collection.md) before using the bundled scripts. Run [network preflight](scripts/sqlserver-access-preflight.ps1) at most once only if direct access is relevant, authorized, and reachability is uncertain; it is unnecessary for user-run collection. Never ask for secrets or connect to production without explicit instruction.
+5. Classify findings as static, metadata-backed, or runtime-backed with evidence, impact, confidence, and unresolved dependencies. Missing visibility, dynamic SQL, encrypted modules, or absent callers limit completeness. SQL version, compatibility, and workload qualify performance claims.
+6. Recommend the smallest safe next step; do not execute schema/data changes or emit destructive SQL. Use db-change-sqlserver only if available and change work is separately authorized; otherwise return an actionable plan without requiring a companion skill.
 
-Return scope, system map, dependency map, findings, application impact, validation still needed, and assumptions.
+Return scope, relevant system/dependency map, findings, assumptions, and validation gaps concisely. For an explicitly requested context document, reuse the existing docs location and [context template](references/sqlserver-context-template.md), preserve manual content, and omit irrelevant sections; a review alone does not authorize creating documentation.

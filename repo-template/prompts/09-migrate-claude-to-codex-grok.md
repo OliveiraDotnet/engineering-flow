@@ -1,6 +1,6 @@
 # Migrate this repository from Claude to Codex + Grok Build
 
-Act as the migration coordinator. I am the sole decision authority. Codex is the control plane for discovery, design, review, judgment and independent validation; Grok Build is the execution plane for bounded parallel work in isolated native worktrees.
+Act as the migration coordinator. I am the sole decision authority. Codex and Grok Build can each coordinate or execute independently. Select the tools requested by the user; neither is a prerequisite for the other.
 
 ## Safety and scope
 
@@ -42,4 +42,4 @@ Act as the migration coordinator. I am the sole decision authority. Codex is the
 - Review the final Git diff and confirm there are no Claude artifacts, secrets, runtime sessions, worktrees, generated handoff files or unrelated changes.
 - Gate 2 applies: present the reviewed result and a manual validation scenario. Do not commit, push, merge, deploy, release, run a production migration or alter data without my separate explicit authorization.
 
-Return the inventory, approved scope, migrations performed, files removed, files added or changed, commands and results, unresolved conflicts, limitations, manual validation steps and the exact next command for the first Codex-to-Grok delegated task.
+Return the inventory, approved scope, migrations performed, files removed, files added or changed, commands and results, unresolved conflicts, limitations, manual validation steps and the next standalone task or optional shared agent-work-order handoff.

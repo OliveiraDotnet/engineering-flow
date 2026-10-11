@@ -10,7 +10,7 @@ description: Inspect and safely reconcile an existing repository installation wi
 3. Run the updater in check mode:
    - Windows: `powershell -ExecutionPolicy Bypass -File "$env:AGENT_PACK_HOME\scripts\update-agent-pack.ps1" -RepoPath . -Check`
    - Linux/macOS: `bash "$AGENT_PACK_HOME/scripts/update-agent-pack.sh" . --check`
-   - When intentionally changing providers, pass `-Integration codex,grok` or `--integration codex,grok` (or the required explicit set). Codex is mandatory.
+   - When intentionally changing providers, pass `-Integration codex,grok` or `--integration codex,grok` (or the required explicit set, including grok alone). Neither Codex nor Grok is mandatory.
 4. Review every planned action and its evidence. The deterministic updater owns file selection; do not invent extra files or profiles.
 5. Resolve conflicts by artifact:
    - Preserve confirmed project facts, commands and rules.

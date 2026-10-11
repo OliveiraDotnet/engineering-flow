@@ -1,12 +1,11 @@
-# Shared project policy for Grok Build. Personal model, authentication, UI, and
-# sandbox defaults belong in ~/.grok/config.toml or managed requirements files.
+# Shared project safeguards. User/organization settings own authentication,
+# models, sandbox and permission modes. AGENTS.md governs task authorization.
+# Commit/push are not globally denied: either standalone provider can perform
+# them when explicitly authorized and allowed by its native permission policy.
 
 [permission]
 rules = [
-  { action = "deny", tool = "bash", pattern = "git commit" },
-  { action = "deny", tool = "bash", pattern = "git commit *" },
-  { action = "deny", tool = "bash", pattern = "git push" },
-  { action = "deny", tool = "bash", pattern = "git push *" },
+  { action = "deny", tool = "bash", pattern = "git reset --hard" },
   { action = "deny", tool = "bash", pattern = "git reset --hard *" },
   { action = "deny", tool = "bash", pattern = "git clean *" },
   { action = "deny", tool = "bash", pattern = "rm -rf *" },

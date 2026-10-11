@@ -122,9 +122,10 @@ else
 fi
 
 agents_governance="$TEMPLATE_ROOT/AGENTS.md"
+work_order_contract="$TEMPLATE_ROOT/.agents/skills/agent-work-order/SKILL.md"
 delegation_contract="$TEMPLATE_ROOT/.agents/skills/delegate-to-grok-build/SKILL.md"
 execution_contract="$TEMPLATE_ROOT/.grok/skills/execute-codex-work-order/SKILL.md"
-for governance_file in "$agents_governance" "$delegation_contract" "$execution_contract"; do
+for governance_file in "$agents_governance" "$work_order_contract" "$delegation_contract" "$execution_contract"; do
   [ -f "$governance_file" ] || fail "Missing Grok governance artifact: $governance_file"
 done
 if [ -f "$agents_governance" ] && [ -f "$delegation_contract" ] && [ -f "$execution_contract" ]; then
@@ -132,11 +133,13 @@ if [ -f "$agents_governance" ] && [ -f "$delegation_contract" ] && [ -f "$execut
     grep -Fq "$required" "$agents_governance" || fail "AGENTS.md is missing governance marker '$required'"
   done
   for required in "Human-approved scope" "Allowed read areas" "Allowed modification areas" "Decision boundaries" "Escalation conditions" "READY_FOR_MANUAL_VALIDATION" "USER_DECISION_REQUIRED"; do
-    grep -Fq "$required" "$delegation_contract" || fail "Codex-to-Grok delegation contract is missing '$required'"
+    grep -Fq "$required" "$work_order_contract" || fail "Shared agent work-order contract is missing '$required'"
   done
   for required in "COMPLETED" "COMPLETED_WITH_CONCERNS" "BLOCKED_BY_DECISION" "UNABLE_TO_VALIDATE" "material change was not performed"; do
-    grep -Fq "$required" "$execution_contract" || fail "Grok execution contract is missing '$required'"
+    grep -Fq "$required" "$work_order_contract" || fail "Shared agent work-order contract is missing '$required'"
   done
+  grep -Fq "agent work order" "$delegation_contract" || fail "Codex-to-Grok delegation entrypoint must reference the shared agent work-order contract"
+  grep -Fq "agent work order" "$execution_contract" || fail "Grok execution entrypoint must reference the shared agent work-order contract"
 fi
 
 while IFS= read -r file; do
@@ -195,10 +198,10 @@ grok_config="$TEMPLATE_ROOT/.grok/config.toml"
 if [ ! -f "$grok_config" ]; then
   fail "Missing Grok Build project configuration: .grok/config.toml"
 else
-  for command in "git commit" "git push"; do
+  for command in "git reset --hard" "git clean" "rm -rf"; do
     required_rule="{ action = \"deny\", tool = \"bash\", pattern = \"$command *\" }"
     if ! grep -Fq "$required_rule" "$grok_config"; then
-      fail ".grok/config.toml must deny '$command'"
+      fail ".grok/config.toml must deny destructive command '$command'"
     fi
   done
 fi

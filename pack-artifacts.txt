@@ -148,3 +148,10 @@ agent.grok.performance-reviewer|.grok/agents/performance-reviewer.md|managed
 agent.grok.release-reviewer|.grok/agents/release-reviewer.md|managed
 skill.grok.security-review-dotnet|.grok/skills/security-review-dotnet/SKILL.md|managed
 skill.grok.performance-review-dotnet|.grok/skills/performance-review-dotnet/SKILL.md|managed
+skill.shared.agent-work-order|.agents/skills/agent-work-order/SKILL.md|managed
+skill.claude.agent-work-order|.claude/skills/agent-work-order/SKILL.md|managed
+skill.grok.agent-work-order|.grok/skills/agent-work-order/SKILL.md|managed
+skill.grok.delegate-to-grok-build|.grok/skills/delegate-to-grok-build/SKILL.md|managed
+skill.shared.sqlserver-structure-review.metadata-collection|.agents/skills/sqlserver-structure-review/references/metadata-collection.md|managed
+skill.claude.sqlserver-structure-review.metadata-collection|.claude/skills/sqlserver-structure-review/references/metadata-collection.md|managed
+skill.grok.sqlserver-structure-review.metadata-collection|.grok/skills/sqlserver-structure-review/references/metadata-collection.md|managed
