@@ -177,7 +177,7 @@ foreach ($agent in $agentFiles) {
         if ($content -notmatch "(?m)^$requiredKey\s*=") { Add-Error "Agent '$($agent.Name)' is missing $requiredKey." }
     }
 
-    $nicknameLine = [regex]::Match($content, '(?m)^nickname_candidates\s*=\s*\[(.+)\]$')
+    $nicknameLine = [regex]::Match($content, '(?m)^nickname_candidates\s*=\s*\[(.+)\]\r?$')
     if ($nicknameLine.Success) {
         foreach ($value in [regex]::Matches($nicknameLine.Groups[1].Value, '"([^"]+)"')) {
             if ($value.Groups[1].Value -notmatch '^[A-Za-z0-9 _-]+$') {
@@ -197,8 +197,8 @@ foreach ($agent in $claudeAgentFiles) {
         continue
     }
 
-    $nameMatch = [regex]::Match($frontmatter.Groups[1].Value, '(?m)^name:\s*([^\r\n]+)$')
-    $descriptionMatch = [regex]::Match($frontmatter.Groups[1].Value, '(?m)^description:\s*([^\r\n]+)$')
+    $nameMatch = [regex]::Match($frontmatter.Groups[1].Value, '(?m)^name:\s*([^\r\n]+?)\r?$')
+    $descriptionMatch = [regex]::Match($frontmatter.Groups[1].Value, '(?m)^description:\s*([^\r\n]+?)\r?$')
     if (-not $nameMatch.Success) { Add-Error "Claude agent '$($agent.Name)' is missing name."; continue }
     if (-not $descriptionMatch.Success) { Add-Error "Claude agent '$($agent.Name)' is missing description." }
 
