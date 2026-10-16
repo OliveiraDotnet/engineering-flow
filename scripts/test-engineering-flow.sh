@@ -75,7 +75,7 @@ if bash "$UPDATER" "$old" --apply; then fail 'Custom migration bypassed conflict
 [ "$before" = "$(sha256sum "$old/AGENTS.md" "$old/.agents/skills/bugfix-dotnet/SKILL.md" "$old/docs/ai/runbook.md")" ] || fail 'Conflict was not atomic'
 bash "$UPDATER" "$old" --apply --keep-local guidance.agents --keep-local skill.shared.bugfix-dotnet --accept-pack config.grok.project
 [ "$before" = "$(sha256sum "$old/AGENTS.md" "$old/.agents/skills/bugfix-dotnet/SKILL.md" "$old/docs/ai/runbook.md")" ] || fail 'Migration lost managed/merge/seed customizations'
-grep -q '^version|2.0.0$' "$old/.agent-pack/state.txt" || fail 'Version not advanced'
+grep -Fxq "version|$(tr -d '\r\n' < "$PACK_ROOT/pack-version.txt")" "$old/.agent-pack/state.txt" || fail 'Version not advanced'
 grep -q '^integration|grok$' "$old/.agent-pack/state.txt" || fail 'Integration selection lost'
 grep -q '^profile|web$' "$old/.agent-pack/state.txt" || fail 'Web selection lost'
 if grep -Eq '^profile\|(mobile|quality)$|^integration\|codex$' "$old/.agent-pack/state.txt"; then fail 'Migration expanded selection'; fi

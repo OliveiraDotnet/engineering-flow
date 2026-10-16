@@ -18,5 +18,6 @@ Use only when the `sqlserver` profile is installed.
 5. Verify that the plan is covered by actual user authorization; reuse approval already given for the same scope. Destructive operations (`DROP`, narrowing `ALTER`, unique indexes on dirty data, `NOT NULL` without backfill) require explicit authorization covering those operations.
 6. After approval, write the smallest idempotent script or migration the repository already uses. Do not execute it against any database unless the user names the environment and has explicitly authorized that execution and target. Prior authorization remains valid if scope and conditions are unchanged.
 7. Update consumers only as required by the approved plan. Keep app and database overlapping versions compatible when releases can drift.
+8. If the project declares a SQL release package in AGENTS.md, consolidate the approved scripts following `docs/engineering-flow/sql-release-package.md`. Execution still requires explicit authorization for the target.
 
 Return diagnosis, approved scope, script/migration (only after approval), data and application impact, rollback, and remaining validation.

@@ -1,4 +1,4 @@
-# Engineering Flow manifest v2.0.0
+# Engineering Flow manifest v2.1.0
 # component|source path relative to repo-template|optional destination path relative to repository
 core|AGENTS.md
 core|docs/ai/project-map.md
@@ -188,6 +188,9 @@ claude-web|.agents/skills/web-app/SKILL.md|.claude/skills/web-app/SKILL.md
 grok-web|.agents/skills/web-app/SKILL.md|.grok/skills/web-app/SKILL.md
 core|docs/engineering-flow/workflow.md|docs/engineering-flow/workflow.md
 core|docs/engineering-flow/capabilities.md|docs/engineering-flow/capabilities.md
+core|docs/engineering-flow/anti-patterns.md|docs/engineering-flow/anti-patterns.md
+core|docs/engineering-flow/planning-workspace.md|docs/engineering-flow/planning-workspace.md
+core|docs/engineering-flow/sql-release-package.md|docs/engineering-flow/sql-release-package.md
 core|.agents/skills/bootstrap-repo/scripts/inspect-repo.ps1|.agents/skills/bootstrap-repo/scripts/inspect-repo.ps1
 claude-core|.agents/skills/bootstrap-repo/scripts/inspect-repo.ps1|.claude/skills/bootstrap-repo/scripts/inspect-repo.ps1
 grok-core|.agents/skills/bootstrap-repo/scripts/inspect-repo.ps1|.grok/skills/bootstrap-repo/scripts/inspect-repo.ps1
