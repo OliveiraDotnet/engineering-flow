@@ -1,5 +1,11 @@
 # Engineering Flow changelog
 
+## 2.1.1 — 2026-10-16
+
+- Documentação: suporte oficial ao modo pack local (pack no projeto sem versionamento), com campo `Versionamento do pack` em "Convenções do projeto" do AGENTS.md e seção "Modo pack local" em INSTRUCOES_DETALHADAS.md.
+- `compat/releases/2.1.0.txt` com a base 2.1.0 para atualização segura.
+- Sem mudança de scripts.
+
 ## 2.1.0 — 2026-10-15
 
 - workflow.md: modos Trivial/Completo com regra de corte, orçamento por fase, descoberta proporcional com leitura justificada, leitura obrigatória de anti-padrões e Gate de 100% (não é cobertura de código).

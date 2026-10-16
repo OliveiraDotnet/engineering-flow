@@ -38,8 +38,30 @@ Evidências transitórias usam diretório temporário externo por padrão. Estad
 
 Instalação e atualização acrescentam somente padrões faltantes de resíduos do pack ao .gitignore existente, preservando conteúdo e bytes originais. DryRun/WhatIf e Check não escrevem. A proteção é aplicada após instalação/reconciliação bem-sucedida; a checagem prévia rejeita arquivo vinculado, encoding incompatível ou bloqueio de escrita identificado. Se uma escrita de proteção falhar depois da reconciliação, reporte esse passo como falho e confira o estado/diff: não presuma rollback da etapa já concluída.
 
-Permanecem versionáveis AGENTS.md, skills/configurações de projeto em .agents/.codex/.claude/.grok, docs/ai úteis e .agent-pack/state.txt (IDs/hashes/seleção para futuras atualizações). Não se ignora nenhuma dessas árvores inteira. Ignore .agent-pack/.runtime (backups/retired/locks/staging), state temporário, caches/logs/sessões/worktrees operacionais, .engineering-flow-evidence e propostas/backups *.agent-pack.new / *.agent-pack.backup-* em qualquer diretório. Revise uma proposta ignorada explicitamente pelo caminho antes de aceitar; Git status não é inventário de conflitos.
+Permanecem versionáveis AGENTS.md, skills/configurações de projeto em .agents/.codex/.claude/.grok, docs/ai úteis e .agent-pack/state.txt (IDs/hashes/seleção para futuras atualizações). No modo padrão (versionado), não se ignora nenhuma dessas árvores inteira; para o modo local, veja abaixo. Ignore .agent-pack/.runtime (backups/retired/locks/staging), state temporário, caches/logs/sessões/worktrees operacionais, .engineering-flow-evidence e propostas/backups *.agent-pack.new / *.agent-pack.backup-* em qualquer diretório. Revise uma proposta ignorada explicitamente pelo caminho antes de aceitar; Git status não é inventário de conflitos.
 
 Regras próprias preexistentes não são removidas nem sobrepostas. Se já ignorarem state.txt ou instruções necessárias, use git check-ignore -v para localizar a regra e decidir a correção. Arquivos operacionais já rastreados continuam rastreados: .gitignore não os retira do índice; remoção do histórico/índice exige revisão específica. Outros diretórios de saída particulares do projeto/host precisam de regras confirmadas; não se adicionam padrões globais para esconder dados desconhecidos. Segredos/dados continuam sujeitos à revisão, sem promessa de sanitização automática.
+
+### Modo pack local
+
+Opcional, declarado em AGENTS.md (`Versionamento do pack: local`). O pack fica no projeto destino, mas não é versionado. O usuário acrescenta ao .gitignore do destino:
+
+```gitignore
+.agents/
+.codex/
+.claude/
+.grok/
+.agent-pack/
+docs/engineering-flow/
+prompts/
+```
+
+AGENTS.md, CLAUDE.md e docs/ai continuam versionados: contêm regras e memória específicas do projeto.
+
+- Updater: lê `.agent-pack/state.txt` do disco e não consulta o Git para decidir a reconciliação. Com state.txt presente localmente, Check e aplicação funcionam normalmente.
+- Clone novo ou outra máquina: o estado não acompanha o repositório. Sem state.txt, o updater só tenta inferir uma instalação por hashes conhecidos (versão atual ou `compat/releases`) dos arquivos presentes; num clone novo os arquivos ignorados também não existem e ele encerra pedindo o instalador. Rode a instalação novamente, com perfis/integrações explícitos (sem state.txt não há seleção registrada para preservar). Para arquivos já existentes, o instalador pula os idênticos ao pack; os divergentes não são sobrescritos: a versão do pack vai para `<arquivo>.agent-pack.new` para revisão (Force substitui com backup `*.agent-pack.backup-*`). O state.txt gerado registra idênticos como `tracked` e divergentes/seed como `keep-local` com o hash local.
+- Customizações locais de arquivos do pack não têm histórico Git; mantenha backup próprio se forem relevantes.
+- Arquivos já rastreados não saem do índice por causa do .gitignore; remova com `git rm --cached` revisado (o arquivo permanece no disco).
+- `protect-engineering-flow-files` continua escrevendo apenas as regras padrão (resíduos gerados). As regras do modo local são adicionadas pelo usuário.
 
 A versão 1.7 tinha regras gerais de build/testes/segredos no checkout do pack e proteção local criada pelo updater em .agent-pack/.runtime/.gitignore. Essa proteção não cobria propostas/backups do instalador em diretórios irmãos e deixava o próprio .runtime/.gitignore visível. A 2.0 amplia a proteção no destino mantendo state.txt visível. PowerShell valida UTF-8 e preserva BOM/CRLF ao acrescentar; Bash preserva bytes, rejeita NUL e verifica UTF-8 quando iconv está disponível. Encoding legado incompatível precisa de mudança revisada; não há transcodificação automática.
