@@ -20,6 +20,10 @@ Ausência de pedido de testes não autoriza execução automática. Destaque a v
 
 Gate 2 separa entrega/evidência de commit, push, merge, publicação, deploy, migrações/dados de produção e operações destrutivas, que precisam de autorização aplicável à ação/alvo. Preserve mudanças existentes, encoding e contratos fora do escopo; não exponha segredos/dados pessoais.
 
+## Modos, anti-padrões e limites
+
+Modos Trivial e Completo, orçamento por fase e Gate de 100% estão em workflow.md; na dúvida, Completo. Leia docs/engineering-flow/anti-patterns.md antes de qualquer tarefa. Teto de fase excedido: pare e devolva com status pendente / UNABLE_TO_VALIDATE.
+
 ## Operação e seleção
 
 Codex e Grok Build operam independentemente; compatibilidade Claude segue o mesmo contrato. O agente ativo conduz a entrega. Colaboração é opcional; não lance subagentes automaticamente nem presuma API entre provedores. Handoff real usa agent-work-order, contexto local preservado, ferramentas verificadas e isolamento para escritores concorrentes.
@@ -37,3 +41,13 @@ Pesquise antes de abrir arquivos; reuse fatos confirmados e revalide memória ob
 Detecte ferramentas/runners antes de executar somente testes aprovados. Checks de encoding também entram no envelope; preserve encoding legado confirmado e reporte limitações. Vincule critério → cenário → esperado → observado → artefato → status. Separe implementado, verificado, falhou e pendente/não verificado. Revise diff/novos arquivos; não declare teste aprovado por leitura de código ou resumo.
 
 Mantenha evidências/sessões/estado transitório fora de memória versionada. Em docs/ai guarde só conhecimento durável verificado, fonte/data e dados mínimos redigidos. Entregue causa/motivação, arquivos, resultados reais, links, decisões e riscos.
+
+## Convenções do projeto
+
+Template (AGENTS.md é artefato `merge`): cada repo preenche; nada aqui é padrão.
+
+- Workspace de planejamento (planning-workspace.md): [on|off]; raiz: [<caminho>]
+- Pacote SQL de release (sql-release-package.md): [on|off]
+- Cópia duplicada dos scripts pendentes no repo: [sim|não]; caminho: [<caminho>]
+- Nível de validação SQL: [syntax-only|execute]
+- Provider (GitHub/Azure DevOps) não é declarado aqui.

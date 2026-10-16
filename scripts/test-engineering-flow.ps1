@@ -103,7 +103,8 @@ try {
  & $Updater -RepoPath $old -Apply -KeepLocal 'guidance.agents','skill.shared.bugfix-dotnet' -AcceptPack 'config.grok.project' -Confirm:$false
  foreach ($p in $before.Keys) { Assert ((Get-FileHash -LiteralPath $p).Hash -eq $before[$p]) 'Migration lost managed/merge/seed customization.' }
  $state = Get-Content (Join-Path $old '.agent-pack/state.txt') -Raw
- Assert ($state -match '(?m)^version\|2\.0\.0$') 'Migration version not advanced.'
+ $expectedVersion = (Get-Content (Join-Path $PackRoot 'pack-version.txt') -Raw).Trim()
+ Assert ($state -match ('(?m)^version\|' + [regex]::Escape($expectedVersion) + '\r?$')) 'Migration version not advanced.'
  Assert ($state -match '(?m)^integration\|grok$' -and $state -notmatch '(?m)^integration\|codex$') 'Migration changed independent integration.'
  Assert ($state -match '(?m)^profile\|web$' -and $state -notmatch '(?m)^profile\|(mobile|quality)$') 'Migration changed profile selection.'
  Assert (Test-Path (Join-Path $old '.grok/skills/complete-task/SKILL.md')) 'Migration did not add selected core workflow.'

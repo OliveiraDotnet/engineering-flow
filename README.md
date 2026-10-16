@@ -4,7 +4,7 @@ Workflow de engenharia para descobrir sistemas, planejar e entregar bugs, featur
 
 **Entender → plano técnico → aprovação humana → implementar → executar testes aprovados → evidências → entregar.** Testes não pedidos/aprovados não executam automaticamente. Implementação aprovada sem testes é entregue como não validada; autorização existente não precisa ser repetida. Veja o [contrato comum](repo-template/docs/engineering-flow/workflow.md).
 
-Versão `2.0.0`. Nome público Engineering Flow; repositório `engineering-flow`. Suporta instalação inicial e atualização de instalações 1.7.0 e versões anteriores reconhecidas pelos catálogos. O pack contém orientação, configurações e scripts locais, sem instalar runtimes ou afirmar suporte automatizado universal. Mobile inclui apps nativos, híbridos e multiplataforma, novos ou existentes; desktop e DevOps têm procedimentos proporcionais ao ambiente autorizado.
+Versão `2.1.0`. Nome público Engineering Flow; repositório `engineering-flow`. Suporta instalação inicial e atualização de instalações 2.0.0, 1.7.0 e versões anteriores reconhecidas pelos catálogos. O pack contém orientação, configurações e scripts locais, sem instalar runtimes ou afirmar suporte automatizado universal. Mobile inclui apps nativos, híbridos e multiplataforma, novos ou existentes; desktop e DevOps têm procedimentos proporcionais ao ambiente autorizado.
 
 | Perfil | Seleção | Conteúdo |
 |---|---|---|
@@ -13,6 +13,8 @@ Versão `2.0.0`. Nome público Engineering Flow; repositório `engineering-flow`
 | sqlserver | explícito ou provider/T-SQL específico | Entendimento read-only e mudanças SQL Server aprovadas. |
 | mobile | explícito ou evidência de plataforma | Planejamento e validação nativa/híbrida/multiplataforma; não instala SDK/dispositivo. |
 | quality | explícito, nunca automático | Revisões focadas de segurança, desempenho e entrega. |
+
+Modos de operação: **Trivial** (1 critério observável, sem risco a dados/migração) e **Completo** (Gate 1 e Gate 2); na dúvida, Completo. Docs: [anti-padrões](repo-template/docs/engineering-flow/anti-patterns.md) (lidos antes de toda tarefa), [workspace de planejamento](repo-template/docs/engineering-flow/planning-workspace.md) e [pacote SQL de release](repo-template/docs/engineering-flow/sql-release-package.md), ambos opcionais por projeto. [GROK_BOT_WORKFLOW.md](GROK_BOT_WORKFLOW.md) descreve o bot secretário de engenharia opcional, fora do pack.
 
 ## Instalação
 

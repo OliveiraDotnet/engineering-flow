@@ -1,5 +1,14 @@
 # Engineering Flow changelog
 
+## 2.1.0 — 2026-10-15
+
+- workflow.md: modos Trivial/Completo com regra de corte, orçamento por fase, descoberta proporcional com leitura justificada, leitura obrigatória de anti-padrões e Gate de 100% (não é cobertura de código).
+- Novos docs gerenciados: anti-patterns.md, planning-workspace.md e sql-release-package.md (opcionais por projeto via "Convenções do projeto" em AGENTS.md).
+- db-change-sqlserver: passo 8 opcional de consolidação no pacote SQL de release.
+- `compat/releases/2.0.0.txt` com a base 2.0.0 para atualização segura.
+- GROK_BOT_WORKFLOW.md (fora do pack): diretriz do bot secretário de engenharia.
+- A adoção do workspace de planejamento pode ser gradual: demanda já em andamento termina na estrutura anterior.
+
 ## 2.0.0 — 2026-10-11
 
 - Nome público Engineering Flow e repositório engineering-flow; instalação inicial e migração de versões anteriores.

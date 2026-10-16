@@ -187,6 +187,9 @@ skill.claude.web-app|.claude/skills/web-app/SKILL.md|managed
 skill.grok.web-app|.grok/skills/web-app/SKILL.md|managed
 flow.workflow|docs/engineering-flow/workflow.md|managed
 flow.capabilities|docs/engineering-flow/capabilities.md|managed
+flow.anti-patterns|docs/engineering-flow/anti-patterns.md|managed
+flow.planning-workspace|docs/engineering-flow/planning-workspace.md|managed
+flow.sql-release-package|docs/engineering-flow/sql-release-package.md|managed
 skill.shared.bootstrap-repo.inspect-ps1|.agents/skills/bootstrap-repo/scripts/inspect-repo.ps1|managed
 skill.claude.bootstrap-repo.inspect-ps1|.claude/skills/bootstrap-repo/scripts/inspect-repo.ps1|managed
 skill.grok.bootstrap-repo.inspect-ps1|.grok/skills/bootstrap-repo/scripts/inspect-repo.ps1|managed
