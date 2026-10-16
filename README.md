@@ -59,3 +59,5 @@ Comece com `$bootstrap-repo` ou prompts/00-bootstrap-repo.md quando faltar conte
 Veja [manual e exemplos](MANUAL_DE_USO.md), [adoção/migração e limites](INSTRUCOES_DETALHADAS.md), [capacidades de validação](repo-template/docs/engineering-flow/capabilities.md), [Grok Bot opcional](GROK_BOT_OPCIONAL.md) e [changelog](CHANGELOG.md).
 
 A instalação/update preserva .gitignore e acrescenta proteção de resíduos operacionais. Skills/configuração e .agent-pack/state.txt permanecem versionáveis; veja higiene Git no guia detalhado. Regras próprias e arquivos já rastreados exigem revisão quando incompatíveis.
+
+Modo pack local (opcional): o pack fica no projeto sem ser versionado; AGENTS.md, CLAUDE.md e docs/ai continuam versionados. Veja "Modo pack local" no guia detalhado.

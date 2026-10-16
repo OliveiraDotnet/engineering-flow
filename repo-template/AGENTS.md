@@ -50,4 +50,5 @@ Template (AGENTS.md é artefato `merge`): cada repo preenche; nada aqui é padr�
 - Pacote SQL de release (sql-release-package.md): [on|off]
 - Cópia duplicada dos scripts pendentes no repo: [sim|não]; caminho: [<caminho>]
 - Nível de validação SQL: [syntax-only|execute]
+- Versionamento do pack: [versionado|local] (padrão: versionado). `local` mantém os arquivos do pack no projeto sem versioná-los; AGENTS.md, CLAUDE.md e docs/ai continuam versionados. Ver "Modo pack local" em INSTRUCOES_DETALHADAS.md do pack.
 - Provider (GitHub/Azure DevOps) não é declarado aqui.
