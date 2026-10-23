@@ -1,13 +1,11 @@
 # Update the Agent Pack in this repository
 
-Use `$update-agent-pack` in Codex, `/update-agent-pack` in Claude Code, or the native `update-agent-pack` skill in Grok Build.
-
-If the goal is to remove Claude and adopt Codex + Grok, start with `prompts/09-migrate-claude-to-codex-grok.md`.
+Use the native `update-agent-pack` skill in Grok Build.
 
 ## Trusted source
 
 - Path to the updated Agent Pack or `AGENT_PACK_HOME`:
-- Desired integrations if they must change (example: `codex,grok`):
+- Desired integrations if they must change (Grok is the only harness in 3.0; example: `grok`):
 
 ## Goal
 

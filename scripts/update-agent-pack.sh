@@ -15,7 +15,7 @@ Modes:
   --apply                 Apply the plan transactionally.
 
 Selection:
-  --integration LIST      Override integrations with codex,claude,grok (comma-separated).
+  --integration LIST      Override integrations (grok only).
 
 Per-artifact resolutions (repeatable; comma-separated ids are accepted):
   --accept-pack ID        Accept pack replacement or retirement for this artifact.
@@ -143,8 +143,8 @@ if [ "${#requested_integrations[@]}" -gt 0 ]; then
   normalized_integrations=()
   for integration in "${requested_integrations[@]}"; do
     case "$integration" in
-      codex|claude|grok) ;;
-      *) fail "Unknown integration: $integration. Valid integrations: codex, claude, grok." ;;
+      grok) ;;
+      *) fail "Unknown integration: $integration. Engineering Flow 3.0 is Grok-only." ;;
     esac
     contains_value "$integration" "${normalized_integrations[@]}" ||
       normalized_integrations+=("$integration")
@@ -524,7 +524,7 @@ if [ -f "$STATE_FILE" ]; then
         separators="${line//[^|]/}"
         [ "${#separators}" -eq 1 ] || fail "Invalid state integration line: $line"
         value="$(trim "${line#*|}")"
-        case "$value" in codex|claude|grok) ;; *) fail "Invalid state integration: $value" ;; esac
+        case "$value" in grok) ;; *) fail "Invalid state integration: $value. Engineering Flow 3.0 is Grok-only." ;; esac
         contains_value "$value" "${state_integrations[@]}" && fail "Duplicate state integration: $value"
         state_integrations+=("$value")
         ;;
@@ -629,17 +629,12 @@ else
       find_known_hash_version "${artifact_ids[$index]}" "${artifact_destinations[$index]}" "$HASH_VALUE"
       if [ -n "$KNOWN_VERSION" ]; then
         component="${artifact_components[$index]}"
-        if [[ "$component" = claude-* ]]; then
-          append_unique_profile "${component#claude-}"
-          append_unique_integration "codex"
-          append_unique_integration "claude"
-        elif [[ "$component" = grok-* ]]; then
+        if [[ "$component" = grok-* ]]; then
           append_unique_profile "${component#grok-}"
-          append_unique_integration "codex"
           append_unique_integration "grok"
         else
           append_unique_profile "$component"
-          append_unique_integration "codex"
+          append_unique_integration "grok"
         fi
       fi
     fi
@@ -657,14 +652,8 @@ fi
 
 artifact_is_selected() {
   local component="$1" destination="$2" profile
-  if ! contains_value "codex" "${selected_integrations[@]}"; then
-    case "$destination" in .codex/*|*/agents/openai.yaml) return 1 ;; esac
-  fi
-  if [[ "$component" = claude-* ]]; then
-    profile="${component#claude-}"
-    contains_value "claude" "${selected_integrations[@]}" &&
-      contains_value "$profile" "${selected_profiles[@]}"
-  elif [[ "$component" = grok-* ]]; then
+  case "$destination" in */agents/openai.yaml) return 1 ;; esac
+  if [[ "$component" = grok-* ]]; then
     profile="${component#grok-}"
     contains_value "grok" "${selected_integrations[@]}" &&
       contains_value "$profile" "${selected_profiles[@]}"

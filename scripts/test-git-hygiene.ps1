@@ -1,3 +1,4 @@
+#Requires -Version 7
 [CmdletBinding()]
 param([string]$BashExecutable)
 $ErrorActionPreference='Stop'
@@ -10,8 +11,8 @@ function Put([string]$Repo,[string]$Path,[string]$Text) {
  [IO.File]::WriteAllText($full,$Text,[Text.UTF8Encoding]::new($false))
 }
 function Assert-Hygiene([string]$Repo) {
- $ignored=@('AGENTS.md.agent-pack.new','AGENTS.md.agent-pack.backup-20261011','.agents/skills/bugfix/SKILL.md.agent-pack.new','.agent-pack/.runtime/.gitignore','.agent-pack/.runtime/backups/2.0.0/backup.txt','.agent-pack/.runtime/retired/old.txt','.agent-pack/.runtime/update.lock','.agent-pack/state.txt.tmp','.agent-pack/cache/cache.txt','.agent-pack/logs/run.log','.grok/sessions/session.log','.codex/worktrees/scratch/local.txt','.engineering-flow-evidence/report.txt')
- $visible=@('AGENTS.md','.agent-pack/state.txt','.grok/config.toml','.grok/skills/new-project/SKILL.md','.agents/skills/new-project/SKILL.md','.codex/config.toml','.claude/agents/project-agent.md','docs/ai/runbook.md')
+ $ignored=@('AGENTS.md.agent-pack.new','AGENTS.md.agent-pack.backup-20261011','.agents/skills/bugfix/SKILL.md.agent-pack.new','.agent-pack/.runtime/.gitignore','.agent-pack/.runtime/backups/2.0.0/backup.txt','.agent-pack/.runtime/retired/old.txt','.agent-pack/.runtime/update.lock','.agent-pack/.runtime/task.lock','.agent-pack/state.txt.tmp','.agent-pack/cache/cache.txt','.agent-pack/logs/run.log','.grok/sessions/session.log','.engineering-flow-evidence/report.txt')
+ $visible=@('AGENTS.md','.agent-pack/state.txt','.grok/config.toml','.grok/skills/new-project/SKILL.md','.agents/skills/new-project/SKILL.md','.grok/agents/repo-explorer.md','docs/ai/runbook.md')
  foreach ($p in $ignored+$visible) {
   if (-not (Test-Path (Join-Path $Repo $p))) {
    $text=if ($p -eq '.agent-pack/.runtime/.gitignore') {"*`n!.gitignore`n"} else {'fixture-only'}
@@ -54,14 +55,14 @@ try {
  [IO.Directory]::CreateDirectory($installed) | Out-Null
  & git -C $installed init -q
  Put $installed '.gitignore' "# custom destination`n.env`n"
- & (Join-Path $PSScriptRoot 'install-engineering-flow.ps1') -RepoPath $installed -Integration grok -Profile core -Confirm:$false
+ & (Join-Path $PSScriptRoot 'install-agent-pack.ps1') -RepoPath $installed -Profile core -Confirm:$false
  Assert-Hygiene $installed
  # The visibility fixture creates a synthetic lock; release it before exercising the updater.
  $fixtureLock=Join-Path $installed '.agent-pack/.runtime/update.lock'
  Assert ([IO.File]::ReadAllText($fixtureLock) -eq 'fixture-only') 'Unexpected lock content in hygiene fixture.'
  Remove-Item -LiteralPath $fixtureLock -Force
  Put $installed '.gitignore' "# custom destination`n.env`n"
- & (Join-Path $PSScriptRoot 'update-engineering-flow.ps1') -RepoPath $installed -Apply -Confirm:$false
+ & (Join-Path $PSScriptRoot 'update-agent-pack.ps1') -RepoPath $installed -Apply -Confirm:$false
  Assert-Hygiene $installed
  Assert ((Get-Content (Join-Path $installed '.gitignore') -Raw).StartsWith("# custom destination`n.env`n")) 'Update replaced destination custom rules.'
  Write-Host 'Git hygiene passed: real check-ignore/status, custom UTF-8 BOM/CRLF preserved, preview/idempotence, necessary state/config/skills/docs visible, generated backups/conflicts/runtime/cache/session/worktree/evidence ignored; install and update integration verified.'

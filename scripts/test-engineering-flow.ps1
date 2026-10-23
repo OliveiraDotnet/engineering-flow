@@ -1,11 +1,12 @@
+#Requires -Version 7
 [CmdletBinding()]
-param([string]$BaselinePackRoot)
+param()
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $PackRoot = Split-Path -Parent $PSScriptRoot
 $Inspector = Join-Path $PackRoot 'repo-template/.agents/skills/bootstrap-repo/scripts/inspect-repo.ps1'
-$Installer = Join-Path $PSScriptRoot 'install-engineering-flow.ps1'
-$Updater = Join-Path $PSScriptRoot 'update-engineering-flow.ps1'
+$Installer = Join-Path $PSScriptRoot 'install-agent-pack.ps1'
+$Updater = Join-Path $PSScriptRoot 'update-agent-pack.ps1'
 $TempRoot = Join-Path ([IO.Path]::GetTempPath()) ('engineering-flow-tests-' + [Guid]::NewGuid().ToString('N'))
 $Utf8 = [Text.UTF8Encoding]::new($false)
 function Assert([bool]$Condition,[string]$Message) { if (-not $Condition) { throw $Message } }
@@ -28,9 +29,10 @@ try {
  $result = Inspect $empty
  Assert ($result.discoveryMode -eq 'empty') 'Empty repo not identified.'
  Assert ($result.optionalProfilesSuggested.Count -eq 0) 'Empty repo selected optional profiles.'
- & $Installer -RepoPath $empty -Integration grok -Profile core -Confirm:$false
+ & $Installer -RepoPath $empty -Profile core -Confirm:$false
  Assert (Test-Path (Join-Path $empty '.grok/skills/new-project/SKILL.md')) 'Empty repo lacks Grok new-project skill.'
- Assert (-not (Test-Path (Join-Path $empty '.codex'))) 'Independent Grok installed Codex.'
+ Assert (Test-Path (Join-Path $empty '.grok/agents/repo-explorer.md')) 'Empty repo lacks Grok agent.'
+ Assert (-not (Test-Path (Join-Path $empty '.codex'))) 'Grok-only installed Codex.'
  Assert (-not (Test-Path (Join-Path $empty '.agents/skills/mobile-app'))) 'Core installed unrelated mobile.'
 
  $mixed = New-Repo 'mixed'
@@ -47,8 +49,9 @@ try {
  Assert ($result.manifestFiles -contains 'ui/package.json' -and $result.runtimeAndPlatformEvidence -contains 'web/default.asp') 'Mixed metadata missing.'
  Assert (($out -join '') -notmatch 'synthetic-secret-script-body') 'Discovery leaked script body.'
  Assert ($result.optionalProfilesSuggested -notcontains 'mobile' -and $result.optionalProfilesSuggested -notcontains 'quality') 'Mixed web selected unrelated profiles.'
- & $Installer -RepoPath $mixed -Integration codex -Confirm:$false
+ & $Installer -RepoPath $mixed -Confirm:$false
  Assert (Test-Path (Join-Path $mixed '.agents/skills/web-app/SKILL.md')) 'Classic ASP auto web module missing.'
+ Assert (Test-Path (Join-Path $mixed '.grok/agents/frontend-web.md')) 'Classic ASP Grok web agent missing.'
 
  $unknown = New-Repo 'unknown'
  Put $unknown 'engine.customlang' 'opaque fixture'
@@ -64,7 +67,7 @@ try {
  Put $mobile 'android/app/Main.kt' 'class Main'
  $result = Inspect $mobile
  Assert ($result.optionalProfilesSuggested -contains 'mobile') 'Native mobile not suggested.'
- & $Installer -RepoPath $mobile -Integration grok -Confirm:$false
+ & $Installer -RepoPath $mobile -Confirm:$false
  Assert (Test-Path (Join-Path $mobile '.grok/skills/mobile-app/SKILL.md')) 'Mobile not installed independently in Grok.'
  Assert (-not (Test-Path (Join-Path $mobile '.agents/skills/web-app'))) 'Native mobile installed unrelated web.'
  $hybrid = New-Repo 'hybrid'
@@ -73,51 +76,38 @@ try {
  $result = Inspect $hybrid
  Assert ($result.optionalProfilesSuggested -contains 'mobile' -and $result.optionalProfilesSuggested -contains 'web') 'Cross-platform/mixed targets not detected.'
 
- # Actual 1.7 bytes, recorded against the 1.7 catalog. A subset is durable; full baseline can also be exercised.
- $old = New-Repo 'installed-1.7'
- if ($BaselinePackRoot) {
-  Assert ((Get-Content (Join-Path $BaselinePackRoot 'pack-version.txt') -Raw).Trim() -eq '1.7.0') 'Full migration baseline must be actual 1.7.0.'
-  & (Join-Path $BaselinePackRoot 'scripts/install-agent-pack.ps1') -RepoPath $old -Profile web,sqlserver -Integration grok -Confirm:$false
- } else {
-  $fixture = Join-Path $PackRoot 'tests/fixtures/installed-1.7.0'
-  Copy-Item -LiteralPath (Join-Path $fixture 'repo') -Destination (Join-Path $old 'fixture-copy') -Recurse
-  Get-ChildItem -LiteralPath (Join-Path $old 'fixture-copy') -Force | Move-Item -Destination $old
-  [IO.Directory]::CreateDirectory((Join-Path $old '.agent-pack')) | Out-Null
-  Copy-Item -LiteralPath (Join-Path $fixture 'state.txt') -Destination (Join-Path $old '.agent-pack/state.txt')
- }
- $managed = Join-Path $old '.agents/skills/bugfix-dotnet/SKILL.md'
- $guidance = Join-Path $old 'AGENTS.md'
- $memory = Join-Path $old 'docs/ai/runbook.md'
+ $fresh = New-Repo 'fresh'
+ & $Installer -RepoPath $fresh -Profile web -Confirm:$false
+ $managed = Join-Path $fresh '.agents/skills/bugfix-dotnet/SKILL.md'
+ $guidance = Join-Path $fresh 'AGENTS.md'
+ $memory = Join-Path $fresh 'docs/ai/runbook.md'
  Add-Content -LiteralPath $managed 'Local recurring rule: preserve me.'
  Add-Content -LiteralPath $guidance 'Local project guidance: preserve me.'
- Put $old 'docs/ai/runbook.md' 'Verified local commands: fixture only.'
+ Put $fresh 'docs/ai/runbook.md' 'Verified local commands: fixture only.'
  $before = @{}
  foreach ($p in @($managed,$guidance,$memory)) { $before[$p] = (Get-FileHash -LiteralPath $p).Hash }
- & $Updater -RepoPath $old -Check -Confirm:$false
+ & $Updater -RepoPath $fresh -Check -Confirm:$false
  foreach ($p in $before.Keys) { Assert ((Get-FileHash -LiteralPath $p).Hash -eq $before[$p]) 'Check modified local content.' }
  $blocked = $false
- try { & $Updater -RepoPath $old -Apply -Confirm:$false } catch { $blocked = $_.Exception.Message -match 'conflict' }
- Assert $blocked 'Custom migration did not stop on conflict.'
+ try { & $Updater -RepoPath $fresh -Apply -Confirm:$false } catch { $blocked = $true }
+ Assert $blocked 'Custom update did not stop on conflict.'
  foreach ($p in $before.Keys) { Assert ((Get-FileHash -LiteralPath $p).Hash -eq $before[$p]) 'Conflict changed local content.' }
- # Preserve customizations explicitly. The unmodified Grok config can accept the new pack.
- & $Updater -RepoPath $old -Apply -KeepLocal 'guidance.agents','skill.shared.bugfix-dotnet' -AcceptPack 'config.grok.project' -Confirm:$false
- foreach ($p in $before.Keys) { Assert ((Get-FileHash -LiteralPath $p).Hash -eq $before[$p]) 'Migration lost managed/merge/seed customization.' }
- $state = Get-Content (Join-Path $old '.agent-pack/state.txt') -Raw
+ & $Updater -RepoPath $fresh -Apply -KeepLocal 'guidance.agents','skill.shared.bugfix-dotnet' -Confirm:$false
+ foreach ($p in $before.Keys) { Assert ((Get-FileHash -LiteralPath $p).Hash -eq $before[$p]) 'Update lost managed/merge/seed customization.' }
+ $state = Get-Content (Join-Path $fresh '.agent-pack/state.txt') -Raw
  $expectedVersion = (Get-Content (Join-Path $PackRoot 'pack-version.txt') -Raw).Trim()
- Assert ($state -match ('(?m)^version\|' + [regex]::Escape($expectedVersion) + '\r?$')) 'Migration version not advanced.'
- Assert ($state -match '(?m)^integration\|grok$' -and $state -notmatch '(?m)^integration\|codex$') 'Migration changed independent integration.'
- Assert ($state -match '(?m)^profile\|web$' -and $state -notmatch '(?m)^profile\|(mobile|quality)$') 'Migration changed profile selection.'
- Assert (Test-Path (Join-Path $old '.grok/skills/complete-task/SKILL.md')) 'Migration did not add selected core workflow.'
- Assert (-not (Test-Path (Join-Path $old '.grok/skills/mobile-app'))) 'Update auto-installed mobile.'
- Assert ((Get-Content (Join-Path $old '.grok/skills/web-dotnet/SKILL.md') -Raw) -match 'Engineering Flow 2.0 execution gate') 'Unchanged trusted 1.7 managed file did not update.'
+ Assert ($state -match ('(?m)^version\|' + [regex]::Escape($expectedVersion) + '\r?$')) 'Version not recorded.'
+ Assert ($state -match '(?m)^integration\|grok$' -and $state -notmatch '(?m)^integration\|codex$') 'Integration selection lost.'
+ Assert ($state -match '(?m)^profile\|web$' -and $state -notmatch '(?m)^profile\|(mobile|quality)$') 'Profile selection changed.'
+ Assert (Test-Path (Join-Path $fresh '.grok/skills/complete-task/SKILL.md')) 'Selected workflow missing.'
+ Assert (-not (Test-Path (Join-Path $fresh '.grok/skills/mobile-app'))) 'Update auto-installed mobile.'
 
- # Static cross-entrypoint approval/evidence checks, not execution of agent behavior.
  $flow = Get-Content (Join-Path $PackRoot 'repo-template/docs/engineering-flow/workflow.md') -Raw
  foreach ($term in @('Ausência de pedido de testes não é autorização automática','não validado','verificado / falhou / pendente / não verificado','observado','Artefato','Mudança material')) { Assert ($flow.Contains($term)) "Missing static contract constraint: $term" }
  foreach ($file in Get-ChildItem (Join-Path $PackRoot 'repo-template/.agents/skills') -Recurse -Filter SKILL.md -File) {
   Assert ((Get-Content -LiteralPath $file.FullName -Raw).Contains('docs/engineering-flow/workflow.md')) "Skill bypasses common contract: $($file.FullName)"
  }
- Write-Host 'Engineering Flow script regressions passed: empty/unknown/classic ASP/mixed/native/hybrid, tool/metadata limits, independent profiles, actual 1.7 bytes, customization/conflict atomicity, migration and static approval/evidence contract. No agent/browser/device behavior claimed.'
+ Write-Host 'Engineering Flow script regressions passed: empty/unknown/classic ASP/mixed/native/hybrid, tool/metadata limits, Grok-only profiles, 3.0 update customization/conflict atomicity and static approval/evidence contract. No agent/browser/device behavior claimed.'
 } finally {
  $resolved = [IO.Path]::GetFullPath($TempRoot)
  $prefix = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\','/') + [IO.Path]::DirectorySeparatorChar

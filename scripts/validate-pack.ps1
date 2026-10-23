@@ -1,3 +1,4 @@
+#Requires -Version 7
 [CmdletBinding()]
 param()
 
@@ -13,7 +14,6 @@ $ArtifactMetadataPath = Join-Path $PackRoot "pack-artifacts.txt"
 $CompatibilityRoot = Join-Path $PackRoot "compat\releases"
 $ValidComponents = @(
     "core", "web", "sqlserver", "quality", "mobile",
-    "claude-core", "claude-web", "claude-sqlserver", "claude-quality", "claude-mobile",
     "grok-core", "grok-web", "grok-sqlserver", "grok-quality", "grok-mobile"
 )
 $errors = New-Object System.Collections.Generic.List[string]
@@ -131,7 +131,7 @@ else {
         }
     }
 
-    foreach ($path in @("AGENTS.md", "CLAUDE.md", ".grok/config.toml")) {
+    foreach ($path in @("AGENTS.md", ".grok/config.toml")) {
         $artifact = @($artifactEntries | Where-Object { $_.Destination -eq $path })
         if ($artifact.Count -eq 1 -and $artifact[0].Ownership -ne "merge") {
             Add-Error "$path must use merge ownership."
@@ -170,73 +170,45 @@ else {
     }
 }
 
-$agentFiles = Get-ChildItem -LiteralPath (Join-Path $TemplateRoot ".codex\agents") -File -Filter "*.toml" -ErrorAction SilentlyContinue
-foreach ($agent in $agentFiles) {
-    $content = Get-Content -LiteralPath $agent.FullName -Raw
-    foreach ($requiredKey in @("name", "description", "developer_instructions")) {
-        if ($content -notmatch "(?m)^$requiredKey\s*=") { Add-Error "Agent '$($agent.Name)' is missing $requiredKey." }
+$grokAgentRoot = Join-Path $TemplateRoot ".grok\agents"
+if (-not (Test-Path -LiteralPath $grokAgentRoot -PathType Container)) {
+    Add-Error "Missing Grok agents directory: .grok/agents"
+}
+else {
+    $grokAgentFiles = @(Get-ChildItem -LiteralPath $grokAgentRoot -File -Filter "*.md" -ErrorAction SilentlyContinue)
+    if ($grokAgentFiles.Count -ne 10) {
+        Add-Error "Expected 10 Grok agents, found $($grokAgentFiles.Count)."
     }
+    foreach ($agent in $grokAgentFiles) {
+        $content = Get-Content -LiteralPath $agent.FullName -Raw
+        $frontmatter = [regex]::Match($content, '(?ms)\A---\s*\r?\n(.*?)\r?\n---')
+        if (-not $frontmatter.Success) {
+            Add-Error "Grok agent '$($agent.Name)' has invalid frontmatter."
+            continue
+        }
 
-    $nicknameLine = [regex]::Match($content, '(?m)^nickname_candidates\s*=\s*\[(.+)\]\r?$')
-    if ($nicknameLine.Success) {
-        foreach ($value in [regex]::Matches($nicknameLine.Groups[1].Value, '"([^"]+)"')) {
-            if ($value.Groups[1].Value -notmatch '^[A-Za-z0-9 _-]+$') {
-                Add-Error "Agent '$($agent.Name)' has a non-ASCII nickname: $($value.Groups[1].Value)"
-            }
+        $nameMatch = [regex]::Match($frontmatter.Groups[1].Value, '(?m)^name:\s*([^\r\n]+?)\r?$')
+        $descriptionMatch = [regex]::Match($frontmatter.Groups[1].Value, '(?m)^description:\s*([^\r\n]+?)\r?$')
+        if (-not $nameMatch.Success) { Add-Error "Grok agent '$($agent.Name)' is missing name."; continue }
+        if (-not $descriptionMatch.Success) { Add-Error "Grok agent '$($agent.Name)' is missing description." }
+
+        $name = $nameMatch.Groups[1].Value.Trim().Trim('"', "'")
+        if ($name -notmatch '^[a-z0-9-]+$') { Add-Error "Grok agent '$($agent.Name)' has invalid name '$name'." }
+        if ($name -ne [IO.Path]::GetFileNameWithoutExtension($agent.Name)) {
+            Add-Error "Grok agent name '$name' does not match file '$($agent.Name)'."
+        }
+
+        $grokSource = ".grok/agents/$name.md"
+        $grokDestination = ".grok/agents/$name.md"
+        $grokOrigin = @($manifestEntries | Where-Object {
+            $_.Source -eq $grokSource -and
+            $_.Destination -eq $grokDestination -and
+            $_.Component -like "grok-*"
+        })
+        if ($grokOrigin.Count -ne 1) {
+            Add-Error "Grok agent '$($agent.Name)' must be listed once as origin in a grok-* component."
         }
     }
-}
-
-$claudeAgentRoot = Join-Path $TemplateRoot ".claude\agents"
-$claudeAgentFiles = Get-ChildItem -LiteralPath $claudeAgentRoot -File -Filter "*.md" -ErrorAction SilentlyContinue
-foreach ($agent in $claudeAgentFiles) {
-    $content = Get-Content -LiteralPath $agent.FullName -Raw
-    $frontmatter = [regex]::Match($content, '(?ms)\A---\s*\r?\n(.*?)\r?\n---')
-    if (-not $frontmatter.Success) {
-        Add-Error "Claude agent '$($agent.Name)' has invalid frontmatter."
-        continue
-    }
-
-    $nameMatch = [regex]::Match($frontmatter.Groups[1].Value, '(?m)^name:\s*([^\r\n]+?)\r?$')
-    $descriptionMatch = [regex]::Match($frontmatter.Groups[1].Value, '(?m)^description:\s*([^\r\n]+?)\r?$')
-    if (-not $nameMatch.Success) { Add-Error "Claude agent '$($agent.Name)' is missing name."; continue }
-    if (-not $descriptionMatch.Success) { Add-Error "Claude agent '$($agent.Name)' is missing description." }
-
-    $name = $nameMatch.Groups[1].Value.Trim().Trim('"', "'")
-    if ($name -notmatch '^[a-z0-9-]+$') { Add-Error "Claude agent '$($agent.Name)' has invalid name '$name'." }
-    if ($name -ne [IO.Path]::GetFileNameWithoutExtension($agent.Name)) {
-        Add-Error "Claude agent name '$name' does not match file '$($agent.Name)'."
-    }
-}
-
-foreach ($agent in $agentFiles) {
-    $content = Get-Content -LiteralPath $agent.FullName -Raw
-    $nameMatch = [regex]::Match($content, '(?m)^name\s*=\s*"([^"]+)"')
-    if (-not $nameMatch.Success) { continue }
-    $claudeName = $nameMatch.Groups[1].Value.Replace('_', '-')
-    $claudePath = Join-Path $claudeAgentRoot "$claudeName.md"
-    if (-not (Test-Path -LiteralPath $claudePath -PathType Leaf)) {
-        Add-Error "Codex agent '$($agent.Name)' has no Claude counterpart '$claudeName.md'."
-    }
-
-    $grokSource = ".claude/agents/$claudeName.md"
-    $grokDestination = ".grok/agents/$claudeName.md"
-    $grokMirror = @($manifestEntries | Where-Object {
-        $_.Source -eq $grokSource -and
-        $_.Destination -eq $grokDestination -and
-        $_.Component -like "grok-*"
-    })
-    if ($grokMirror.Count -ne 1) {
-        Add-Error "Codex agent '$($agent.Name)' must map once to Grok agent '$grokDestination'."
-    }
-}
-
-$claudeGuidancePath = Join-Path $TemplateRoot "CLAUDE.md"
-if (-not (Test-Path -LiteralPath $claudeGuidancePath -PathType Leaf)) {
-    Add-Error "Missing Claude guidance bridge: CLAUDE.md"
-}
-elseif ((Get-Content -LiteralPath $claudeGuidancePath -Raw) -notmatch '(?m)^@AGENTS\.md\s*$') {
-    Add-Error "CLAUDE.md must import @AGENTS.md."
 }
 
 $grokConfigPath = Join-Path $TemplateRoot ".grok\config.toml"
@@ -255,7 +227,6 @@ $governanceFiles = @{
     "AGENTS.md" = Join-Path $TemplateRoot "AGENTS.md"
     "agent-work-order" = Join-Path $TemplateRoot ".agents\skills\agent-work-order\SKILL.md"
     "delegate-to-grok-build" = Join-Path $TemplateRoot ".agents\skills\delegate-to-grok-build\SKILL.md"
-    "execute-codex-work-order" = Join-Path $TemplateRoot ".grok\skills\execute-codex-work-order\SKILL.md"
 }
 foreach ($name in $governanceFiles.Keys) {
     if (-not (Test-Path -LiteralPath $governanceFiles[$name] -PathType Leaf)) {
@@ -266,9 +237,8 @@ if (@($governanceFiles.Values | Where-Object { -not (Test-Path -LiteralPath $_ -
     $agentsGovernance = Get-Content -LiteralPath $governanceFiles["AGENTS.md"] -Raw
     $workOrderContract = Get-Content -LiteralPath $governanceFiles["agent-work-order"] -Raw
     $delegationContract = Get-Content -LiteralPath $governanceFiles["delegate-to-grok-build"] -Raw
-    $executionContract = Get-Content -LiteralPath $governanceFiles["execute-codex-work-order"] -Raw
 
-    foreach ($required in @("sole decision authority", "Gate 1", "execution envelope", "Gate 2", "BLOCKED_BY_DECISION")) {
+    foreach ($required in @("sole decision authority", "Gate 1", "execution envelope", "Gate 2", "ok explícito do Matheus", "nunca force push", "BLOCKED_BY_DECISION")) {
         if (-not $agentsGovernance.Contains($required)) { Add-Error "AGENTS.md is missing governance marker '$required'." }
     }
     foreach ($required in @("Human-approved scope", "Allowed read areas", "Allowed modification areas", "Decision boundaries", "Escalation conditions", "READY_FOR_MANUAL_VALIDATION", "USER_DECISION_REQUIRED")) {
@@ -277,8 +247,7 @@ if (@($governanceFiles.Values | Where-Object { -not (Test-Path -LiteralPath $_ -
     foreach ($required in @("COMPLETED", "COMPLETED_WITH_CONCERNS", "BLOCKED_BY_DECISION", "UNABLE_TO_VALIDATE", "material change was not performed")) {
         if (-not $workOrderContract.Contains($required)) { Add-Error "Shared agent work-order contract is missing '$required'." }
     }
-    if (-not $delegationContract.Contains("agent work order")) { Add-Error "Codex-to-Grok delegation entrypoint must reference the shared agent work-order contract." }
-    if (-not $executionContract.Contains("agent work order")) { Add-Error "Grok execution entrypoint must reference the shared agent work-order contract." }
+    if (-not $delegationContract.Contains("agent work order")) { Add-Error "Grok delegation entrypoint must reference the shared agent work-order contract." }
 }
 
 $skillFiles = Get-ChildItem -LiteralPath (Join-Path $TemplateRoot ".agents\skills") -File -Filter "SKILL.md" -Recurse -ErrorAction SilentlyContinue
@@ -299,17 +268,6 @@ foreach ($skill in $skillFiles) {
 $baseComponents = @("core", "web", "sqlserver", "quality", "mobile")
 $canonicalSkillEntries = @($manifestEntries | Where-Object { $_.Component -in $baseComponents -and $_.Destination -like ".agents/skills/*" })
 foreach ($entry in $canonicalSkillEntries) {
-    $expectedComponent = "claude-$($entry.Component)"
-    $expectedDestination = $entry.Destination -replace '^\.agents/skills/', '.claude/skills/'
-    $mirror = @($manifestEntries | Where-Object {
-        $_.Component -eq $expectedComponent -and
-        $_.Source -eq $entry.Source -and
-        $_.Destination -eq $expectedDestination
-    })
-    if ($mirror.Count -ne 1) {
-        Add-Error "Skill '$($entry.Source)' must map once to '$expectedDestination' in '$expectedComponent'."
-    }
-
     if (-not $entry.Destination.EndsWith("/agents/openai.yaml")) {
         $grokComponent = "grok-$($entry.Component)"
         $grokDestination = $entry.Destination -replace '^\.agents/skills/', '.grok/skills/'
@@ -326,7 +284,7 @@ foreach ($entry in $canonicalSkillEntries) {
 
 $genericFiles = @(
     Get-ChildItem -LiteralPath $TemplateRoot -File -Recurse -Force
-    Get-Item -LiteralPath (Join-Path $PackRoot "README.md"), (Join-Path $PackRoot "MANUAL_DE_USO.md"), (Join-Path $PackRoot "INSTRUCOES_DETALHADAS.md"), (Join-Path $PackRoot "FONTES_OFICIAIS_CODEX.md"), (Join-Path $PackRoot "FONTES_OFICIAIS_CLAUDE.md"), (Join-Path $PackRoot "FONTES_OFICIAIS_GROK_BUILD.md"), (Join-Path $PackRoot "global\AGENTS.md")
+    Get-Item -LiteralPath (Join-Path $PackRoot "README.md"), (Join-Path $PackRoot "MANUAL_DE_USO.md"), (Join-Path $PackRoot "INSTRUCOES_DETALHADAS.md"), (Join-Path $PackRoot "FONTES_OFICIAIS_GROK_BUILD.md"), (Join-Path $PackRoot "global\AGENTS.md")
 )
 $allText = ($genericFiles | ForEach-Object { Get-Content -LiteralPath $_.FullName -Raw }) -join "`n"
 foreach ($term in @("Aptos", "M & Y TECH", "Portal de Vendas", "projetos/")) {
@@ -352,4 +310,4 @@ if ($errors.Count -gt 0) {
     throw "Pack validation failed with $($errors.Count) error(s)."
 }
 
-Write-Host "Pack validation passed: manifest, shared skills, Codex/Claude/Grok agents and generic-content checks are valid."
+Write-Host "Pack validation passed: manifest, shared skills, Grok agents and generic-content checks are valid."

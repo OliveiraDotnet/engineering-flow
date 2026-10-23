@@ -3,7 +3,7 @@ name: bootstrap-dotnet-repo
 description: Inspect and bootstrap a .NET workspace without changing production code. Use for first-run discovery of one Git repository, a parent folder of independent repositories, or a monorepo. Do not use to rewrite an already bootstrapped AGENTS.md; use agents-md-generator for that short file only.
 ---
 
-## Engineering Flow 2.0 execution gate
+## Engineering Flow 3.0 execution gate
 
 Follow docs/engineering-flow/workflow.md in the target repository. Understand demand, present a technical plan, receive human approval, implement, execute only approved tests, gather criterion-linked evidence, deliver. Existing explicit authorization persists. Investigation/plan do not authorize implementation. Absence of a test request does not automatically authorize tests: highlight missing validation and ask whether to include it. If only implementation is approved, deliver it as unvalidated with pending checks. Material changes in scope, behavior, architecture/contracts, dependencies, security/data or validation return to the human. This gate governs execution steps below; no automatic delegation or second provider is required.
 
@@ -19,4 +19,4 @@ Follow docs/engineering-flow/workflow.md in the target repository. Understand de
 6. Update `docs/ai` and replace `[UNVERIFIED]` items in `AGENTS.md` only with confirmed, always-relevant rules. Keep `AGENTS.md` short; put details in `docs/ai`. Use `agents-md-generator` only for that short persistent shell.
 7. End without changing production code. Ask the user to start a new task so updated instructions load.
 
-Codex or Grok Build can perform bootstrap directly. Use the repository exploration role mapped by project instructions only when a bounded question benefits from delegation; no named agent is required. Do not fan out reviewers during bootstrap.
+Grok Build can perform bootstrap directly. Use the repository exploration role mapped by project instructions only when a bounded question benefits from delegation; no named agent is required. Do not fan out reviewers during bootstrap.

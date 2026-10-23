@@ -1,3 +1,4 @@
+#Requires -Version 7
 [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = "Medium")]
 param(
     [Parameter(Mandatory = $true)]
@@ -7,8 +8,6 @@ param(
     [string[]]$Profile = @(),
     [string[]]$Integration = @(),
 
-    [switch]$IncludeClaude,
-    [switch]$IncludeGrokBuild,
     [switch]$InstallGlobal,
     [switch]$AllowNonGit,
     [switch]$Force,
@@ -433,21 +432,15 @@ function Install-ToRepository {
     foreach ($value in $Integration) {
         foreach ($item in ($value -split ',')) {
             $selected = $item.Trim().ToLowerInvariant()
-            if ($selected -notin @('codex', 'grok', 'claude')) { throw "Unknown integration: $item" }
+            if ($selected -ne 'grok') { throw "Unknown integration: $item. Engineering Flow 3.0 is Grok-only." }
             $integrations.Add($selected) | Out-Null
         }
     }
     foreach ($integration in (Get-StateRecords -TargetRoot $TargetRoot -Kind "integration")) {
-        if ($integration -notin @('codex', 'grok', 'claude')) { throw "Unknown integration in state: $integration" }
+        if ($integration -ne 'grok') { throw "Unknown integration in state: $integration. Engineering Flow 3.0 is Grok-only." }
         $integrations.Add($integration) | Out-Null
     }
-    if ($integrations.Count -eq 0) { $integrations.Add("codex") | Out-Null }
-    if ($IncludeClaude) {
-        $integrations.Add("claude") | Out-Null
-    }
-    if ($IncludeGrokBuild) {
-        $integrations.Add("grok") | Out-Null
-    }
+    if ($integrations.Count -eq 0) { $integrations.Add("grok") | Out-Null }
     $integrations = @($integrations | Select-Object -Unique)
 
     Write-Host ""
@@ -466,12 +459,7 @@ function Install-ToRepository {
     $requestedComponents = New-Object System.Collections.Generic.List[string]
     foreach ($requestedProfile in $profiles) {
         $requestedComponents.Add($requestedProfile)
-        if ($integrations -contains "claude") {
-            $requestedComponents.Add("claude-$requestedProfile")
-        }
-        if ($integrations -contains "grok") {
-            $requestedComponents.Add("grok-$requestedProfile")
-        }
+        $requestedComponents.Add("grok-$requestedProfile")
     }
 
     $actions = New-Object System.Collections.Generic.List[object]
@@ -479,7 +467,7 @@ function Install-ToRepository {
         if ($requestedComponents -notcontains $entry.Component) {
             continue
         }
-        if ($integrations -notcontains 'codex' -and ($entry.Destination -like '.codex/*' -or $entry.Destination -like '*/agents/openai.yaml')) { continue }
+        if ($entry.Destination -like '*/agents/openai.yaml') { continue }
         $source = [IO.Path]::GetFullPath((Join-Path $templateRootCanonical $entry.Source))
         $destination = [IO.Path]::GetFullPath((Join-Path $TargetRoot $entry.Destination))
         if (-not (Test-PathWithin $templateRootCanonical $source)) {
@@ -591,25 +579,20 @@ else {
     }
 }
 
-Write-Host "Installing .NET Agents Pack $packVersion"
+Write-Host "Installing Engineering Flow $packVersion"
 Write-Host "Workspace path: $repoRoot"
 Write-Host ("Repositories: {0}" -f (($targets | ForEach-Object { $_.Path }) -join ', '))
-if ($IncludeClaude) {
-    Write-Host "Claude project support enabled."
-}
-if ($IncludeGrokBuild) {
-    Write-Host "Grok Build project support enabled."
-}
+Write-Host "Grok Build project support enabled."
 
 foreach ($target in $targets) {
     Install-ToRepository -TargetRoot $target.Path -Kind $target.Kind -PackVersion $packVersion -ManifestEntries $manifestEntries -ManifestByDestination $manifestByDestination -ArtifactEntries $artifactEntries
 }
 
 if ($InstallGlobal -and -not $DiscoverOnly) {
-    $codexHome = if ($env:CODEX_HOME) { $env:CODEX_HOME } else { Join-Path $HOME ".codex" }
-    $codexHome = [IO.Path]::GetFullPath($codexHome)
+    $grokHome = if ($env:GROK_HOME) { $env:GROK_HOME } else { Join-Path $HOME ".grok" }
+    $grokHome = [IO.Path]::GetFullPath($grokHome)
     $globalActions = New-Object System.Collections.Generic.List[object]
-    Add-CopyAction -Actions $globalActions -Source $GlobalGuidance -Destination (Join-Path $codexHome "AGENTS.md")
+    Add-CopyAction -Actions $globalActions -Source $GlobalGuidance -Destination (Join-Path $grokHome "AGENTS.md")
     foreach ($action in $globalActions) {
         Invoke-CopyAction -Action $action
     }

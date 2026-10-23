@@ -1,3 +1,4 @@
+#Requires -Version 7
 param(
     [string]$RepoPath = (Get-Location).Path,
     [ValidateSet("json", "markdown")]

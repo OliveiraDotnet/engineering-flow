@@ -1,5 +1,19 @@
 # Engineering Flow changelog
 
+## 3.0.0 — 2026-10-23
+
+- Só Grok Build: saem Codex, Claude, `CLAUDE.md`, `.codex/`, `.claude/`, `execute-codex-work-order`, o prompt 09, os scripts `install`/`update-engineering-flow` e a skill `update-engineering-flow`.
+- Os 10 agentes passam a ter origem em `repo-template/.grok/agents/`.
+- Sem compatibilidade com 2.1.1 e 1.7.0, e sem migração automática; a linha 2.x permanece na tag `v2.1.1`.
+- Gate 2: commit e push exigem o ok explícito do Matheus; o Grok Build comita; o Jow dá push (ou o Matheus, se o Jow estiver indisponível); nunca na main/master, nunca force push.
+- LOCK em `.agent-pack/.runtime/task.lock` (não versionado): criado pelo bot do repo, expira no commit, trava esquecida liberada pelo bot da demanda.
+- Índice de skills gerado por `tools/generate-skills-index.sh` (e `.ps1`) em `SKILLS-INDEX.md`.
+- `tools/task-lock.sh` (e `.ps1`): `acquire`/`release`/`status` do LOCK, com testes `scripts/test-task-lock.{sh,ps1}`.
+- Removido `scripts/test-update-agent-pack.ps1`; `scripts/test-update-agent-pack.sh` permanece.
+- PowerShell 7 (`#Requires -Version 7`) em todos os `.ps1`; `.gitattributes` cobre `*.sh`, `*.ps1`, `*.md` e `*.txt`.
+- `compat/releases/2.1.1.txt` e `3.0.0.txt`; `pack-version.txt` = 3.0.0.
+- Hierarquia e briefing opcionais só em `GROK_BOT_*.md`, fora do pack de projeto.
+
 ## 2.1.1 — 2026-10-16
 
 - Documentação: suporte oficial ao modo pack local (pack no projeto sem versionamento), com campo `Versionamento do pack` em "Convenções do projeto" do AGENTS.md e seção "Modo pack local" em INSTRUCOES_DETALHADAS.md.

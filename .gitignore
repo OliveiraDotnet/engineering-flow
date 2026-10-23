@@ -16,8 +16,9 @@ coverage/
 *.pfx
 *.snk
 
-# Local update state, backups and transient evidence
+# Local update state, backups, task lock and transient evidence
 .agent-pack/.runtime/
+.agent-pack/.runtime/task.lock
 .agent-pack/*.tmp
 .agent-pack/*.lock
 .agent-pack/logs/
@@ -29,8 +30,4 @@ coverage/
 *.agent-pack.backup-*
 .grok/sessions/
 .grok/worktrees/
-.codex/sessions/
-.codex/worktrees/
-.claude/sessions/
-.claude/worktrees/
 .engineering-flow-evidence/

@@ -1,3 +1,4 @@
+#Requires -Version 7
 [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = "High")]
 param(
     [Parameter(Mandatory = $true)]
@@ -460,8 +461,8 @@ function Read-AgentPackState {
                     throw "Invalid integration state record: $line"
                 }
                 $integration = $parts[1].Trim().ToLowerInvariant()
-                if ($integration -notin @("codex", "claude", "grok") -or $integrations -contains $integration) {
-                    throw "Invalid or duplicate state integration: $integration"
+                if ($integration -ne "grok" -or $integrations -contains $integration) {
+                    throw "Invalid or duplicate state integration: $integration. Engineering Flow 3.0 is Grok-only."
                 }
                 $integrations.Add($integration) | Out-Null
             }
@@ -579,9 +580,6 @@ function Get-CurrentFileStatus {
 
 function Get-ProfileFromComponent {
     param([string]$Component)
-    if ($Component.StartsWith("claude-")) {
-        return $Component.Substring("claude-".Length)
-    }
     if ($Component.StartsWith("grok-")) {
         return $Component.Substring("grok-".Length)
     }
@@ -631,7 +629,7 @@ function Get-EffectiveSelection {
     }
 
     $profiles = @{}
-    $integrations = @{ codex = $true }
+    $integrations = @{ grok = $true }
     foreach ($artifact in $CurrentArtifacts.Entries) {
         $status = Get-CurrentFileStatus -Path $artifact.DestinationFull -RepositoryRoot $RepositoryRoot
         if ($status.Kind -eq "missing") {
@@ -640,10 +638,7 @@ function Get-EffectiveSelection {
 
         $profile = Get-ProfileFromComponent $artifact.Component
         $profiles[$profile] = $true
-        if ($artifact.Component.StartsWith("claude-")) {
-            $integrations["claude"] = $true
-        }
-        elseif ($artifact.Component.StartsWith("grok-")) {
+        if ($artifact.Component.StartsWith("grok-")) {
             $integrations["grok"] = $true
         }
     }
@@ -747,9 +742,6 @@ function Get-ReconcilePlan {
     $desiredComponents = @{}
     foreach ($profile in $Selection.Profiles) {
         $desiredComponents[$profile] = $true
-        if ($Selection.Integrations -contains "claude") {
-            $desiredComponents["claude-$profile"] = $true
-        }
         if ($Selection.Integrations -contains "grok") {
             $desiredComponents["grok-$profile"] = $true
         }
@@ -757,8 +749,7 @@ function Get-ReconcilePlan {
     $desiredArtifacts = @(
         $CurrentArtifacts.Entries | Where-Object {
             $desiredComponents.ContainsKey($_.Component) -and
-            (($Selection.Integrations -contains "codex") -or
-             ($_.Destination -notlike '.codex/*' -and $_.Destination -notlike '*/agents/openai.yaml'))
+            ($_.Destination -notlike '*/agents/openai.yaml')
         }
     )
     $desiredIds = @{}
@@ -1362,8 +1353,8 @@ foreach ($value in $Integration) {
     foreach ($item in ($value -split ",")) {
         $normalized = $item.Trim().ToLowerInvariant()
         if ($normalized) {
-            if ($normalized -notin @("codex", "claude", "grok")) {
-                throw "Unknown integration '$normalized'. Valid integrations: codex, claude, grok."
+            if ($normalized -ne "grok") {
+                throw "Unknown integration '$normalized'. Engineering Flow 3.0 is Grok-only."
             }
             if ($requestedIntegrations -notcontains $normalized) {
                 $requestedIntegrations.Add($normalized) | Out-Null
