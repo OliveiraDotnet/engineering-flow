@@ -3,8 +3,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 PACK_ROOT="$(cd "$SCRIPT_DIR/.." && pwd -P)"
 INSPECTOR="$PACK_ROOT/repo-template/.agents/skills/bootstrap-repo/scripts/inspect-repo.sh"
-INSTALLER="$SCRIPT_DIR/install-engineering-flow.sh"
-UPDATER="$SCRIPT_DIR/update-engineering-flow.sh"
+INSTALLER="$SCRIPT_DIR/install-agent-pack.sh"
+UPDATER="$SCRIPT_DIR/update-agent-pack.sh"
 TEMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/engineering-flow-tests.XXXXXX")"
 cleanup() {
   case "$TEMP_ROOT" in "${TMPDIR:-/tmp}"/engineering-flow-tests.*) rm -rf -- "$TEMP_ROOT" ;; *) echo 'Unsafe test cleanup' >&2; return 1 ;; esac
@@ -17,9 +17,11 @@ new_repo "$empty"
 output="$(bash "$INSPECTOR" "$empty")"
 [[ "$output" = *'Discovery mode: empty'* ]] || fail 'Empty mode lost'
 [[ "$output" = *'Suggested profiles: [none]'* ]] || fail 'Empty selected unrelated modules'
-bash "$INSTALLER" "$empty" --integration grok --profile core
+bash "$INSTALLER" "$empty" --profile core
 [ -f "$empty/.grok/skills/new-project/SKILL.md" ] || fail 'Empty new-project missing'
-[ ! -e "$empty/.codex" ] || fail 'Independent Grok installed Codex'
+[ -f "$empty/.grok/agents/repo-explorer.md" ] || fail 'Empty Grok agent missing'
+[ ! -e "$empty/.codex" ] || fail 'Grok-only installed Codex'
+[ ! -e "$empty/.claude" ] || fail 'Grok-only installed Claude'
 [ ! -e "$empty/.agents/skills/mobile-app" ] || fail 'Core installed mobile'
 mixed="$TEMP_ROOT/mixed"
 new_repo "$mixed"
@@ -31,8 +33,9 @@ output="$(bash "$INSPECTOR" "$mixed")"
 [[ "$output" = *'Suggested profiles: web sqlserver'* ]] || fail 'Mixed ASP/.NET/SQL detection lost'
 [[ "$output" = *'v4.8'* && "$output" = *'ui/package.json'* ]] || fail 'Mixed evidence lost'
 [[ "$output" != *'synthetic-secret-script-body'* ]] || fail 'Source payload leaked'
-bash "$INSTALLER" "$mixed" --integration codex
+bash "$INSTALLER" "$mixed"
 [ -f "$mixed/.agents/skills/web-app/SKILL.md" ] || fail 'ASP web profile missing'
+[ -f "$mixed/.grok/agents/frontend-web.md" ] || fail 'ASP web Grok agent missing'
 unknown="$TEMP_ROOT/unknown"
 new_repo "$unknown"
 printf opaque > "$unknown/engine.customlang"
@@ -48,7 +51,7 @@ printf '<manifest />\n' > "$mobile/AndroidManifest.xml"
 printf 'class Main\n' > "$mobile/Main.kt"
 output="$(bash "$INSPECTOR" "$mobile")"
 [[ "$output" = *'Suggested profiles: mobile'* ]] || fail 'Native mobile not detected'
-bash "$INSTALLER" "$mobile" --integration grok
+bash "$INSTALLER" "$mobile"
 [ -f "$mobile/.grok/skills/mobile-app/SKILL.md" ] || fail 'Mobile independent install missing'
 [ ! -e "$mobile/.agents/skills/web-app" ] || fail 'Native mobile installed web'
 hybrid="$TEMP_ROOT/hybrid"
@@ -58,28 +61,27 @@ printf '<html></html>\n' > "$hybrid/index.html"
 output="$(bash "$INSPECTOR" "$hybrid")"
 [[ "$output" = *'Suggested profiles: web mobile'* ]] || fail 'Mixed cross-platform detection lost'
 
-old="$TEMP_ROOT/old"
-new_repo "$old"
-cp -R "$PACK_ROOT/tests/fixtures/installed-1.7.0/repo/." "$old/"
-mkdir -p "$old/.agent-pack"
-cp "$PACK_ROOT/tests/fixtures/installed-1.7.0/state.txt" "$old/.agent-pack/state.txt"
-printf '\nLocal recurring rule: preserve me.\n' >> "$old/.agents/skills/bugfix-dotnet/SKILL.md"
-printf '\nLocal project guidance: preserve me.\n' >> "$old/AGENTS.md"
-printf 'Verified local commands: fixture only.\n' > "$old/docs/ai/runbook.md"
-before="$(sha256sum "$old/AGENTS.md" "$old/.agents/skills/bugfix-dotnet/SKILL.md" "$old/docs/ai/runbook.md")"
+# Fresh 3.0 install then updater preserves customizations.
+fresh="$TEMP_ROOT/fresh"
+new_repo "$fresh"
+bash "$INSTALLER" "$fresh" --profile web
+printf '\nLocal recurring rule: preserve me.\n' >> "$fresh/.agents/skills/bugfix-dotnet/SKILL.md"
+printf '\nLocal project guidance: preserve me.\n' >> "$fresh/AGENTS.md"
+printf 'Verified local commands: fixture only.\n' > "$fresh/docs/ai/runbook.md"
+before="$(sha256sum "$fresh/AGENTS.md" "$fresh/.agents/skills/bugfix-dotnet/SKILL.md" "$fresh/docs/ai/runbook.md")"
 check_status=0
-bash "$UPDATER" "$old" --check || check_status=$?
-[ "$check_status" -eq 2 ] || fail 'Expected check-mode conflict exit code 2'
-[ "$before" = "$(sha256sum "$old/AGENTS.md" "$old/.agents/skills/bugfix-dotnet/SKILL.md" "$old/docs/ai/runbook.md")" ] || fail 'Check changed content'
-if bash "$UPDATER" "$old" --apply; then fail 'Custom migration bypassed conflict'; fi
-[ "$before" = "$(sha256sum "$old/AGENTS.md" "$old/.agents/skills/bugfix-dotnet/SKILL.md" "$old/docs/ai/runbook.md")" ] || fail 'Conflict was not atomic'
-bash "$UPDATER" "$old" --apply --keep-local guidance.agents --keep-local skill.shared.bugfix-dotnet --accept-pack config.grok.project
-[ "$before" = "$(sha256sum "$old/AGENTS.md" "$old/.agents/skills/bugfix-dotnet/SKILL.md" "$old/docs/ai/runbook.md")" ] || fail 'Migration lost managed/merge/seed customizations'
-grep -Fxq "version|$(tr -d '\r\n' < "$PACK_ROOT/pack-version.txt")" "$old/.agent-pack/state.txt" || fail 'Version not advanced'
-grep -q '^integration|grok$' "$old/.agent-pack/state.txt" || fail 'Integration selection lost'
-grep -q '^profile|web$' "$old/.agent-pack/state.txt" || fail 'Web selection lost'
-if grep -Eq '^profile\|(mobile|quality)$|^integration\|codex$' "$old/.agent-pack/state.txt"; then fail 'Migration expanded selection'; fi
-[ -f "$old/.grok/skills/complete-task/SKILL.md" ] || fail 'Selected workflow not migrated'
-[ ! -e "$old/.grok/skills/mobile-app" ] || fail 'Migration installed unrelated mobile'
-grep -q 'Engineering Flow 2.0 execution gate' "$old/.grok/skills/web-dotnet/SKILL.md" || fail 'Trusted 1.7 managed file not updated'
-echo 'Engineering Flow Bash script regressions passed: empty, unknown, classic ASP/mixed, native/hybrid, independent selection, actual 1.7 bytes, conflict atomicity and customization. No agent/browser/device behavior claimed.'
+bash "$UPDATER" "$fresh" --check || check_status=$?
+[ "$check_status" -eq 2 ] || fail "Expected check-mode conflict exit code 2, got $check_status"
+[ "$before" = "$(sha256sum "$fresh/AGENTS.md" "$fresh/.agents/skills/bugfix-dotnet/SKILL.md" "$fresh/docs/ai/runbook.md")" ] || fail 'Check changed content'
+if bash "$UPDATER" "$fresh" --apply; then fail 'Custom update bypassed conflict'; fi
+[ "$before" = "$(sha256sum "$fresh/AGENTS.md" "$fresh/.agents/skills/bugfix-dotnet/SKILL.md" "$fresh/docs/ai/runbook.md")" ] || fail 'Conflict was not atomic'
+bash "$UPDATER" "$fresh" --apply --keep-local guidance.agents --keep-local skill.shared.bugfix-dotnet
+[ "$before" = "$(sha256sum "$fresh/AGENTS.md" "$fresh/.agents/skills/bugfix-dotnet/SKILL.md" "$fresh/docs/ai/runbook.md")" ] || fail 'Update lost managed/merge/seed customizations'
+grep -Fxq "version|$(tr -d '\r\n' < "$PACK_ROOT/pack-version.txt")" "$fresh/.agent-pack/state.txt" || fail 'Version not recorded'
+grep -q '^integration|grok$' "$fresh/.agent-pack/state.txt" || fail 'Integration selection lost'
+grep -q '^profile|web$' "$fresh/.agent-pack/state.txt" || fail 'Web selection lost'
+if grep -Eq '^profile\|(mobile|quality)$|^integration\|codex$' "$fresh/.agent-pack/state.txt"; then fail 'Update expanded selection'; fi
+[ -f "$fresh/.grok/skills/complete-task/SKILL.md" ] || fail 'Selected workflow missing'
+[ ! -e "$fresh/.grok/skills/mobile-app" ] || fail 'Update installed unrelated mobile'
+[ -f "$fresh/.agent-pack/.runtime/.gitignore" ] || true
+echo 'Engineering Flow Bash script regressions passed: empty, unknown, classic ASP/mixed, native/hybrid, Grok-only selection, 3.0 update customization. No agent/browser/device behavior claimed.'

@@ -1,11 +1,11 @@
 # Fontes oficiais do Grok Build
 
-Este arquivo registra as decisões específicas do Grok Build usadas pelo Engineering Flow. Consulte novamente as fontes antes de alterar caminhos, formatos ou políticas.
+Este arquivo registra as decisões específicas do Grok Build usadas pelo Engineering Flow 3.0. Consulte novamente as fontes antes de alterar caminhos, formatos ou políticas. O único harness do pack é o Grok Build.
 
 ## Regras e contexto do projeto
 
 - [Project rules](https://docs.x.ai/build/features/project-rules): o Grok Build lê `AGENTS.md` como instrução de projeto.
-- O pack não cria `GROK.md`: `AGENTS.md` permanece a fonte compartilhada entre Codex e Grok Build.
+- O pack não cria `GROK.md`: `AGENTS.md` é a fonte de orientação do projeto.
 
 ## Skills, agentes e configuração
 
@@ -14,7 +14,7 @@ Este arquivo registra as decisões específicas do Grok Build usadas pelo Engine
 - [Settings](https://docs.x.ai/build/settings): configuração de projeto usa `.grok/config.toml`.
 - [Permissions](https://docs.x.ai/build/features/permissions): regras de permissão podem permitir, perguntar ou negar comandos específicos.
 
-O pack instala em `.grok/config.toml` somente uma política mínima do projeto que nega operações destrutivas. Commit/push dependem de autorização humana aplicável e permissões nativas. Autenticação, modelo, sandbox e preferências pessoais continuam sob responsabilidade da configuração do usuário.
+O pack instala em `.grok/config.toml` somente uma política mínima do projeto que nega operações destrutivas. Commit e push seguem o Gate 2: ok explícito do Matheus, commit só pelo Grok Build, push só pelo Jow ou pelo Matheus manualmente. Autenticação, modelo, sandbox e preferências pessoais continuam sob responsabilidade da configuração do usuário.
 
 ## Worktrees e execução não interativa
 
@@ -26,21 +26,18 @@ O pack instala em `.grok/config.toml` somente uma política mínima do projeto q
 - [Official source: subagents](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-pager/docs/user-guide/16-subagents.md): detalhes de paralelismo e isolamento.
 - [Announcement](https://x.ai/news/grok-build-cli): anúncio oficial do Grok Build.
 
-O Agent Pack usa essas capacidades com a seguinte divisão:
-
-1. Codex investiga, raciocina, projeta, define critérios e cria uma ordem de trabalho delimitada.
-2. Grok Build executa trabalho mecânico ou paralelizável em worktree nativo.
-3. Codex revisa o diff real, julga riscos, valida de forma independente e recomenda o próximo passo; o usuário decide e autoriza a integração.
+O Grok Build lê o índice de skills, escolhe a skill pertinente, implementa, testa e traz evidências. Sem skill que caiba, pergunta.
 
 Veja também [Grok Bot opcional](GROK_BOT_OPCIONAL.md), sem dependência ou integração direta assumida.
 
 ## Decisões deliberadas do pack
 
-- `IncludeGrokBuild` e `--include-grok-build` são opt-in e independentes de `IncludeClaude`.
-- Skills compartilhadas continuam canônicas em `.agents/skills` e são espelhadas em `.grok/skills` apenas para descoberta nativa.
-- Não se versionam worktrees, sessões, transcrições ou estado da máquina.
+- O Grok Build é o único harness; Codex e Claude saíram na 3.0.
+- Os 10 agentes têm origem em `.grok/agents`.
+- Skills compartilhadas continuam canônicas em `.agents/skills` e são espelhadas em `.grok/skills` para descoberta nativa.
+- Não se versionam worktrees, sessões, transcrições, estado da máquina nem `.agent-pack/.runtime/task.lock`.
 - Não se cria `.ai-collab`, `.grok-worktrees` ou outro diretório de coordenação no repositório.
 - Não se ignora `.grok/` inteira: agentes, skills e configuração de projeto instalados ali são parte intencional e versionável da integração.
 - A automação padrão não usa `--yolo`; permissões amplas exigem decisão explícita do usuário.
-- A tarefa não concede automaticamente commit, push, deploy, migração ou integração na branch principal. Autorização explícita específica persiste para qualquer provedor.
-- O usuário é a única autoridade decisória; plano/aprovação precedem implementação e somente testes aprovados executam. Integração/produção exigem autorização aplicável.
+- A tarefa não concede automaticamente commit ou push. O Gate 2 define os papéis.
+- Matheus é a única autoridade decisória; plano/aprovação precedem implementação e somente testes aprovados executam.

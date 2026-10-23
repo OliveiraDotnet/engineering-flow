@@ -1,15 +1,15 @@
-# Engineering Flow 2.0 — contrato de execução
+# Engineering Flow 3.0 — contrato de execução
 
 Entender a demanda → plano técnico → aprovação humana → implementar → executar testes aprovados → reunir evidências → entregar.
 
-O agente ativo conduz o fluxo sozinho em Codex, Grok Build ou outra ferramenta compatível. Colaboração e segundo provedor são opcionais. Leia somente as skills pertinentes; o nome `$skill` indica invocação nativa, não comando de shell. Instruções locais e autorização humana definem o envelope de execução.
+O Grok Build conduz o fluxo. Colaboração e segundo provedor são opcionais. Leia somente o índice de skills e carregue a skill escolhida; o nome `$skill` indica invocação nativa, não comando de shell. Instruções locais e autorização humana definem o envelope de execução.
 
 ## Modos de operação
 
 - **Trivial**: exatamente 1 critério observável, sem risco a dados e sem migração. O agente escreve o critério em uma frase, o harness executa e entrega o diff para ok humano. Sem plano formal e sem tabela de evidência.
-- **Completo**: fluxo atual com Gate 1 (plano aprovado) e Gate 2 (entrega/evidência separada de ações externas).
+- **Completo**: fluxo atual com Gate 1 (plano aprovado) e Gate 2 (commit e push).
 - Regra de corte: qualquer coisa além do Trivial, ou qualquer dúvida, é Completo.
-- Commit, push, merge e deploy exigem autorização explícita nos dois modos.
+- Commit e push seguem o Gate 2 nos dois modos.
 
 ## Anti-padrões
 
@@ -25,7 +25,18 @@ Antes de implementar, apresente objetivo, critérios de aceitação observáveis
 
 Registre o que foi aprovado: implementação, testes/cenários/comandos, ambiente e ações externas. Ausência de pedido de testes não é autorização automática: destaque a validação faltante e pergunte se deve incluí-la. Autorização explícita existente persiste; não peça novamente por passos cobertos. Se só implementação foi aprovada, entregue como implementado e não validado, com verificações pendentes. Inspeção de código não prova teste executado.
 
-Mudança material de escopo, comportamento, arquitetura/contratos, dependências, segurança/dados ou validação retorna à decisão humana com evidência, opções e recomendação (BLOCKED_BY_DECISION). Não troque ambiente nem instale ferramentas para contornar uma limitação. Commit, push, merge, publicação, deploy, migrações/dados de produção e operações destrutivas exigem autorização aplicável à ação e ao alvo. Um handoff não amplia permissões.
+Mudança material de escopo, comportamento, arquitetura/contratos, dependências, segurança/dados ou validação retorna à decisão humana com evidência, opções e recomendação (BLOCKED_BY_DECISION). Não troque ambiente nem instale ferramentas para contornar uma limitação. Um handoff não amplia permissões.
+
+**Gate 2:** commit e push exigem o ok explícito do Matheus, dado depois de ele ver as evidências. O commit é feito só pelo Grok Build. O push é feito só pelo Jow ou, com o Jow indisponível, pelo Matheus manualmente. Nenhum outro agente comita ou dá push. Nunca na main ou na master, nunca force push.
+
+## LOCK
+
+O LOCK fica em `.agent-pack/.runtime/task.lock` no repositório em trabalho. O arquivo não é versionado.
+
+- Quem cria: o bot do repo, depois de conferir que não existe outro LOCK.
+- Conteúdo: a tarefa, a branch, o bot responsável e a data e hora em que foi criado.
+- Quando expira: no commit da tarefa.
+- Trava esquecida: quem libera é o bot da demanda.
 
 ## Descoberta proporcional
 

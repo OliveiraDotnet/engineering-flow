@@ -1,3 +1,4 @@
+#Requires -Version 7
 [CmdletBinding()]
 param()
 
@@ -31,12 +32,16 @@ try {
     & $Installer -RepoPath $grokOnly -Integration grok -Profile web,sqlserver,quality -Confirm:$false
     & $Installer -RepoPath $grokOnly -Confirm:$false
     Assert-True (Test-Path -LiteralPath (Join-Path $grokOnly '.grok/config.toml')) 'Grok-only config missing.'
+    Assert-True (Test-Path -LiteralPath (Join-Path $grokOnly '.grok/agents/repo-explorer.md')) 'Grok agent origin missing.'
+    Assert-True (Test-Path -LiteralPath (Join-Path $grokOnly '.grok/agents/frontend-web.md')) 'Grok web agent missing.'
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $grokOnly '.codex'))) 'Grok-only installed Codex agents.'
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $grokOnly '.claude'))) 'Grok-only installed Claude agents.'
     Assert-True (@(Get-ChildItem -LiteralPath (Join-Path $grokOnly '.agents') -Recurse -Filter openai.yaml).Count -eq 0) 'Grok-only installed Codex metadata.'
     $grokState = Get-Content -LiteralPath (Join-Path $grokOnly '.agent-pack/state.txt') -Raw
     Assert-True ($grokState -match '(?m)^integration\|grok$' -and $grokState -notmatch '(?m)^integration\|codex$') 'Grok-only state selected Codex.'
-    & $Installer -RepoPath $grokOnly -Integration codex,grok -Confirm:$false
-    Assert-True (Test-Path -LiteralPath (Join-Path $grokOnly '.codex/agents/frontend-web.toml')) 'Explicit coexistence did not add Codex.'
+    $rejected = $false
+    try { & $Installer -RepoPath $grokOnly -Integration codex,grok -Confirm:$false } catch { $rejected = $true }
+    Assert-True $rejected 'Installer accepted Codex integration.'
 
     foreach ($linkedRelative in @('.agents', '.agent-pack', 'AGENTS.md.agent-pack.new')) {
         $linkedRepo = Join-Path $TempRoot ('linked-' + [Guid]::NewGuid().ToString('N'))
@@ -47,148 +52,83 @@ try {
         $linkType = if ($env:OS -eq 'Windows_NT') { 'Junction' } else { 'SymbolicLink' }
         New-Item -ItemType $linkType -Path $linkPath -Target $outside | Out-Null
         try {
-            $rejected = $false
-            try { & $Installer -RepoPath $linkedRepo -Profile core -Confirm:$false } catch { $rejected = $_.Exception.Message -match 'Linked installation path' }
-            Assert-True $rejected "Installer accepted linked path $linkedRelative."
+            $linkRejected = $false
+            try { & $Installer -RepoPath $linkedRepo -Profile core -Confirm:$false } catch { $linkRejected = $_.Exception.Message -match 'Linked installation path' }
+            Assert-True $linkRejected "Installer accepted linked path $linkedRelative."
             Assert-True (@(Get-ChildItem -LiteralPath $outside -Force).Count -eq 0) 'Installer wrote through a linked path.'
             Assert-True (-not (Test-Path -LiteralPath (Join-Path $linkedRepo 'AGENTS.md'))) 'Link validation occurred after writes.'
         }
         finally { [IO.Directory]::Delete($linkPath) }
     }
 
-    & $Installer -RepoPath $Repo -IncludeClaude -DryRun -Confirm:$false
-    Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo "CLAUDE.md"))) "Claude dry-run wrote CLAUDE.md."
-    Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".claude"))) "Claude dry-run created .claude."
-
-    & $Installer -RepoPath $Repo -IncludeGrokBuild -DryRun -Confirm:$false
-    Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".grok"))) "Grok dry-run created .grok."
-    Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\delegate-to-grok-build"))) "Grok dry-run wrote the delegation skill."
-
     & $Installer -RepoPath $Repo -Confirm:$false
     Assert-True (Test-Path -LiteralPath (Join-Path $Repo "AGENTS.md")) "Core AGENTS.md was not installed."
     Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\bootstrap-dotnet-repo\SKILL.md")) "Bootstrap skill was not installed."
     Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\agents-md-generator\references\agents-md-checklist.md")) "AGENTS.md generator skill was not installed."
     Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\dotnet-xunit-tests\references\xunit-test-checklist.md")) "xUnit test skill was not installed."
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\update-engineering-flow\SKILL.md"))) "Removed update-engineering-flow skill was installed."
     Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agent-pack\state.txt")) "Installer did not write Agent Pack state."
     $coreState = Get-Content -LiteralPath (Join-Path $Repo ".agent-pack\state.txt") -Raw
     $expectedVersion = (Get-Content -LiteralPath (Join-Path (Split-Path -Parent $ScriptDir) 'pack-version.txt') -Raw).Trim()
     Assert-True ($coreState -match ('(?m)^version\|' + [regex]::Escape($expectedVersion) + '$')) 'Installer state version does not match pack-version.txt.'
     Assert-True ($coreState -match '(?m)^profile\|core$') "Installer state is missing core."
-    Assert-True (-not ($coreState -match '(?m)^profile\|flutter$')) "Installer selected a removed Flutter profile."
-    Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\flutter-tests\SKILL.md"))) "Removed Flutter skill was installed."
+    Assert-True ($coreState -match '(?m)^integration\|grok$') "Default install did not select Grok."
     Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\update-agent-pack\SKILL.md")) "Agent Pack update skill was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\check-text-encoding\scripts\check-mojibake.ps1")) "PowerShell text encoding checker was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\check-text-encoding\scripts\check-mojibake.sh")) "Shell text encoding checker was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo "prompts\08-update-agent-pack.md")) "Agent Pack update prompt was not installed."
-    Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".codex\agents\frontend-web.toml"))) "Web profile was installed unexpectedly."
+    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".grok\config.toml")) "Grok config was not installed by default."
+    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".grok\agents\repo-explorer.md")) "Grok agent origin was not installed."
+    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".grok\agents\implementer.md")) "Grok implementer was not installed."
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".codex"))) "Default install created .codex."
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo "CLAUDE.md"))) "Default install wrote CLAUDE.md."
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".claude"))) "Default install created .claude."
-    Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".grok"))) "Default install created .grok."
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".grok\skills\execute-codex-work-order"))) "Removed execute-codex-work-order was installed."
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo "prompts\09-migrate-claude-to-codex-grok.md"))) "Removed migration prompt was installed."
 
     & $Installer -RepoPath $Repo -Confirm:$false
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo "AGENTS.md.agent-pack.new"))) "Idempotent install created a sidecar."
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".grok\config.toml.agent-pack.new"))) "Idempotent Grok install created a sidecar."
 
     & $Installer -RepoPath $Repo -Profile web,sqlserver,quality -Confirm:$false
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".codex\agents\frontend-web.toml")) "Web profile was not installed."
+    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".grok\agents\frontend-web.md")) "Web Grok agent was not installed."
     Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\web-dotnet\SKILL.md")) "Web skill was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\db-change-sqlserver\SKILL.md")) "SQL Server profile was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\db-change-sqlserver\references\sqlserver-change-gates.md")) "SQL Server change gates were not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\sqlserver-structure-review\scripts\sqlserver-metadata-map.sql")) "SQL Server structure review skill was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\sqlserver-structure-review\references\sqlserver-system-understanding.md")) "SQL Server system-understanding reference was not installed."
-    Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\flutter-tests\SKILL.md"))) "Removed Flutter profile was installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\security-review-dotnet\SKILL.md")) "Quality profile was not installed."
-    Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo "CLAUDE.md"))) "Profiles installed Claude support without -IncludeClaude."
-    Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".grok"))) "Profiles installed Grok support without -IncludeGrokBuild."
-
-    & $Installer -RepoPath $Repo -IncludeClaude -Confirm:$false
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo "CLAUDE.md")) "Claude guidance bridge was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".claude\agents\repo-explorer.md")) "Core Claude agent was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".claude\skills\bootstrap-dotnet-repo\SKILL.md")) "Core Claude skill was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".claude\skills\bootstrap-dotnet-repo\scripts\inspect-dotnet-repo.ps1")) "Claude skill support script was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".claude\skills\update-agent-pack\SKILL.md")) "Claude Agent Pack update skill was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".claude\skills\check-text-encoding\scripts\check-mojibake.ps1")) "Claude PowerShell text encoding checker was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".claude\skills\check-text-encoding\scripts\check-mojibake.sh")) "Claude shell text encoding checker was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".claude\agents\frontend-web.md")) "Claude web profile was not installed from existing state."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".claude\agents\database-sqlserver.md")) "Claude SQL Server profile was not installed from existing state."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".claude\agents\security-reviewer.md")) "Claude quality profile was not installed from existing state."
-
+    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".grok\skills\web-dotnet\SKILL.md")) "Grok web skill was not installed."
+    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\db-change-sqlserver\SKILL.md")) "SQL Server skill was not installed."
+    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".grok\agents\database-sqlserver.md")) "SQL Server Grok agent was not installed."
+    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".grok\agents\security-reviewer.md")) "Quality Grok agent was not installed."
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".codex"))) "Profiles installed Codex."
     $canonicalBootstrapSkill = Join-Path $Repo ".agents\skills\bootstrap-dotnet-repo\SKILL.md"
-    $claudeBootstrapSkill = Join-Path $Repo ".claude\skills\bootstrap-dotnet-repo\SKILL.md"
-    Assert-True ((Get-FileHash -LiteralPath $canonicalBootstrapSkill -Algorithm SHA256).Hash -eq (Get-FileHash -LiteralPath $claudeBootstrapSkill -Algorithm SHA256).Hash) "Claude bootstrap skill diverged from its canonical source."
-
-    & $Installer -RepoPath $Repo -IncludeGrokBuild -Confirm:$false
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".grok\config.toml")) "Grok project config was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".grok\agents\repo-explorer.md")) "Core Grok agent was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".grok\skills\bootstrap-dotnet-repo\SKILL.md")) "Core Grok skill was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\delegate-to-grok-build\SKILL.md")) "Codex delegation skill was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".grok\skills\execute-codex-work-order\SKILL.md")) "Grok execution skill was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo "prompts\09-migrate-claude-to-codex-grok.md")) "Codex/Grok migration prompt was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".grok\agents\frontend-web.md")) "Grok web profile was not installed from existing state."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".grok\agents\database-sqlserver.md")) "Grok SQL Server profile was not installed from existing state."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".grok\agents\security-reviewer.md")) "Grok quality profile was not installed from existing state."
-
     $grokBootstrapSkill = Join-Path $Repo ".grok\skills\bootstrap-dotnet-repo\SKILL.md"
     Assert-True ((Get-FileHash -LiteralPath $canonicalBootstrapSkill -Algorithm SHA256).Hash -eq (Get-FileHash -LiteralPath $grokBootstrapSkill -Algorithm SHA256).Hash) "Grok bootstrap skill diverged from its canonical source."
-
-    & $Installer -RepoPath $Repo -IncludeGrokBuild -Confirm:$false
-    Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".grok\config.toml.agent-pack.new"))) "Idempotent Grok install created a config sidecar."
-
-    & $Installer -RepoPath $Repo -IncludeClaude -Confirm:$false
-    Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo "CLAUDE.md.agent-pack.new"))) "Idempotent Claude install created a sidecar."
-
-    & $Installer -RepoPath $Repo -Profile web,sqlserver,quality -IncludeClaude -Confirm:$false
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".claude\agents\frontend-web.md")) "Claude web profile was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".claude\agents\database-sqlserver.md")) "Claude SQL Server profile was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".claude\agents\security-reviewer.md")) "Claude quality profile was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".claude\skills\db-change-sqlserver\SKILL.md")) "Claude SQL Server skill was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".claude\skills\sqlserver-structure-review\references\sqlserver-review-checklist.md")) "Claude SQL Server structure review skill was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".claude\skills\web-dotnet\SKILL.md")) "Claude web skill was not installed."
-    Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".claude\skills\flutter-tests\SKILL.md"))) "Claude Flutter skill was installed after removal."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".claude\skills\security-review-dotnet\SKILL.md")) "Claude quality skill was not installed."
-
-    & $Installer -RepoPath $Repo -Profile web,sqlserver,quality -IncludeGrokBuild -Confirm:$false
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".grok\agents\frontend-web.md")) "Grok web profile was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".grok\agents\database-sqlserver.md")) "Grok SQL Server profile was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".grok\agents\security-reviewer.md")) "Grok quality profile was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".grok\skills\db-change-sqlserver\SKILL.md")) "Grok SQL Server skill was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".grok\skills\sqlserver-structure-review\scripts\find-sqlserver-references.ps1")) "Grok SQL Server structure review skill was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".grok\skills\web-dotnet\SKILL.md")) "Grok web skill was not installed."
-    Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".grok\skills\flutter-tests\SKILL.md"))) "Grok Flutter skill was installed after removal."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".grok\skills\security-review-dotnet\SKILL.md")) "Grok quality skill was not installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo "CLAUDE.md")) "Adding Grok removed the coexisting Claude integration."
 
     Add-Content -LiteralPath (Join-Path $Repo "AGENTS.md") -Value "# local change"
     & $Installer -RepoPath $Repo -Confirm:$false
     Assert-True (Test-Path -LiteralPath (Join-Path $Repo "AGENTS.md.agent-pack.new")) "Conflict sidecar was not created."
 
-    $managedSkill = Join-Path $Repo '.agents/skills/bugfix-dotnet/SKILL.md'
-    Add-Content -LiteralPath $managedSkill -Value '# local customization'
+    Add-Content -LiteralPath (Join-Path $Repo ".agents\skills\bugfix-dotnet\SKILL.md") -Value "# local customization"
     & $Installer -RepoPath $Repo -Confirm:$false
     & $Installer -RepoPath $Repo -Confirm:$false
-    $conflictState = Get-Content -LiteralPath (Join-Path $Repo '.agent-pack/state.txt') -Raw
-    Assert-True ($conflictState -match '(?m)^artifact\|[^|]+\|\.agents/skills/bugfix-dotnet/SKILL.md\|[^|]+\|-\|-\|keep-local\|') 'Repeated sidecar install falsely tracked local customization.'
-    Assert-True ((Get-Content -LiteralPath $managedSkill -Raw) -match 'local customization') 'Sidecar install replaced local customization.'
+    $state = Get-Content -LiteralPath (Join-Path $Repo ".agent-pack\state.txt") -Raw
+    Assert-True ($state -match '(?m)^artifact\|[^|]+\|\.agents/skills/bugfix-dotnet/SKILL.md\|[^|]+\|-\|-\|keep-local\|') "Local customization was not recorded as keep-local."
+    Assert-True ((Get-Content -LiteralPath (Join-Path $Repo ".agents\skills\bugfix-dotnet\SKILL.md") -Raw) -match 'local customization') "Local customization was overwritten."
 
     & $Installer -RepoPath $Repo -Force -Confirm:$false
-    Assert-True ((Get-Content -LiteralPath (Join-Path $Repo "AGENTS.md") -Raw) -eq (Get-Content -LiteralPath (Join-Path $Template "AGENTS.md") -Raw)) "Force install did not replace modified file."
+    Assert-True ((Get-Content -LiteralPath (Join-Path $Repo "AGENTS.md") -Raw) -eq (Get-Content -LiteralPath (Join-Path $Template "AGENTS.md") -Raw)) "Force install did not replace modified AGENTS.md."
     Assert-True ((Get-ChildItem -LiteralPath $Repo -Filter "AGENTS.md.agent-pack.backup-*" -File).Count -gt 0) "Force install did not preserve a backup."
 
-    Add-Content -LiteralPath (Join-Path $Repo "CLAUDE.md") -Value "# local Claude change"
-    & $Installer -RepoPath $Repo -IncludeClaude -Confirm:$false
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo "CLAUDE.md.agent-pack.new")) "Claude conflict sidecar was not created."
+    Add-Content -LiteralPath (Join-Path $Repo ".grok\config.toml") -Value "# local Grok change"
+    & $Installer -RepoPath $Repo -Confirm:$false
+    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".grok\config.toml.agent-pack.new")) "Grok conflict sidecar was not created."
 
-    & $Installer -RepoPath $Repo -IncludeClaude -Force -Confirm:$false
-    Assert-True ((Get-Content -LiteralPath (Join-Path $Repo "CLAUDE.md") -Raw) -eq (Get-Content -LiteralPath (Join-Path $Template "CLAUDE.md") -Raw)) "Force install did not replace modified CLAUDE.md."
-    Assert-True ((Get-ChildItem -LiteralPath $Repo -Filter "CLAUDE.md.agent-pack.backup-*" -File).Count -gt 0) "Force install did not preserve a CLAUDE.md backup."
+    & $Installer -RepoPath $Repo -Force -Confirm:$false
+    Assert-True ((Get-Content -LiteralPath (Join-Path $Repo ".grok\config.toml") -Raw) -eq (Get-Content -LiteralPath (Join-Path $Template ".grok\config.toml") -Raw)) "Force install did not replace modified Grok config."
 
-    $previousCodexHome = $env:CODEX_HOME
+    $previousGrokHome = $env:GROK_HOME
     try {
-        $env:CODEX_HOME = Join-Path $TempRoot "custom-codex-home"
+        $env:GROK_HOME = Join-Path $TempRoot "custom-grok-home"
         & $Installer -RepoPath $Repo -InstallGlobal -Confirm:$false
-        Assert-True (Test-Path -LiteralPath (Join-Path $env:CODEX_HOME "AGENTS.md")) "InstallGlobal did not honor CODEX_HOME."
+        Assert-True (Test-Path -LiteralPath (Join-Path $env:GROK_HOME "AGENTS.md")) "InstallGlobal did not honor GROK_HOME."
     }
     finally {
-        $env:CODEX_HOME = $previousCodexHome
+        $env:GROK_HOME = $previousGrokHome
     }
 
     $workspace = Join-Path $TempRoot "multi-root"
@@ -204,8 +144,8 @@ try {
     & $Installer -RepoPath $workspace -Confirm:$false
     Assert-True (Test-Path -LiteralPath (Join-Path $firstRepo "AGENTS.md")) "Workspace install did not reach the first Git root."
     Assert-True (Test-Path -LiteralPath (Join-Path $secondRepo "AGENTS.md")) "Workspace install did not reach the second Git root."
-    Assert-True (Test-Path -LiteralPath (Join-Path $firstRepo ".codex\agents\frontend-web.toml")) "Detected web profile was not installed into the web Git root."
-    Assert-True (-not (Test-Path -LiteralPath (Join-Path $secondRepo ".codex\agents\frontend-web.toml"))) "Web profile was installed into a repository without web evidence."
+    Assert-True (Test-Path -LiteralPath (Join-Path $firstRepo ".grok\agents\frontend-web.md")) "Detected web profile was not installed into the web Git root."
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $secondRepo ".grok\agents\frontend-web.md"))) "Web profile was installed into a repository without web evidence."
 
     Write-Host "Installer smoke test passed."
 }

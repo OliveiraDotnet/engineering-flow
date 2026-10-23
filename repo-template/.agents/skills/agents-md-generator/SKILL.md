@@ -3,7 +3,7 @@ name: agents-md-generator
 description: Create or improve concise AGENTS.md guidance from repository evidence. Use when project instructions need to be created or rewritten, in any repository or explicitly selected folder.
 ---
 
-## Engineering Flow 2.0 execution gate
+## Engineering Flow 3.0 execution gate
 
 Follow docs/engineering-flow/workflow.md in the target repository. Understand demand, present a technical plan, receive human approval, implement, execute only approved tests, gather criterion-linked evidence, deliver. Existing explicit authorization persists. Investigation/plan do not authorize implementation. Absence of a test request does not automatically authorize tests: highlight missing validation and ask whether to include it. If only implementation is approved, deliver it as unvalidated with pending checks. Material changes in scope, behavior, architecture/contracts, dependencies, security/data or validation return to the human. This gate governs execution steps below; no automatic delegation or second provider is required.
 
@@ -60,7 +60,7 @@ Follow existing repository guidance. If Agent Pack is installed, reuse its templ
 - Facts to confirm, or confirmed facts after bootstrap
 - Working rules
 - Context and delegation
-- Codex and Grok Build collaboration when that integration is present
+- Grok Build delegation when that integration is present
 - Definition of done
 
 Link existing detailed documentation in the repository's chosen location (`docs/ai` only when that convention exists). Retain short, confirmed build/test commands that agents need regularly. Do not create a documentation tree or relocate manual notes merely to match a template. Include database rules only when they are durable, confirmed operating constraints.

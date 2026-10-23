@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: bash ./scripts/install-agent-pack.sh REPO_PATH [--profile core,web,sqlserver,quality,mobile] [--integration codex,grok,claude] [--include-claude] [--include-grok-build] [--install-global] [--allow-non-git] [--force] [--dry-run] [--discover-only]"
+  echo "Usage: bash ./scripts/install-agent-pack.sh REPO_PATH [--profile core,web,sqlserver,quality,mobile] [--integration grok] [--install-global] [--allow-non-git] [--force] [--dry-run] [--discover-only]"
 }
 
 if [ "$#" -lt 1 ]; then
@@ -14,8 +14,6 @@ repo_input="$1"
 shift
 requested_profiles=()
 requested_integrations=()
-include_claude=false
-include_grok_build=false
 install_global=false
 allow_non_git=false
 force=false
@@ -29,7 +27,7 @@ while [ "$#" -gt 0 ]; do
       IFS=',' read -r -a requested <<< "$2"
       [ "${#requested[@]}" -gt 0 ] || { echo "Empty integration selection" >&2; exit 1; }
       for integration in "${requested[@]}"; do
-        case "$integration" in codex|grok|claude) requested_integrations+=("$integration") ;; *) echo "Unknown integration: $integration" >&2; exit 1 ;; esac
+        case "$integration" in grok) requested_integrations+=("$integration") ;; *) echo "Unknown integration: $integration. Engineering Flow 3.0 is Grok-only." >&2; exit 1 ;; esac
       done
       shift 2
       ;;
@@ -41,8 +39,6 @@ while [ "$#" -gt 0 ]; do
       done
       shift 2
       ;;
-    --include-claude) include_claude=true; shift ;;
-    --include-grok-build) include_grok_build=true; shift ;;
     --install-global) install_global=true; shift ;;
     --allow-non-git) allow_non_git=true; shift ;;
     --force) force=true; shift ;;
@@ -256,8 +252,6 @@ write_state() {
     for profile in "${resolved_profiles[@]}"; do
       printf 'profile|%s\n' "$profile"
     done
-    [ "$include_codex_effective" = true ] && printf 'integration|codex\n'
-    [ "$include_claude_effective" = true ] && printf 'integration|claude\n'
     [ "$include_grok_effective" = true ] && printf 'integration|grok\n'
     while IFS= read -r line || [ -n "$line" ]; do
       line="$(trim "$line")"
@@ -301,31 +295,19 @@ install_one() {
     return
   fi
 
-  include_claude_effective="$include_claude"
-  include_grok_effective="$include_grok_build"
-  include_codex_effective=false
+  include_grok_effective=true
   read_state_values "$REPO_ROOT" integration
-  if [ "${#requested_integrations[@]}" -eq 0 ] && [ "${#state_values[@]}" -eq 0 ]; then include_codex_effective=true; fi
   for integration in "${state_values[@]+"${state_values[@]}"}" "${requested_integrations[@]+"${requested_integrations[@]}"}"; do
-    case "$integration" in codex|grok|claude) ;; *) echo "Unknown integration in state: $integration" >&2; exit 1 ;; esac
-    [ "$integration" = "codex" ] && include_codex_effective=true
-    [ "$integration" = "claude" ] && include_claude_effective=true
-    [ "$integration" = "grok" ] && include_grok_effective=true
+    case "$integration" in
+      grok) ;;
+      *) echo "Unknown integration in state: $integration. Engineering Flow 3.0 is Grok-only." >&2; exit 1 ;;
+    esac
   done
-  [ "$include_claude" = true ] && include_claude_effective=true
-  [ "$include_grok_build" = true ] && include_grok_effective=true
 
   components=("${resolved_profiles[@]}")
-  if [ "$include_claude_effective" = true ]; then
-    for profile in "${resolved_profiles[@]}"; do
-      components+=("claude-$profile")
-    done
-  fi
-  if [ "$include_grok_effective" = true ]; then
-    for profile in "${resolved_profiles[@]}"; do
-      components+=("grok-$profile")
-    done
-  fi
+  for profile in "${resolved_profiles[@]}"; do
+    components+=("grok-$profile")
+  done
 
   action_state=()
   action_source=()
@@ -382,9 +364,7 @@ install_one() {
     [ -n "$source_relative" ] || { echo "Invalid manifest line: $line" >&2; exit 1; }
     [ -n "$destination_relative" ] || { echo "Invalid manifest line: $line" >&2; exit 1; }
     contains_component "$component" || continue
-    if [ "$include_codex_effective" != true ]; then
-      case "$destination_relative" in .codex/*|*/agents/openai.yaml) continue ;; esac
-    fi
+    case "$destination_relative" in */agents/openai.yaml) continue ;; esac
     valid_relative_path "$source_relative" || { echo "Manifest source path escapes template: $source_relative" >&2; exit 1; }
     valid_relative_path "$destination_relative" || { echo "Manifest destination path escapes repository: $destination_relative" >&2; exit 1; }
     source="$TEMPLATE_ROOT/$source_relative"
@@ -463,18 +443,17 @@ elif [ "${#discovered_roots[@]}" -eq 1 ] && [ "${discovered_roots[0]}" = "$WORKS
   fi
 fi
 
-echo "Installing .NET Agents Pack $PACK_VERSION"
+echo "Installing Engineering Flow $PACK_VERSION"
 echo "Workspace path: $WORKSPACE_ROOT"
 echo "Repositories: ${discovered_roots[*]}"
-[ "$include_claude" = true ] && echo "Claude project support enabled."
-[ "$include_grok_build" = true ] && echo "Grok Build project support enabled."
+echo "Grok Build project support enabled."
 
 for target in "${discovered_roots[@]}"; do
   install_one "$target"
 done
 
 if [ "$install_global" = true ] && [ "$discover_only" != true ]; then
-  CODEX_HOME_RESOLVED="${CODEX_HOME:-$HOME/.codex}"
+  GROK_HOME_RESOLVED="${GROK_HOME:-$HOME/.grok}"
   action_state=()
   action_source=()
   action_destination=()
@@ -517,5 +496,5 @@ if [ "$install_global" = true ] && [ "$discover_only" != true ]; then
     fi
     cp "$source" "$effective"
   }
-  add_global "$GLOBAL_GUIDANCE" "$CODEX_HOME_RESOLVED/AGENTS.md"
+  add_global "$GLOBAL_GUIDANCE" "$GROK_HOME_RESOLVED/AGENTS.md"
 fi

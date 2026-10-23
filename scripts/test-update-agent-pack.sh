@@ -101,7 +101,7 @@ cp "$BASELINES/anchor.txt" "$REPO/anchor.txt"
   echo "# agent-pack state v1"
   echo "version|1.1.0"
   echo "profile|core"
-  echo "integration|codex"
+  echo "integration|grok"
   printf 'artifact|update-file|update.txt|managed|1.1.0|%s|tracked|-\n' "$update_old_hash"
   printf 'artifact|conflict-file|conflict.txt|managed|1.1.0|%s|tracked|-\n' "$conflict_old_hash"
   printf 'artifact|seed-file|seed.txt|seed|1.1.0|%s|tracked|-\n' "$seed_old_hash"
@@ -165,27 +165,20 @@ printf '%s\n' "$noop_output" | grep -q "conflicts=0" ||
 cmp -s "$REPO/.agent-pack/state.txt" "$TEMP_ROOT/state-before-noop.txt" ||
   fail "Second --check changed state."
 
-bash "$FAKE_PACK/scripts/update-agent-pack.sh" "$REPO" --apply --integration codex,grok >/dev/null
-grep -q '^integration|codex$' "$REPO/.agent-pack/state.txt" ||
-  fail "Codex was not retained in the integration override."
+bash "$FAKE_PACK/scripts/update-agent-pack.sh" "$REPO" --apply --integration grok >/dev/null
 grep -q '^integration|grok$' "$REPO/.agent-pack/state.txt" ||
-  fail "Grok integration override was not persisted."
-if grep -q '^integration|claude$' "$REPO/.agent-pack/state.txt"; then
-  fail "Claude remained selected after a codex,grok override."
+  fail "Grok integration was not persisted."
+if grep -qE '^integration\|(codex|claude)$' "$REPO/.agent-pack/state.txt"; then
+  fail "Non-Grok integration remained selected."
 fi
 cp "$REPO/.agent-pack/state.txt" "$TEMP_ROOT/state-with-grok.txt"
 bash "$FAKE_PACK/scripts/update-agent-pack.sh" "$REPO" --apply >/dev/null
 cmp -s "$REPO/.agent-pack/state.txt" "$TEMP_ROOT/state-with-grok.txt" ||
-  fail "A later update did not preserve the codex,grok selection."
-bash "$FAKE_PACK/scripts/update-agent-pack.sh" "$REPO" --apply --integration grok >/dev/null
-assert_file_content "$REPO/update.txt" "new update"
-if grep -q '^integration|codex$' "$REPO/.agent-pack/state.txt"; then
-  fail "Grok-only retained Codex integration."
+  fail "A later update did not preserve the grok selection."
+if bash "$FAKE_PACK/scripts/update-agent-pack.sh" "$REPO" --apply --integration codex,grok >/dev/null 2>&1; then
+  fail "Updater accepted Codex integration."
 fi
-cp "$REPO/.agent-pack/state.txt" "$TEMP_ROOT/grok-only-state.txt"
-bash "$FAKE_PACK/scripts/update-agent-pack.sh" "$REPO" --apply >/dev/null
-cmp -s "$REPO/.agent-pack/state.txt" "$TEMP_ROOT/grok-only-state.txt" || fail "Grok-only was not preserved."
-bash "$FAKE_PACK/scripts/update-agent-pack.sh" "$REPO" --apply --integration codex,grok >/dev/null
+assert_file_content "$REPO/update.txt" "new update"
 printf '%s' 'active owner' > "$REPO/.agent-pack/.runtime/update.lock"
 if bash "$FAKE_PACK/scripts/update-agent-pack.sh" "$REPO" --apply >/dev/null 2>&1; then
   fail "Existing cross-shell lock did not block apply."
@@ -193,20 +186,16 @@ fi
 assert_file_content "$REPO/.agent-pack/.runtime/update.lock" "active owner"
 rm "$REPO/.agent-pack/.runtime/update.lock"
 
-# Provider-specific core artifacts are optional, shared core is always retained.
-mkdir -p "$FAKE_PACK/repo-template/.codex/agents" "$FAKE_PACK/repo-template/.agents/skills/example/agents"
-printf '%s\n' "agent" > "$FAKE_PACK/repo-template/.codex/agents/reviewer.toml"
+# Codex metadata is never installed; Grok-core extras are retained.
+mkdir -p "$FAKE_PACK/repo-template/.grok/agents" "$FAKE_PACK/repo-template/.agents/skills/example/agents"
+printf '%s\n' "agent" > "$FAKE_PACK/repo-template/.grok/agents/reviewer.md"
 printf '%s\n' "metadata" > "$FAKE_PACK/repo-template/.agents/skills/example/agents/openai.yaml"
-printf '%s\n' 'core|.codex/agents/reviewer.toml' 'core|.agents/skills/example/agents/openai.yaml' >> "$FAKE_PACK/pack-manifest.txt"
-printf '%s\n' 'codex-agent|.codex/agents/reviewer.toml|managed' 'codex-metadata|.agents/skills/example/agents/openai.yaml|managed' >> "$FAKE_PACK/pack-artifacts.txt"
+printf '%s\n' 'grok-core|.grok/agents/reviewer.md' 'core|.agents/skills/example/agents/openai.yaml' >> "$FAKE_PACK/pack-manifest.txt"
+printf '%s\n' 'grok-agent|.grok/agents/reviewer.md|managed' 'codex-metadata|.agents/skills/example/agents/openai.yaml|managed' >> "$FAKE_PACK/pack-artifacts.txt"
 bash "$FAKE_PACK/scripts/update-agent-pack.sh" "$REPO" --apply >/dev/null
-[ -f "$REPO/.codex/agents/reviewer.toml" ] || fail "Codex agent not installed."
-bash "$FAKE_PACK/scripts/update-agent-pack.sh" "$REPO" --apply --integration grok >/dev/null
-[ ! -e "$REPO/.codex/agents/reviewer.toml" ] || fail "Grok-only retained Codex agent."
-[ ! -e "$REPO/.agents/skills/example/agents/openai.yaml" ] || fail "Grok-only retained Codex metadata."
+[ -f "$REPO/.grok/agents/reviewer.md" ] || fail "Grok agent not installed."
+[ ! -e "$REPO/.agents/skills/example/agents/openai.yaml" ] || fail "Grok-only installed Codex metadata."
 assert_file_content "$REPO/update.txt" "new update"
-bash "$FAKE_PACK/scripts/update-agent-pack.sh" "$REPO" --apply --integration codex,grok >/dev/null
-[ -f "$REPO/.codex/agents/reviewer.toml" ] || fail "Re-enabling Codex failed."
 
 # Inject failures in backup and replacement moves through a local command wrapper.
 # The receipt now describes 2.0 files. Preserve that trusted release before
@@ -302,7 +291,7 @@ anchor_new_hash="$(hash_file "$FAKE_PACK/repo-template/anchor.txt")"
   printf 'anchor-file|anchor.txt|%s\n' "$anchor_new_hash"
   # Provider fixtures are removed from the candidate manifest below, but their
   # installed receipts still require trusted historical hashes for retirement.
-  printf 'codex-agent|.codex/agents/reviewer.toml|%s\n' "$(hash_file "$FAKE_PACK/repo-template/.codex/agents/reviewer.toml")"
+  printf 'grok-agent|.grok/agents/reviewer.md|%s\n' "$(hash_file "$FAKE_PACK/repo-template/.grok/agents/reviewer.md")"
   printf 'codex-metadata|.agents/skills/example/agents/openai.yaml|%s\n' "$(hash_file "$FAKE_PACK/repo-template/.agents/skills/example/agents/openai.yaml")"
 } > "$FAKE_PACK/compat/releases/2.0.0.txt"
 printf '%s\n' "2.1.0" > "$FAKE_PACK/pack-version.txt"

@@ -9,7 +9,7 @@ if [ -f "$path" ]; then
   if ! cmp -s "$path" <(tr -d '\000' < "$path"); then echo 'Non UTF-8 .gitignore needs a reviewed encoding-preserving change.' >&2; exit 1; fi
   if command -v iconv >/dev/null 2>&1 && ! iconv -f UTF-8 -t UTF-8 "$path" >/dev/null 2>&1; then echo 'Non UTF-8 .gitignore needs a reviewed encoding-preserving change.' >&2; exit 1; fi
 fi
-patterns=('*.agent-pack.new' '*.agent-pack.backup-*' '.agent-pack/.runtime/' '.agent-pack/*.tmp' '.agent-pack/*.lock' '.agent-pack/logs/' '.agent-pack/cache/' '.agent-pack/tmp/' '.agent-pack/sessions/' '.agent-pack/worktrees/' '.engineering-flow-evidence/' '.grok/sessions/' '.grok/worktrees/' '.codex/sessions/' '.codex/worktrees/' '.claude/sessions/' '.claude/worktrees/')
+patterns=('*.agent-pack.new' '*.agent-pack.backup-*' '.agent-pack/.runtime/' '.agent-pack/.runtime/task.lock' '.agent-pack/*.tmp' '.agent-pack/*.lock' '.agent-pack/logs/' '.agent-pack/cache/' '.agent-pack/tmp/' '.agent-pack/sessions/' '.agent-pack/worktrees/' '.engineering-flow-evidence/' '.grok/sessions/' '.grok/worktrees/')
 missing=()
 for pattern in "${patterns[@]}"; do
   if [ ! -f "$path" ] || ! grep -F -x -q "$pattern" <(sed $'s/\r$//' "$path"); then missing+=("$pattern"); fi

@@ -1,6 +1,8 @@
-# Manual do Engineering Flow 2.0
+# Manual do Engineering Flow 3.0
 
-O agente ativo pode investigar, planejar, implementar e entregar sozinho em Codex ou Grok Build. Compatibilidade Claude é opcional. Não é necessário coordenador de outro provedor nem colaboração automática. O fluxo completo está em [workflow.md](repo-template/docs/engineering-flow/workflow.md).
+O Grok Build pode investigar, planejar, implementar e entregar sozinho. Não é necessário coordenador de outro provedor nem colaboração automática. O fluxo completo está em [workflow.md](repo-template/docs/engineering-flow/workflow.md). Escolha a skill pelo [índice](SKILLS-INDEX.md).
+
+**Gate 2:** commit e push exigem o ok explícito do Matheus, dado depois de ele ver as evidências. O commit é feito só pelo Grok Build. O push é feito só pelo Jow ou, com o Jow indisponível, pelo Matheus manualmente. Nenhum outro agente comita ou dá push. Nunca na main ou na master, nunca force push.
 
 ## Seleção por demanda
 
@@ -38,6 +40,6 @@ Registre envelope: “implementação do filtro + unitários no runner existente
 | Zero aceito | Salvar/recarregar preço 0 no ambiente aprovado | Valor permanece 0 | [resultado real] | [relatório/log/clip acessível e redigido] | [verificado/falhou/pendente] |
 | Negativo rejeitado | Teste com -1 | Erro de validação | Não executado, teste não aprovado | Roteiro proposto | não verificado |
 
-A tabela é exemplo, não execução. Reporte comandos/códigos de saída e testes realmente descobertos. Screenshots complementam cenários; não comprovam comportamento sozinhas. Memória durável em docs/ai contém fonte/data; evidência e estado de execução ficam fora do repositório por padrão. Não inclua segredos/dados sensíveis. Publicação/produção dependem de autorização específica, mesmo com testes aprovados.
+A tabela é exemplo, não execução. Reporte comandos/códigos de saída e testes realmente descobertos. Screenshots complementam cenários; não comprovam comportamento sozinhas. Memória durável em docs/ai contém fonte/data; evidência e estado de execução ficam fora do repositório por padrão. Não inclua segredos/dados sensíveis.
 
 Pesquisa oficial é sob demanda por incerteza técnica e versões; mapa existente evita redescoberta. Stack desconhecida exige investigar e reportar limites. Desktop/DevOps usam checks adequados ao host e ambiente aprovados. [Grok Bot](GROK_BOT_OPCIONAL.md) é ajuda opcional com handoff limitado, sem integração direta presumida.
