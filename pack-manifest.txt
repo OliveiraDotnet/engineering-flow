@@ -1,4 +1,4 @@
-# Engineering Flow manifest v3.0.0
+# Engineering Flow manifest v3.1.0
 core|AGENTS.md
 core|docs/ai/project-map.md
 core|docs/ai/architecture.md
@@ -101,6 +101,10 @@ web|.agents/skills/web-dotnet/SKILL.md
 grok-web|.agents/skills/web-dotnet/SKILL.md|.grok/skills/web-dotnet/SKILL.md
 web|.agents/skills/web-dotnet/references/web-dotnet-checklist.md
 grok-web|.agents/skills/web-dotnet/references/web-dotnet-checklist.md|.grok/skills/web-dotnet/references/web-dotnet-checklist.md
+web|.agents/skills/web-e2e-playwright/SKILL.md
+grok-web|.agents/skills/web-e2e-playwright/SKILL.md|.grok/skills/web-e2e-playwright/SKILL.md
+web|.agents/skills/web-e2e-playwright/templates/cenario.fixture.ts
+grok-web|.agents/skills/web-e2e-playwright/templates/cenario.fixture.ts|.grok/skills/web-e2e-playwright/templates/cenario.fixture.ts
 grok-core|.grok/config.toml
 grok-core|.grok/agents/change-reviewer.md
 grok-sqlserver|.grok/agents/database-sqlserver.md

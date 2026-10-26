@@ -53,9 +53,9 @@ while IFS= read -r skill; do
 done < <(find "$SKILLS_ROOT" -mindepth 2 -maxdepth 2 -type f -name SKILL.md | sort)
 
 {
-  printf '%s\n' '# Índice de skills — Engineering Flow 3.0'
+  printf '%s\n' '# Índice de skills — Engineering Flow 3.1'
   printf '\n'
-  printf '%s\n' 'Gerado por `tools/generate-skills-index.sh` a partir do frontmatter `name`/`description` de `repo-template/.agents/skills/*/SKILL.md`. O Grok Build lê este índice e carrega apenas a skill escolhida.'
+  printf '%s\n' 'Gerado por `tools/generate-skills-index.sh` a partir do frontmatter `name`/`description` de `repo-template/.agents/skills/*/SKILL.md`. O implementador lê este índice e carrega apenas a skill escolhida.'
   printf '\n'
   printf '%s\n' '| Nome | Quando usar | Entrada exigida |'
   printf '%s\n' '|---|---|---|'

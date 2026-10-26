@@ -5,7 +5,7 @@ $ErrorActionPreference='Stop'
 $root=(Resolve-Path -LiteralPath $RepoPath).Path
 $path=Join-Path $root '.gitignore'
 $utf8=[Text.UTF8Encoding]::new($false,$true)
-$patterns=@('*.agent-pack.new','*.agent-pack.backup-*','.agent-pack/.runtime/','.agent-pack/.runtime/task.lock','.agent-pack/*.tmp','.agent-pack/*.lock','.agent-pack/logs/','.agent-pack/cache/','.agent-pack/tmp/','.agent-pack/sessions/','.agent-pack/worktrees/','.engineering-flow-evidence/','.grok/sessions/','.grok/worktrees/')
+$patterns=@('*.agent-pack.new','*.agent-pack.backup-*','.agent-pack/.runtime/','.agent-pack/.runtime/task.lock','.agent-pack/*.tmp','.agent-pack/*.lock','.agent-pack/logs/','.agent-pack/cache/','.agent-pack/tmp/','.agent-pack/sessions/','.agent-pack/worktrees/','.engineering-flow-evidence/','.grok/sessions/','.grok/worktrees/','Planejamento/','planejamento/','conhecimento/')
 $bytes=[byte[]]@()
 $text=''
 if (Test-Path -LiteralPath $path) {

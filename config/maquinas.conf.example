@@ -1,0 +1,16 @@
+# Raiz local dos clones por máquina. Copie para config/maquinas.conf (não versionado).
+# A máquina é o bloco escolhido por EF_MAQUINA. Sem segredos neste arquivo.
+# Formato: um bloco [maquina] e chaves chave: valor.
+# machine_id abaixo é placeholder. O valor real fica só no maquinas.conf local.
+
+[aptus]
+descricao: PC da Aptus (Windows)
+machine_id: 00000000-0000-4000-8000-000000000001
+raiz_repos: C:\Repositorios
+conhecimento: pasta conhecimento/ (no .gitignore) em cada repo; memoria compartilhada em <raiz>\<sistema>\conhecimento
+
+[ubuntu-matheus]
+descricao: Ubuntu do Matheus (disco WD 500)
+machine_id: 00000000-0000-4000-8000-000000000002
+raiz_repos: /mnt/wd500/repos
+conhecimento: pasta conhecimento/ (no .gitignore) em cada repo; memoria compartilhada em <raiz>/<sistema>/conhecimento
