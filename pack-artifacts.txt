@@ -101,6 +101,10 @@ skill.shared.web-dotnet|.agents/skills/web-dotnet/SKILL.md|managed
 skill.grok.web-dotnet|.grok/skills/web-dotnet/SKILL.md|managed
 skill.shared.web-dotnet.checklist|.agents/skills/web-dotnet/references/web-dotnet-checklist.md|managed
 skill.grok.web-dotnet.checklist|.grok/skills/web-dotnet/references/web-dotnet-checklist.md|managed
+skill.shared.web-e2e-playwright|.agents/skills/web-e2e-playwright/SKILL.md|managed
+skill.grok.web-e2e-playwright|.grok/skills/web-e2e-playwright/SKILL.md|managed
+skill.shared.web-e2e-playwright.template|.agents/skills/web-e2e-playwright/templates/cenario.fixture.ts|managed
+skill.grok.web-e2e-playwright.template|.grok/skills/web-e2e-playwright/templates/cenario.fixture.ts|managed
 config.grok.project|.grok/config.toml|merge
 agent.grok.change-reviewer|.grok/agents/change-reviewer.md|managed
 agent.grok.database-sqlserver|.grok/agents/database-sqlserver.md|managed
