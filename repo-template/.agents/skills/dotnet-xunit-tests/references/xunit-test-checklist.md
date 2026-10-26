@@ -26,7 +26,8 @@
 - Ensure test data isolation, including parallel runs. Clean up only test-owned resources; await async operations and use the fixture lifecycle supported by the installed xUnit version.
 - Verify endpoint/database configuration points to the intended test environment before executing integration setup or migrations.
 - Prefer realistic persistence tests when query behavior is the risk.
-- Propose heavy dependencies such as Testcontainers before adding them when the repository does not already use them.
+- Testcontainers is a standard dependency in the text for an isolated database. The pack does not install it. Use the repository's existing fixture when one is already present.
+- If there is no integration test, report that explicitly. Do not leave the integration layer silent.
 
 ## API Test Rules
 
@@ -60,3 +61,12 @@ Portuguese:
 - `ProcessarWebhook_QuandoEventoJaFoiProcessado_DeveSerIdempotente`
 - `ObterUsuario_QuandoUsuarioForDeOutraEmpresa_DeveRetornarNaoEncontrado`
 - `CancelarPedido_QuandoPedidoJaFoiEnviado_DeveFalhar`
+
+## .NET Framework 4.8
+
+- Do not assume `msbuild`, `dotnet build` or Visual Studio workloads on the implementer's machine.
+- The plan says: build and 4.8 tests are run by Matheus in VS 2022 (Test Explorer or the Developer Prompt).
+- The implementer delivers the steps. Matheus returns the output (count and `.trx`, or a Test Explorer print) for `logs/`.
+- A confirmed build/test command in the envelope, recorded in `docs/ai/runbook.md`, overrides that default for that task.
+- Playwright, bUnit and Testcontainers remain standard dependencies in the text. The pack installs none of them.
+- R0 still applies: the regression fails before the fix and passes after. The planner (today, Jeff) gives an opinion first. Only Matheus waives it, explicitly, with the reason recorded.

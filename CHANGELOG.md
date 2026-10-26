@@ -1,5 +1,19 @@
 # Engineering Flow changelog
 
+## 3.1.0 — 2026-10-26
+
+- Papéis genéricos no método: aprovador humano, planejador, implementador, revisor/entrega e publicador opcional. A instanciação atual (Matheus, Jeff, Grok Build, bot de projeto, Jow) é exemplo. Nenhuma regra de gate ou de branch mudou.
+- Renomeação, fora do pack: `GROK_BOT_WORKFLOW.md` passou a `ASSISTENTE_WORKFLOW.md` e `GROK_BOT_OPCIONAL.md` passou a `ASSISTENTE_OPCIONAL.md`.
+- Diretriz de entrega revisão 3 em `diretrizes/DIRETRIZ-entrega-pelo-bot-de-projeto.md`: a revisão 2 com papéis genéricos. Exceções de GA, B2TI, SISMAN e FASTCRED com o texto literal.
+- Camada de teste: R0 obrigatório em bug (falha antes, passa depois; o planejador opina antes; só o Matheus dispensa), pirâmide unitário / integração xUnit / e2e Playwright, e o aviso explícito quando não há teste de integração.
+- Dependências padrão no texto, sem instalação pelo pack: Playwright, bUnit e Testcontainers. Imagem obrigatória no Completo para critério de tela ou evidência de cliente, gerada pelo Playwright E2E. No Trivial, resumo curto com o arquivo alterado.
+- Skill nova `web-e2e-playwright` (texto e template). Checklist xUnit: .NET Framework 4.8 no VS 2022, com o Matheus.
+- `config/maquinas.conf.example` e `EF_MAQUINA`. O `maquinas.conf` real não é versionado.
+- Instaladores acrescentam `Planejamento/`, `planejamento/` e `conhecimento/` ao `.gitignore`, sem duplicar.
+- Memória local (`tools/memoria.sh`, `tools/memoria.ps1`, `memory-template/`). Versionamento em Git previsto para a 3.2. Sem busca semântica. Piloto SISMAN só no texto.
+- Lint do `mem` bloqueia CPF, e-mail, telefone, dado bancário e segredo, sem exceção. Username e CPF de 11 dígitos com dígito inválido passam. Dado de cliente, no máximo o username.
+- `pack-version.txt` = 3.1.0. `compat/releases/3.1.0.txt`.
+
 ## 3.0.0 — 2026-10-23
 
 - Só Grok Build: saem Codex, Claude, `CLAUDE.md`, `.codex/`, `.claude/`, `execute-codex-work-order`, o prompt 09, os scripts `install`/`update-engineering-flow` e a skill `update-engineering-flow`.

@@ -9,7 +9,7 @@ Follow docs/engineering-flow/workflow.md in the target repository. Understand de
 
 # Agent work order
 
-Grok Build can be coordinator or worker. The current task and user authorization determine roles. In standalone mode complete the task normally; do not require another provider.
+The implementer (currently Grok Build; an example, not a requirement) can be coordinator or worker, and so can the reviewer/delivery role (currently the project bot). The current task and user authorization determine roles; see the Roles section of docs/engineering-flow/workflow.md. In standalone mode complete the task normally; do not require another provider.
 
 ## Coordinator
 

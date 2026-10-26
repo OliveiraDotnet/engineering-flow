@@ -28,7 +28,7 @@ O pack instala em `.grok/config.toml` somente uma política mínima do projeto q
 
 O Grok Build lê o índice de skills, escolhe a skill pertinente, implementa, testa e traz evidências. Sem skill que caiba, pergunta.
 
-Veja também [Grok Bot opcional](GROK_BOT_OPCIONAL.md), sem dependência ou integração direta assumida.
+Veja também [assistente opcional](ASSISTENTE_OPCIONAL.md), sem dependência ou integração direta assumida.
 
 ## Decisões deliberadas do pack
 

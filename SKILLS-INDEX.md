@@ -1,6 +1,6 @@
-# Índice de skills — Engineering Flow 3.0
+# Índice de skills — Engineering Flow 3.1
 
-Gerado por `tools/generate-skills-index.sh` a partir do frontmatter `name`/`description` de `repo-template/.agents/skills/*/SKILL.md`. O Grok Build lê este índice e carrega apenas a skill escolhida.
+Gerado por `tools/generate-skills-index.sh` a partir do frontmatter `name`/`description` de `repo-template/.agents/skills/*/SKILL.md`. O implementador lê este índice e carrega apenas a skill escolhida.
 
 | Nome | Quando usar | Entrada exigida |
 |---|---|---|
@@ -31,4 +31,5 @@ Gerado por `tools/generate-skills-index.sh` a partir do frontmatter `name`/`desc
 | update-agent-pack | Inspect and safely reconcile an existing repository installation with a newer Agent Pack, including added, changed, renamed, or retired skills, agents, prompts, and rules. Use when the user asks Grok Build to check, update, migrate, synchronize, or repair an installed Agent Pack without losing repository-specific guidance or local customizations. | ver SKILL.md |
 | web-app | Plan and validate web UI behavior in the detected stack, including HTML/CSS/JavaScript, SPAs and classic ASP. | ver SKILL.md |
 | web-dotnet | Implement or fix UI in a .NET web app (Razor Pages, MVC, Blazor, Web Forms, .aspx, and app JavaScript). Use when the change lives in the .NET web project itself. Do not use for Angular/React SPAs, API-only work, or SQL schema changes. | ver SKILL.md |
+| web-e2e-playwright | Descreve o e2e de tela com Playwright para critério de UI ou evidência de cliente. Use quando o Completo exigir imagem do fluxo. O pack não instala a ferramenta. | ver SKILL.md |
 

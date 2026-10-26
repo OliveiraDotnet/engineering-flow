@@ -9,6 +9,8 @@ Follow docs/engineering-flow/workflow.md in the target repository. Understand de
 
 # Delegate to Grok Build
 
+This skill is the adapter for the current implementer instance (Grok Build). The method itself is role-based (see the Roles section of docs/engineering-flow/workflow.md); another implementer would get its own adapter skill without changing gates, rules or branches.
+
 Read the shared [agent work order](../agent-work-order/SKILL.md) and follow its coordinator contract. Grok Build or another authorized agent can coordinate; user authorization establishes the execution envelope.
 
 If already running in Grok Build, prefer its available native subagent mechanism for a useful independent task rather than recursively starting another coordinator. A missing Grok CLI does not block ordinary standalone work.
