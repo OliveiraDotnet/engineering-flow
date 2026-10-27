@@ -1,4 +1,4 @@
-#Requires -Version 7
+﻿#Requires -Version 7
 # Fixtures fictícias. Literais sensíveis são montados em tempo de execução.
 $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
@@ -30,12 +30,27 @@ $env:EF_MAQUINAS_CONF = Join-Path $Tmp 'maquinas.conf'
 Remove-Item Env:EF_MAQUINA -ErrorAction SilentlyContinue
 
 function Invoke-Mem([string[]]$Cmd) {
-  $prev = $ErrorActionPreference
-  $ErrorActionPreference = 'Continue'
-  $lines = & $Pwsh -NoProfile -File $Mem @Cmd 2>&1 | ForEach-Object { "$_" }
-  $ErrorActionPreference = $prev
-  $text = if ($lines) { ($lines -join "`n") } else { '' }
-  return [pscustomobject]@{ Out = $text; Code = $LASTEXITCODE }
+  $psi = [System.Diagnostics.ProcessStartInfo]::new()
+  $psi.FileName = $Pwsh
+  $psi.UseShellExecute = $false
+  $psi.RedirectStandardOutput = $true
+  $psi.RedirectStandardError = $true
+  $psi.CreateNoWindow = $true
+  $psi.WorkingDirectory = (Get-Location).Path
+  $utf8 = [System.Text.UTF8Encoding]::new($false)
+  $psi.StandardOutputEncoding = $utf8
+  $psi.StandardErrorEncoding = $utf8
+  foreach ($arg in (@('-NoProfile', '-File', $Mem) + $Cmd)) { $psi.ArgumentList.Add([string]$arg) }
+  $proc = [System.Diagnostics.Process]::Start($psi)
+  $outTask = $proc.StandardOutput.ReadToEndAsync()
+  $errTask = $proc.StandardError.ReadToEndAsync()
+  $proc.WaitForExit()
+  $text = $outTask.GetAwaiter().GetResult()
+  $err = $errTask.GetAwaiter().GetResult()
+  if ($err) { $text = if ($text) { $text + $err } else { $err } }
+  if (-not $text) { $text = '' }
+  $text = ($text -replace "`r`n", "`n").TrimEnd("`n")
+  return [pscustomobject]@{ Out = $text; Code = $proc.ExitCode }
 }
 
 try {
@@ -49,6 +64,10 @@ try {
   $r = Invoke-Mem @('lint')
   if ($r.Code -eq 0) { Fail 'bloco inválido deveria falhar' }
   if ($r.Out -notmatch 'não é um bloco') { Fail "mensagem de bloco inválido: $($r.Out)" }
+  $mojibake1252 = 'n' + [char]0x00C3 + [char]0x00A3 + 'o'
+  $mojibake850 = 'n' + [char]0x251C + [char]0x00FA + 'o'
+  if ($r.Out -match ($mojibake1252 + '|' + $mojibake850 + '|\uFFFD')) { Fail "mojibake na mensagem de bloco: $($r.Out)" }
+  if ($r.Out -notmatch 'Blocos: fixture semraiz\.') { Fail "blocos sem trim ou acento ilegível: $($r.Out)" }
   Pass 'EF_MAQUINA inválida'
 
   $env:EF_MAQUINA = 'semraiz'
@@ -78,6 +97,15 @@ try {
   if ($meta -notmatch '(?m)^prefixo: SIS$') { Fail 'prefixo' }
   if ($meta -notmatch '(?m)^sistema: sisman$') { Fail 'sistema' }
   Pass 'init'
+
+  $r = Invoke-Mem @('--sistema','sisman','lint')
+  if ($r.Code -ne 0 -or $r.Out -notmatch 'mem lint: 0') { Fail "lint logo após init: $($r.Out)" }
+  $r = Invoke-Mem @('--sistema','sisman','index')
+  if ($r.Code -ne 0 -or $r.Out -match 'index abortado' -or $r.Out -notmatch 'mem index: 0') { Fail "index logo após init: $($r.Out)" }
+  $r = Invoke-Mem @('--sistema','sisman','pendentes')
+  if ($r.Code -ne 0 -or $r.Out -notmatch 'mem pendentes: 0') { Fail "pendentes logo após init: $($r.Out)" }
+  if ($r.Out -match 'Uma frase por linha' -or $r.Out -match '_templates') { Fail "pendentes listou o modelo: $($r.Out)" }
+  Pass 'init não conta README nem _templates'
 
   $r = Invoke-Mem @('--sistema','sisman','init','sisman','SIS')
   if ($r.Code -eq 0) { Fail 'segundo init deveria falhar' }
@@ -148,7 +176,17 @@ try {
   $r = Invoke-Mem @('--sistema','sisman','pendentes')
   Write-Output $r.Out
   if ($r.Out -notmatch 'mem pendentes: 2') { Fail 'pendentes' }
+  if ($r.Out -match 'Uma frase por linha' -or $r.Out -match '_templates') { Fail "pendentes listou o modelo: $($r.Out)" }
   Pass 'pendentes'
+
+  Push-Location $Know
+  try { $r = Invoke-Mem @('find','--tipo','regra') } finally { Pop-Location }
+  if ($r.Code -ne 0 -or $r.Out -notmatch 'mem find: 1') { Fail "find sem --sistema na pasta: $($r.Out)" }
+  $sub = Join-Path $Know 'contextos/os'
+  Push-Location $sub
+  try { $r = Invoke-Mem @('find','--tipo','contexto') } finally { Pop-Location }
+  if ($r.Code -ne 0 -or $r.Out -notmatch 'mem find: 1') { Fail "find sem --sistema na subpasta: $($r.Out)" }
+  Pass 'busca sem --sistema na pasta e na subpasta'
 
   $r = Invoke-Mem @('--sistema','sisman','dupes')
   Write-Output $r.Out
@@ -378,6 +416,41 @@ Com marcador.
     if ($n -ne 1) { Fail "$line apareceu $n vezes na instalação" }
   }
   Pass 'instalador idempotente'
+
+  $probe = Join-Path $Tmp 'path-probe.ps1'
+  $probeText = @'
+param([string]$Mem)
+$ErrorActionPreference = 'Stop'
+. $Mem
+$script:MemDir = 'C:\x/sisman/conhecimento'
+$readme = Get-Rel 'C:\x\sisman\conhecimento\README.md'
+$tmpl = Get-Rel 'C:\x\sisman\conhecimento\_templates\cartao.md'
+$indexRel = Get-Rel 'C:\x\sisman\conhecimento\INDEX.md'
+$real = Get-Rel 'C:\x\sisman\conhecimento\projeto\SIS-RN-0001--regra.md'
+if ($readme -ne 'README.md') { throw "readme rel=$readme" }
+if (Test-CardPath $readme) { throw 'README contou como cartao' }
+if ($tmpl -ne '_templates/cartao.md') { throw "tmpl rel=$tmpl" }
+if (Test-CardPath $tmpl) { throw '_templates contou como cartao' }
+if ($indexRel -ne 'INDEX.md') { throw "index rel=$indexRel" }
+if (Test-CardPath $indexRel) { throw 'INDEX contou como cartao' }
+if ($real -ne 'projeto/SIS-RN-0001--regra.md') { throw "real rel=$real" }
+if (-not (Test-CardPath $real)) { throw 'cartao real excluido' }
+if (-not (Test-MemUnderRoot 'C:\x\sisman\conhecimento' 'C:\x')) { throw 'descoberta com barra invertida falhou' }
+if (-not (Test-MemUnderRoot 'C:\x\sisman\conhecimento' 'C:/x')) { throw 'descoberta com raiz em barra falhou' }
+$ignore = [System.StringComparison]::OrdinalIgnoreCase
+if (-not (Test-MemUnderRoot 'C:\X\Sisman\conhecimento' 'c:/x' -Comparison $ignore)) { throw 'OrdinalIgnoreCase nao aceitou a raiz' }
+if (Test-MemUnderRoot 'C:\x-outro\sisman\conhecimento' 'C:\x') { throw 'prefixo irmao foi aceito' }
+if (Test-MemUnderRoot 'D:\x\sisman\conhecimento' 'C:\x') { throw 'outro drive foi aceito' }
+Write-Output 'PATH_OK'
+'@
+  [System.IO.File]::WriteAllText($probe, ($probeText -replace "`r`n", "`n"), [Text.UTF8Encoding]::new($false))
+  $prevEa = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  $got = @(& $Pwsh -NoProfile -File $probe $Mem 2>&1 | ForEach-Object { "$_" })
+  $ErrorActionPreference = $prevEa
+  if ($LASTEXITCODE -ne 0) { Fail "funções de caminho: $($got -join "`n")" }
+  if (($got -join "`n") -notmatch 'PATH_OK') { Fail "funções de caminho sem PATH_OK: $($got -join "`n")" }
+  Pass 'caminhos no estilo Windows'
   Write-Output 'TEST_MEMORIA_PS1_OK'
 } finally {
   if ($Tmp -like (Join-Path ([IO.Path]::GetTempPath()) 'ef-mem-*') -and (Test-Path -LiteralPath $Tmp)) {

@@ -15,7 +15,7 @@ Follow docs/engineering-flow/workflow.md in the target repository. Understand de
    - `AGENTS.md` for short always-relevant operating rules.
    - `docs/ai/project-map.md` for confirmed navigation and commands.
    - `architecture.md`, `database.md`, `domain-glossary.md` or `recurring-bugs.md` for their respective durable details.
-4. Record last verification and source where the template provides fields.
-5. Do not change production code or duplicate existing guidance.
+4. Do not change production code or duplicate existing guidance.
+5. Local memory is `conhecimento/`, consulted with `mem` (`$AGENT_PACK_HOME/tools/memoria.sh` or `memoria.ps1`). A dictated card is born `pendente`. A card captured by the bot is born `rascunho`. Confirmation is a manual edit of the front-matter after Matheus's ok. Cards do not expire and there is no ceiling.
 
-End with the file changed, evidence, reason for placement and any expiration or revalidation need.
+End with the file changed, the evidence and the reason for placement.

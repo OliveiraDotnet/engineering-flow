@@ -1,5 +1,18 @@
 # Engineering Flow changelog
 
+## 3.1.2 — 2026-10-27
+
+- Causa: no Windows, o teste capturava a saída do `pwsh -File tools/memoria.ps1` com `[Console]::OutputEncoding` OEM. O filho já escrevia UTF-8. O C07 via `não é um bloco` como mojibake (`n├úo` na CP850) e a asserção não casava. No Linux com `LANG=C` o pwsh 7 não reproduz isso. Os `.ps1` com acento estavam em UTF-8 sem BOM; o Windows PowerShell 5.1 lê esse arquivo como ANSI.
+- Correção: `scripts/test-memoria.ps1` lê stdout e stderr do filho com `StandardOutputEncoding` e `StandardErrorEncoding` UTF-8. Todo `.ps1` com caractere não ASCII fica UTF-8 com BOM. `tools/memoria.ps1` e `scripts/test-memoria.ps1` ficam também com CRLF.
+- Causa: `Get-Rel` e `Resolve-MemDir` comparavam o prefixo sem normalizar `\` e `/`. `Get-MemPath` monta a pasta com `/` e o `FullName` / `Get-Location` no Windows traz `\`. `README.md`, `_templates/cartao.md` e `INDEX.md` contavam como cartão (`lint` falha, `index` aborta, `pendentes` lista o modelo). Sem `--sistema`, a pasta atual parecia fora da raiz.
+- Correção: os separadores viram `/` antes da comparação. No Windows o prefixo usa `OrdinalIgnoreCase`. As funções ficam testáveis por dot-source, sem comando novo na CLI. O filtro de `.cache` já aceitava os dois separadores e não mudou.
+- Causa cosmética: a lista de blocos saía com espaço antes do ponto (`Blocos: fixture semraiz .`).
+- Correção: trim da lista em `tools/memoria.ps1` e `tools/memoria.sh`. O `memoria.sh` não mistura `FullName` com `\`; o caminho dele não mudou.
+- Testes: logo após o `init`, `lint` é 0, `index` não aborta e `pendentes` não lista o modelo. A busca sem `--sistema` funciona na pasta da memória e numa subpasta. As mensagens com acento casam. Há um caso com caminhos no estilo Windows (`C:\x/sisman/conhecimento`).
+- Texto: `maintain-agent-memory` e o prompt 06 não falam mais em revalidação, validade ou expiração. O `AGENTS.md` do repo-template também saiu da revalidação. O cartão não vence e não há teto. A confirmação continua sendo a edição manual do front-matter depois do ok do Matheus.
+- Documentação: `update-agent-pack.ps1 -Apply` no PowerShell sem console inclui `-Confirm:$false`. `ConfirmImpact` e a lógica de confiança do updater não mudaram.
+- `pack-version.txt` = 3.1.2. `compat/releases/3.1.2.txt`.
+
 ## 3.1.1 — 2026-10-27
 
 - Causa: `compat/releases/3.0.0.txt`, publicado na 3.0.0 e repetido na 3.1.0, tinha 35 hashes que não correspondem ao conteúdo da tag `v3.0.0`. O updater da 3.1.0 recusa um state 3.0.0 intacto.

@@ -40,7 +40,7 @@ Especialistas são opcionais: repo-explorer, implementer, dotnet-implementer, te
 
 ## Contexto e conclusão
 
-Pesquise antes de abrir arquivos; reuse fatos confirmados e revalide memória obsoleta. Consulte docs oficiais da versão apenas por incerteza/decisão concreta. Detectores são pistas e tecnologias desconhecidas exigem investigação, sem inventar capacidades.
+Pesquise antes de abrir arquivos; reuse fatos confirmados; para memória local, siga a seção Memória de domínio. Consulte docs oficiais da versão apenas por incerteza/decisão concreta. Detectores são pistas e tecnologias desconhecidas exigem investigação, sem inventar capacidades.
 
 Detecte ferramentas/runners antes de executar somente testes aprovados. Checks de encoding também entram no envelope; preserve encoding legado confirmado e reporte limitações. Vincule critério → cenário → esperado → observado → artefato → status. Separe implementado, verificado, falhou e pendente/não verificado. Revise diff/novos arquivos; não declare teste aprovado por leitura de código ou resumo.
 
@@ -59,4 +59,4 @@ Template (AGENTS.md é artefato `merge`): cada repo preenche; nada aqui é padr�
 
 ## Memória de domínio
 
-Memória local; versionamento em Git previsto para a 3.2. O índice é `conhecimento/INDEX.md`, fora do Git. A raiz vem de `config/maquinas.conf` pela variável `EF_MAQUINA`. Consulte com `mem`; não leia a pasta inteira. Cartão ditado nasce `pendente` e só fica ativo com o ok do Matheus. Captura feita pelo bot nasce `rascunho`. Não há `revalidar_em` nem teto. O piloto é o SISMAN, só no texto. Dado de cliente só entra se for útil para teste, e no máximo o username. CPF, dado bancário e dado sensível nunca entram.
+Memória local; versionamento em Git previsto para a 3.2. O índice é `conhecimento/INDEX.md`, fora do Git. A raiz vem de `config/maquinas.conf` pela variável `EF_MAQUINA`. Consulte com `mem`; não leia a pasta inteira. Cartão ditado nasce `pendente`. Captura feita pelo bot nasce `rascunho`. A confirmação é edição manual do front-matter depois do ok do Matheus. O cartão não vence: não há `revalidar_em` nem teto. O piloto é o SISMAN, só no texto. Dado de cliente só entra se for útil para teste, e no máximo o username. CPF, dado bancário e dado sensível nunca entram.
