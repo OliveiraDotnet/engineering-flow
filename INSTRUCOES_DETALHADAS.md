@@ -1,6 +1,6 @@
 # Adoção — Engineering Flow 3.0
 
-Instalação e exemplos: [README](README.md) e [manual](MANUAL_DE_USO.md). Versão atual 3.0.0. A 3.0 é incompatível com 2.1.1 e 1.7.0 e não oferece migração automática; para a linha 2.x use a tag `v2.1.1`. Este pack não instala runtimes nem configura contas externas. O único harness é o Grok Build.
+Instalação e exemplos: [README](README.md) e [manual](MANUAL_DE_USO.md). Versão atual 3.1.1. A 3.0 é incompatível com 2.1.1 e 1.7.0 e não oferece migração automática; para a linha 2.x use a tag `v2.1.1`. Este pack não instala runtimes nem configura contas externas. O único harness é o Grok Build.
 
 ## Instalação inicial
 
@@ -10,7 +10,7 @@ O instalador grava `integration|grok`. `--integration grok` é aceito e é o ún
 
 ## Atualizar uma instalação 3.0
 
-Use update-agent-pack com Check antes de Apply. `.agent-pack/state.txt` continua sendo o formato/local de estado. Catálogos históricos (1.1–2.1.1) permanecem como registro; `compat/releases/3.0.0.txt` é a base 3.0. Bytes próprios ou release anterior diferente não viram arquivo confiável silenciosamente.
+Use update-agent-pack com Check antes de Apply. `.agent-pack/state.txt` continua sendo o formato/local de estado. Catálogos históricos (1.1–2.1.1) permanecem como registro; `compat/releases/3.0.0.txt` é a base 3.0.0 corrigida na 3.1.1. Bytes próprios ou release anterior diferente não viram arquivo confiável silenciosamente.
 
 | Propriedade | Atualização |
 |---|---|

@@ -8,7 +8,7 @@ Workflow de engenharia para descobrir sistemas, planejar e entregar bugs, featur
 
 **Entender → plano técnico → aprovação humana → implementar → executar testes aprovados → evidências → entregar.** Testes não pedidos/aprovados não executam automaticamente. Implementação aprovada sem testes é entregue como não validada; autorização existente não precisa ser repetida. Veja o [contrato comum](repo-template/docs/engineering-flow/workflow.md).
 
-Versão `3.1.0`. Nome público Engineering Flow; repositório `engineering-flow`. O pack contém orientação, configurações e scripts locais, sem instalar runtimes ou afirmar suporte automatizado universal. Mobile inclui apps nativos, híbridos e multiplataforma, novos ou existentes; desktop e DevOps têm procedimentos proporcionais ao ambiente autorizado. Memória local; versionamento em Git previsto para a 3.2.
+Versão `3.1.1`. Nome público Engineering Flow; repositório `engineering-flow`. O pack contém orientação, configurações e scripts locais, sem instalar runtimes ou afirmar suporte automatizado universal. Mobile inclui apps nativos, híbridos e multiplataforma, novos ou existentes; desktop e DevOps têm procedimentos proporcionais ao ambiente autorizado. Memória local; versionamento em Git previsto para a 3.2.
 
 **Gate 2:** commit e push exigem o ok explícito do Matheus, dado depois de ele ver as evidências. O commit é feito só pelo implementador. O push é feito só pelo publicador ou, com o publicador indisponível, pelo Matheus manualmente. Nenhum outro agente comita ou dá push. Nunca na main ou na master, nunca force push. Instanciação atual (exemplo, não requisito): implementador = Grok Build; publicador = Jow, hoje opcional, porque a diretriz de entrega pelo bot de projeto atribui push, PR e merge ao papel revisor/entrega nos passos 9 e 10.
 
@@ -56,7 +56,7 @@ bash ./scripts/update-agent-pack.sh /src/sistema --apply
 
 Use updater, não Force. `pack-manifest.txt`, `pack-artifacts.txt` e `pack-version.txt` definem arquivos, IDs estáveis/propriedade e versão. `.agent-pack/state.txt` continua sendo o formato/local de estado. Perfis previamente selecionados são preservados; atualizar não adiciona mobile/quality não selecionados. `managed` atualizado somente pela reconciliação, `merge` exige revisão humana das diferenças, `seed` pertence ao projeto. Conflitos mantêm customização e precisam de AcceptPack, AcceptMerge (após merge) ou KeepLocal; confira o [guia detalhado](INSTRUCOES_DETALHADAS.md).
 
-A 3.0 não migra instalações 2.1.1 nem 1.7.0. Catálogos históricos permanecem como registro; `compat/releases/2.1.1.txt` descreve a base 2.1.1, `compat/releases/3.0.0.txt` a base 3.0 e `compat/releases/3.1.0.txt` a base 3.1.
+A 3.0 não migra instalações 2.1.1 nem 1.7.0. Catálogos históricos permanecem como registro; `compat/releases/2.1.1.txt` descreve a base 2.1.1, `compat/releases/3.0.0.txt` é a base 3.0.0 corrigida na 3.1.1, `compat/releases/3.1.0.txt` a base 3.1 e `compat/releases/3.1.1.txt` a base 3.1.1.
 
 ## Uso diário
 
