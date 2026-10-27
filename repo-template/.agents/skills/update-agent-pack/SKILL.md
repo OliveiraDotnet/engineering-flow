@@ -12,7 +12,7 @@ Follow docs/engineering-flow/workflow.md in the target repository. Understand de
 1. Confirm the repository root, read its applicable `AGENTS.md`, `.grok/config.toml`, and `.agent-pack/state.txt` when present, then inspect `git status`. Do not modify production code.
 2. Locate the latest trusted Agent Pack checkout from the user-provided path or `AGENT_PACK_HOME`. Do not download or guess a source.
 3. Run the updater in check mode:
-   - Windows: `powershell -ExecutionPolicy Bypass -File "$env:AGENT_PACK_HOME\scripts\update-agent-pack.ps1" -RepoPath . -Check`
+   - Windows: `pwsh -File "$env:AGENT_PACK_HOME\scripts\update-agent-pack.ps1" -RepoPath . -Check`
    - Linux/macOS: `bash "$AGENT_PACK_HOME/scripts/update-agent-pack.sh" . --check`
    - Engineering Flow 3.0 is Grok-only. Pass `-Integration grok` or `--integration grok` when stating the harness explicitly.
 4. Review every planned action and its evidence. The deterministic updater owns file selection; do not invent extra files or profiles.

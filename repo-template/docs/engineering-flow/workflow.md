@@ -116,7 +116,7 @@ O relatório de evidência tem a seção "Lições e regras". O implementador pr
 
 ## Memória local
 
-Memória local; versionamento em Git previsto para a 3.2. Não há busca semântica nesta versão. A raiz vem de `config/maquinas.conf`, escolhida por `EF_MAQUINA`. O comando é `mem` (`tools/memoria.sh` e `tools/memoria.ps1`).
+Memória local; versionamento em Git previsto para a 3.2. Não há busca semântica nesta versão. A raiz vem de `config/maquinas.conf`, escolhida por `EF_MAQUINA`. O comando é `mem` (`$AGENT_PACK_HOME/tools/memoria.sh` e `$AGENT_PACK_HOME/tools/memoria.ps1`), executado a partir do clone do pack.
 
 Cartão ditado nasce `pendente` e só fica ativo com o ok do Matheus. Captura feita pelo bot nasce `rascunho`. Não há `revalidar_em` nem teto. O piloto é o SISMAN, só no texto.
 
