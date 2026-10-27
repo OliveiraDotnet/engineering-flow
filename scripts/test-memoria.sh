@@ -53,6 +53,7 @@ export EF_MAQUINA='naoexiste'
 capture lint
 [ "$CAPTURE_CODE" -ne 0 ] || fail 'bloco inválido deveria falhar'
 printf '%s\n' "$CAPTURE_OUT" | grep -q 'não é um bloco' || fail 'mensagem de bloco inválido'
+printf '%s\n' "$CAPTURE_OUT" | grep -F -q 'Blocos: fixture semraiz.' || fail 'espaço antes do ponto nos blocos'
 pass 'EF_MAQUINA inválida'
 
 export EF_MAQUINA='semraiz'
@@ -83,6 +84,20 @@ KNOW="$TMP/repos/sisman/conhecimento"
 grep -q '^prefixo: SIS$' "$KNOW/.memoria.conf" || fail 'prefixo'
 grep -q '^sistema: sisman$' "$KNOW/.memoria.conf" || fail 'sistema'
 pass 'init'
+
+capture --sistema sisman lint
+[ "$CAPTURE_CODE" -eq 0 ] || fail "lint logo após init: $CAPTURE_OUT"
+printf '%s\n' "$CAPTURE_OUT" | grep -q 'mem lint: 0' || fail "lint logo após init: $CAPTURE_OUT"
+capture --sistema sisman index
+[ "$CAPTURE_CODE" -eq 0 ] || fail "index logo após init: $CAPTURE_OUT"
+printf '%s\n' "$CAPTURE_OUT" | grep -q 'index abortado' && fail "index abortou logo após init: $CAPTURE_OUT"
+printf '%s\n' "$CAPTURE_OUT" | grep -q 'mem index: 0' || fail "index logo após init: $CAPTURE_OUT"
+capture --sistema sisman pendentes
+[ "$CAPTURE_CODE" -eq 0 ] || fail "pendentes logo após init: $CAPTURE_OUT"
+printf '%s\n' "$CAPTURE_OUT" | grep -q 'mem pendentes: 0' || fail "pendentes logo após init: $CAPTURE_OUT"
+printf '%s\n' "$CAPTURE_OUT" | grep -q 'Uma frase por linha' && fail 'pendentes listou o modelo'
+printf '%s\n' "$CAPTURE_OUT" | grep -q '_templates' && fail 'pendentes listou o modelo'
+pass 'init não conta README nem _templates'
 
 capture --sistema sisman init sisman SIS
 [ "$CAPTURE_CODE" -ne 0 ] || fail 'segundo init deveria falhar'
@@ -152,7 +167,19 @@ pass 'gatilho'
 capture --sistema sisman pendentes
 printf '%s\n' "$CAPTURE_OUT"
 printf '%s\n' "$CAPTURE_OUT" | grep -q 'mem pendentes: 2' || fail 'pendentes'
+printf '%s\n' "$CAPTURE_OUT" | grep -q 'Uma frase por linha' && fail 'pendentes listou o modelo'
+printf '%s\n' "$CAPTURE_OUT" | grep -q '_templates' && fail 'pendentes listou o modelo'
 pass 'pendentes'
+
+code=0
+fromdir="$(cd "$KNOW" && bash "$MEM" find --tipo regra 2>&1)" || code=$?
+[ "$code" -eq 0 ] || fail "find sem --sistema na pasta: $fromdir"
+printf '%s\n' "$fromdir" | grep -q 'mem find: 1' || fail "find sem --sistema na pasta: $fromdir"
+code=0
+fromsub="$(cd "$KNOW/contextos/os" && bash "$MEM" find --tipo contexto 2>&1)" || code=$?
+[ "$code" -eq 0 ] || fail "find sem --sistema na subpasta: $fromsub"
+printf '%s\n' "$fromsub" | grep -q 'mem find: 1' || fail "find sem --sistema na subpasta: $fromsub"
+pass 'busca sem --sistema na pasta e na subpasta'
 
 capture --sistema sisman dupes
 printf '%s\n' "$CAPTURE_OUT"

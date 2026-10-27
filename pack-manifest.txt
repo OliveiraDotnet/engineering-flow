@@ -1,4 +1,4 @@
-# Engineering Flow manifest v3.1.1
+# Engineering Flow manifest v3.1.2
 core|AGENTS.md
 core|docs/ai/project-map.md
 core|docs/ai/architecture.md

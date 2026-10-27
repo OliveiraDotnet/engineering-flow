@@ -43,7 +43,10 @@ load_conf() {
     if [[ " ${blocks}" == *" ${EF_MAQUINA} "* ]]; then
       die "O bloco [${EF_MAQUINA}] não define raiz_repos."
     fi
-    die "EF_MAQUINA='${EF_MAQUINA}' não é um bloco de maquinas.conf. Blocos: ${blocks:-nenhum}."
+    local shown
+    shown="$(trim "$blocks")"
+    [ -n "$shown" ] || shown='nenhum'
+    die "EF_MAQUINA='${EF_MAQUINA}' não é um bloco de maquinas.conf. Blocos: ${shown}."
   fi
   case "$RAIZ_REPOS" in
     *$'\n'*|*'..'*) die "raiz_repos inválida no bloco [${EF_MAQUINA}]." ;;

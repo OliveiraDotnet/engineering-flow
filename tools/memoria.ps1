@@ -1,4 +1,4 @@
-#Requires -Version 7
+﻿#Requires -Version 7
 # mem — memória local (engineering-flow 3.1). Sem Git e sem busca semântica.
 # Versionamento em Git previsto para a 3.2. A raiz vem de maquinas.conf (EF_MAQUINA).
 $ErrorActionPreference = 'Stop'
@@ -113,7 +113,7 @@ function Import-Maquina {
     if ((" $blocks").Contains(" $($env:EF_MAQUINA) ")) {
       Die "O bloco [$($env:EF_MAQUINA)] não define raiz_repos."
     }
-    $shown = if ($blocks) { $blocks } else { 'nenhum' }
+    $shown = if ([string]::IsNullOrWhiteSpace($blocks)) { 'nenhum' } else { $blocks.Trim() }
     Die "EF_MAQUINA='$($env:EF_MAQUINA)' não é um bloco de maquinas.conf. Blocos: ${shown}."
   }
   if ($raiz.Contains("`n") -or $raiz.Contains('..')) { Die "raiz_repos inválida no bloco [$($env:EF_MAQUINA)]." }
@@ -125,6 +125,31 @@ function Assert-Slug([string]$Value) {
 }
 function Assert-Prefix([string]$Value) {
   if ($Value -notmatch '^[A-Z][A-Z0-9]{1,3}$') { Die 'prefixo inválido: 2 a 4 letras maiúsculas.' }
+}
+
+function ConvertTo-MemSlash([string]$Value) {
+  if ([string]::IsNullOrEmpty($Value)) { return '' }
+  return ($Value -replace '\\', '/')
+}
+
+function Get-MemPathComparison {
+  if ($IsWindows) { return [System.StringComparison]::OrdinalIgnoreCase }
+  return [System.StringComparison]::Ordinal
+}
+
+function Test-MemUnderRoot {
+  param(
+    [string]$Path,
+    [string]$Root,
+    [System.StringComparison]$Comparison = [System.StringComparison]::Ordinal
+  )
+  if (-not $PSBoundParameters.ContainsKey('Comparison')) {
+    $Comparison = Get-MemPathComparison
+  }
+  $rootN = (ConvertTo-MemSlash $Root).TrimEnd('/')
+  $pathN = (ConvertTo-MemSlash $Path).TrimEnd('/')
+  if ($rootN.Length -eq 0 -or $pathN.Length -eq 0) { return $false }
+  return ($pathN + '/').StartsWith(($rootN + '/'), $Comparison)
 }
 
 function Get-MemPath([string]$Sistema) {
@@ -160,9 +185,7 @@ function Resolve-MemDir {
   if (-not $dir -or -not (Test-Path -LiteralPath $conf -PathType Leaf)) {
     Die 'memória não encontrada. Rode mem init <sistema> <prefixo> ou passe --sistema.'
   }
-  $prefix = $script:RaizRepos.TrimEnd('/', '\') + '/'
-  $probe = $dir.TrimEnd('/', '\') + '/'
-  if (-not $probe.StartsWith($prefix, [System.StringComparison]::Ordinal)) {
+  if (-not (Test-MemUnderRoot $dir $script:RaizRepos)) {
     Die "a memória está fora da raiz configurada para EF_MAQUINA=$($env:EF_MAQUINA)."
   }
   $script:MemDir = $dir.TrimEnd('/', '\')
@@ -279,10 +302,10 @@ function Get-MemFiles {
 }
 
 function Get-Rel([string]$Full) {
-  $root = $script:MemDir.TrimEnd('/', '\') + '/'
-  $rel = $Full
-  if ($rel.StartsWith($root, [System.StringComparison]::Ordinal)) { $rel = $rel.Substring($root.Length) }
-  return ($rel -replace '\\', '/')
+  $root = (ConvertTo-MemSlash $script:MemDir).TrimEnd('/') + '/'
+  $rel = ConvertTo-MemSlash $Full
+  if ($rel.StartsWith($root, (Get-MemPathComparison))) { $rel = $rel.Substring($root.Length) }
+  return $rel
 }
 
 function Get-CardFiles {
@@ -747,6 +770,7 @@ function Invoke-Dupes {
   Write-Out "mem dupes: $count"
 }
 
+if ($MyInvocation.InvocationName -ne '.') {
 $scriptArgs = @($args)
 $rest = New-Object System.Collections.Generic.List[string]
 for ($i = 0; $i -lt $scriptArgs.Count; $i++) {
@@ -787,3 +811,4 @@ switch ($cmd) {
   default { Die "comando desconhecido: $cmd" }
 }
 exit 0
+}
