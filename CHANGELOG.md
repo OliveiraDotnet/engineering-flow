@@ -1,5 +1,14 @@
 # Engineering Flow changelog
 
+## 3.1.1 — 2026-10-27
+
+- Causa: `compat/releases/3.0.0.txt`, publicado na 3.0.0 e repetido na 3.1.0, tinha 35 hashes que não correspondem ao conteúdo da tag `v3.0.0`. O updater da 3.1.0 recusa um state 3.0.0 intacto.
+- Correção: esses 35 hashes foram substituídos pelo SHA-256 normalizado (UTF-8 sem BOM, CRLF/CR para LF) da tag `v3.0.0`. Ids, destinos e ordem permanecem. A verificação de confiança do updater não mudou.
+- Teste novo: `scripts/test-compat-catalogs.ps1` e `scripts/test-compat-catalogs.sh` conferem catálogo × tag, ids × `pack-artifacts.txt`, o catálogo da versão atual × working tree e a fixture 3.0.0 → atual.
+- Aviso: a 3.1.0 não atualiza repositórios com state 3.0.0 intacto. Use a 3.1.1.
+- Skills `update-agent-pack` e `bootstrap-dotnet-repo`: o comando Windows passa a `pwsh -File` (os scripts exigem PowerShell 7).
+- `workflow.md` registra que `tools/memoria.*` roda a partir do clone do pack (`$AGENT_PACK_HOME/tools/...`).
+
 ## 3.1.0 — 2026-10-26
 
 - Papéis genéricos no método: aprovador humano, planejador, implementador, revisor/entrega e publicador opcional. A instanciação atual (Matheus, Jeff, Grok Build, bot de projeto, Jow) é exemplo. Nenhuma regra de gate ou de branch mudou.
