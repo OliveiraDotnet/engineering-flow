@@ -1,16 +1,21 @@
-# Adoção — Engineering Flow 3.0
+# Adoção — Engineering Flow 4.0
 
-Instalação e exemplos: [README](README.md) e [manual](MANUAL_DE_USO.md). Versão atual 3.1.2. A 3.0 é incompatível com 2.1.1 e 1.7.0 e não oferece migração automática; para a linha 2.x use a tag `v2.1.1`. Este pack não instala runtimes nem configura contas externas. O único harness é o Grok Build.
+Instalação e exemplos: [README](README.md) e [manual](MANUAL_DE_USO.md). Versão atual `4.0.0`. A linha 4.0 evolui a 3.x (incompatível com 2.1.1 e 1.7.0; para a linha 2.x use a tag `v2.1.1`). Este pack não instala runtimes nem configura contas externas. O único harness configurado é o Grok Build, operando sob a hierarquia Matheus (aprovador) → Jeff (engenheiro-chefe) → bot de projeto (revisor/entrega) → Grok Build (implementador) e Jow (validador/publicador opcional), com memória persistente no **`ai-memory` (Fábio Akita)**.
 
-## Instalação inicial
+## Instalação inicial e Instalação Limpa 4.0 (Delegação Jeff → Bot de Projeto)
 
 Inspecione com DiscoverOnly/--discover-only, confira Git roots e perfis, faça DryRun/--dry-run e instale dentro do escopo autorizado. Core sempre, web/sqlserver/mobile sugeridos por evidência, quality apenas explícito. Perfil explícito evita autodetecção. Vários repos recebem instalação por Git root; pasta não Git requer AllowNonGit/--allow-non-git. Repo Git vazio recebe instruções e segue new-project para planejar antes de criar aplicação.
 
+Quando o Jeff delega a **Instalação Limpa da v4.0** para um bot de projeto:
+1. O bot executa o instalador com `--force` / `-Force` apontando para o repositório (ex: `bash ./scripts/install-agent-pack.sh /caminho/repo --force --profile web,sqlserver`). O instalador cria backups seguros (`*.agent-pack.backup-*`) de arquivos preexistentes divergentes, instala todas as skills/agentes/regras v4.0 e grava `.agent-pack/state.txt` na versão `4.0.0`.
+2. O bot configura o arquivo `.ai-memory.toml` na raiz de cada repositório (`workspace = "<slug-do-projeto>"` compartilhado entre repos do mesmo sistema e `project = "<slug-do-repo>"`).
+3. O bot preenche as Convenções do Projeto em `AGENTS.md` (branches `main`/`hom`, pacote SQL por Tag e workspace de planejamento) e inicializa `Planejamento/DEMANDAS.md` e `Planejamento/scripts/{PendentesProducao,Releases,Aplicados}`.
+
 O instalador grava `integration|grok`. `--integration grok` é aceito e é o único valor válido. Instruções persistentes requerem recarga conforme host. Respeite regras personalizadas no destino.
 
-## Atualizar uma instalação 3.0
+## Atualizar uma instalação 3.x por reconciliação
 
-Use update-agent-pack com Check antes de Apply. No PowerShell sem console, `-Apply` inclui `-Confirm:$false`. `.agent-pack/state.txt` continua sendo o formato/local de estado. Catálogos históricos (1.1–2.1.1) permanecem como registro; `compat/releases/3.0.0.txt` é a base 3.0.0 corrigida na 3.1.1 e `compat/releases/3.1.2.txt` é a base 3.1.2. Bytes próprios ou release anterior diferente não viram arquivo confiável silenciosamente.
+Use update-agent-pack com Check antes de Apply. No PowerShell sem console, `-Apply` inclui `-Confirm:$false`. `.agent-pack/state.txt` continua sendo o formato/local de estado. Catálogos históricos (`1.1.0` a `4.0.0`) permanecem em `compat/releases/`. Bytes próprios ou release anterior diferente não viram arquivo confiável silenciosamente.
 
 | Propriedade | Atualização |
 |---|---|

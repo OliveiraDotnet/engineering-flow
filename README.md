@@ -1,48 +1,48 @@
-# Engineering Flow 3.1
+# Engineering Flow 4.0
 
-> **Incompatível com 2.1.1 e 1.7.0.** A 3.0 não tem compatibilidade com essas versões e não oferece migração automática. Para a linha 2.x, use a tag `v2.1.1`. A 3.1 continua a partir da 3.0.
+> **Incompatível com 2.1.1 e 1.7.0.** A linha 4.0 evolui a arquitetura 3.x consolidando a hierarquia do engenheiro-chefe (Jeff) e bots de projeto, adoção exclusiva do **`ai-memory` (Fábio Akita)** no lugar do script local `mem`, rastreabilidade de branches por Card (`AB-<ID>`), promoção isolada para `main`/`master`, pacote SQL por Tag de Release (`vX.Y.Z`) com geração de OS para Infra e regra de saúde de testes no legado vs. Playwright E2E completo.
 
 Índice de skills: [SKILLS-INDEX.md](SKILLS-INDEX.md)
 
-Workflow de engenharia para descobrir sistemas, planejar e entregar bugs, features, refatorações e projetos novos com aprovação humana e evidência. O método define papéis (aprovador humano, planejador, implementador, revisor/entrega e publicador opcional) e não depende de uma ferramenta; a instanciação atual é exemplo, não requisito: planejador = Matheus com o Jeff, implementador = **Grok Build**, revisor/entrega = bot de projeto, Jow opcional. Na 3.0 o pack configura um único implementador, o Grok Build. Mantém expertise .NET moderno/Framework, Web Forms, ASP clássico, HTML/CSS/JavaScript e SQL Server; tecnologias adicionais são investigadas pelo contexto, sem lista fechada de linguagens.
+Workflow de engenharia para descobrir sistemas, triar demandas por card, planejar e entregar bugs, features, refatorações e projetos novos com aprovação humana e evidência. O método define papéis em hierarquia clara (aprovador humano, engenheiro-chefe/planejador, revisor/entrega por repo, implementador/harness e publicador/validador opcional) e não depende de uma ferramenta; a instanciação atual é exemplo, não requisito: aprovador = Matheus, engenheiro-chefe/planejador = Jeff (com o Matheus), revisor/entrega = bot de projeto, implementador = **Grok Build**, validador/publicador opcional = Jow. Mantém expertise .NET moderno/Framework, Web Forms, ASP clássico, HTML/CSS/JavaScript e SQL Server; tecnologias adicionais são investigadas pelo contexto, sem lista fechada de linguagens.
 
-**Entender → plano técnico → aprovação humana → implementar → executar testes aprovados → evidências → entregar.** Testes não pedidos/aprovados não executam automaticamente. Implementação aprovada sem testes é entregue como não validada; autorização existente não precisa ser repetida. Veja o [contrato comum](repo-template/docs/engineering-flow/workflow.md).
+**Triagem por Card (`AB-<ID>`) → entender → plano técnico (Gate 1) → aprovação humana → implementar na branch do card → executar testes aprovados → evidências → Gate 2 (commit) → homologação (mantendo branch viva) → produção isolada, Tag `vX.Y.Z`, SQL consolidado e OS de Infra.** Em bug, o teste de regressão `R0` (falha antes, passa depois — unitário/integração se saudável no legado, ou Playwright E2E completo se acoplado) entra por padrão no plano do Gate 1. Fora do `R0`, testes não pedidos/aprovados não executam automaticamente. Implementação aprovada sem testes é entregue como não validada; autorização existente não precisa ser repetida. Veja o [contrato comum](repo-template/docs/engineering-flow/workflow.md).
 
-Versão `3.1.2`. Nome público Engineering Flow; repositório `engineering-flow`. O pack contém orientação, configurações e scripts locais, sem instalar runtimes ou afirmar suporte automatizado universal. Mobile inclui apps nativos, híbridos e multiplataforma, novos ou existentes; desktop e DevOps têm procedimentos proporcionais ao ambiente autorizado. Memória local; versionamento em Git previsto para a 3.2.
+Versão `4.0.0`. Nome público Engineering Flow; repositório `engineering-flow`. O pack contém orientação, configurações e scripts locais, sem instalar runtimes ou afirmar suporte automatizado universal. Mobile inclui apps nativos, híbridos e multiplataforma, novos ou existentes; desktop e DevOps têm procedimentos proporcionais ao ambiente autorizado. Memória persistente de longo prazo e handoffs entre sessões utilizam o **`ai-memory` (`akitaonrails/ai-memory`)** via `.ai-memory.toml` e MCP, junto com `docs/ai/`.
 
-**Gate 2:** commit e push exigem o ok explícito do Matheus, dado depois de ele ver as evidências. O commit é feito só pelo implementador. O push é feito só pelo publicador ou, com o publicador indisponível, pelo Matheus manualmente. Nenhum outro agente comita ou dá push. Nunca na main ou na master, nunca force push. Instanciação atual (exemplo, não requisito): implementador = Grok Build; publicador = Jow, hoje opcional, porque a diretriz de entrega pelo bot de projeto atribui push, PR e merge ao papel revisor/entrega nos passos 9 e 10.
+**Gate 2:** commit e push exigem o ok explícito do Matheus, dado depois de ele ver as evidências. O commit é feito só pelo implementador. O push é feito só pelo publicador ou, com o publicador indisponível, pelo Matheus manualmente. Nenhum outro agente comita ou dá push. Nunca na main ou na master, nunca force push. Instanciação atual (exemplo, não requisito): implementador = Grok Build; publicador = Jow, hoje opcional, porque a [diretriz de entrega pelo bot de projeto](diretrizes/DIRETRIZ-entrega-pelo-bot-de-projeto.md) atribui push, PR, merge na homologação (sem excluir a branch do card), promoção isolada da branch do card na `main`/`master`, Tag `vX.Y.Z`, consolidação SQL e geração da OS da Infra ao papel revisor/entrega nos passos 9 a 11.
 
 | Perfil | Seleção | Conteúdo |
 |---|---|---|
 | core | sempre | Descoberta, projeto novo, bug, feature, refactor, review, completion, skills recorrentes e contrato. Entradas .NET antigas preservadas. |
-| web | explícito ou evidência de UI | Procedimento geral de navegador/ASP clássico/SPA e especialização .NET web. |
-| sqlserver | explícito ou provider/T-SQL específico | Entendimento read-only e mudanças SQL Server aprovadas. |
+| web | explícito ou evidência de UI | Procedimento geral de navegador/ASP clássico/SPA, Playwright E2E e especialização .NET web. |
+| sqlserver | explícito ou provider/T-SQL específico | Entendimento read-only, mudanças SQL Server idempotentes por card e pacote de release por Tag. |
 | mobile | explícito ou evidência de plataforma | Planejamento e validação nativa/híbrida/multiplataforma; não instala SDK/dispositivo. |
 | quality | explícito, nunca automático | Revisões focadas de segurança, desempenho e entrega. |
 
-Modos de operação: **Trivial** (1 critério observável, sem risco a dados/migração) e **Completo** (Gate 1 e Gate 2); na dúvida, Completo. Docs: [anti-padrões](repo-template/docs/engineering-flow/anti-patterns.md) (lidos antes de toda tarefa), [workspace de planejamento](repo-template/docs/engineering-flow/planning-workspace.md) e [pacote SQL de release](repo-template/docs/engineering-flow/sql-release-package.md), ambos opcionais por projeto. [ASSISTENTE_WORKFLOW.md](ASSISTENTE_WORKFLOW.md) descreve a camada opcional de bots (planejamento e repositórios), fora do pack.
+Modos de operação: **Trivial** (1 critério observável, sem risco a dados/migração) e **Completo** (Gate 1 e Gate 2); na dúvida, Completo. Docs: [anti-padrões](repo-template/docs/engineering-flow/anti-patterns.md) (lidos antes de toda tarefa), [workspace de planejamento](repo-template/docs/engineering-flow/planning-workspace.md) (inclui `Planejamento/DEMANDAS.md`) e [pacote SQL de release](repo-template/docs/engineering-flow/sql-release-package.md), opcionais por projeto. [ASSISTENTE_WORKFLOW.md](ASSISTENTE_WORKFLOW.md) descreve a hierarquia do Jeff (engenheiro-chefe) e dos bots de projeto e o rito de instalação limpa da v4.0.
 
-## Instalação
+## Instalação (Padrão e Instalação Limpa 4.0 pelos Bots de Projeto)
 
-Execute na raiz do pack, apontando para Git root, monorepo ou pasta com repos independentes. Um repo Git vazio pode receber core e planejar scaffolding depois. Para pasta deliberadamente não Git use AllowNonGit.
+Execute na raiz do pack, apontando para Git root, monorepo ou pasta com repos independentes. Um repo Git vazio pode receber core e planejar scaffolding depois. Para pasta deliberadamente não Git use AllowNonGit. Para instalação limpa da 4.0 delegada pelo Jeff aos bots de projeto sobre instalações anteriores, use `--force` / `-Force` (cria backup `*.agent-pack.backup-*` de arquivos divergentes e atualiza para `4.0.0`).
 
 ```powershell
 .\scripts\install-agent-pack.ps1 -RepoPath 'C:\src' -DiscoverOnly
 .\scripts\install-agent-pack.ps1 -RepoPath 'C:\src\Sistema' -Profile web,sqlserver -DryRun
 .\scripts\install-agent-pack.ps1 -RepoPath 'C:\src\Sistema' -Profile web,sqlserver
-.\scripts\install-agent-pack.ps1 -RepoPath 'C:\src\NovoApp' -Profile mobile
+.\scripts\install-agent-pack.ps1 -RepoPath 'C:\src\Sistema' -Profile web,sqlserver -Force
 ```
 
 ```bash
 bash ./scripts/install-agent-pack.sh /src --discover-only
 bash ./scripts/install-agent-pack.sh /src/sistema --profile web,sqlserver --dry-run
 bash ./scripts/install-agent-pack.sh /src/sistema --profile web,sqlserver
-bash ./scripts/install-agent-pack.sh /src/novo-app --profile mobile
+bash ./scripts/install-agent-pack.sh /src/sistema --profile web,sqlserver --force
 ```
 
-O instalador da 3.0 configura sempre o mesmo implementador, o Grok Build (`integration|grok`, único valor aceito). Perfil explícito evita autodetecção; não prepara ferramentas por inferência. InstallGlobal é exemplo pessoal opt-in (`$GROK_HOME` ou `~/.grok/AGENTS.md`).
+O instalador configura o implementador Grok Build (`integration|grok`, único valor aceito). Perfil explícito evita autodetecção; não prepara ferramentas por inferência. InstallGlobal é exemplo pessoal opt-in (`$GROK_HOME` ou `~/.grok/AGENTS.md`).
 
-## Atualização segura
+## Atualização reconciliada (3.x → 4.0)
 
 ```powershell
 .\scripts\update-agent-pack.ps1 -RepoPath 'C:\src\Sistema' -Check
@@ -56,9 +56,9 @@ bash ./scripts/update-agent-pack.sh /src/sistema --check
 bash ./scripts/update-agent-pack.sh /src/sistema --apply
 ```
 
-Use updater, não Force. `pack-manifest.txt`, `pack-artifacts.txt` e `pack-version.txt` definem arquivos, IDs estáveis/propriedade e versão. `.agent-pack/state.txt` continua sendo o formato/local de estado. Perfis previamente selecionados são preservados; atualizar não adiciona mobile/quality não selecionados. `managed` atualizado somente pela reconciliação, `merge` exige revisão humana das diferenças, `seed` pertence ao projeto. Conflitos mantêm customização e precisam de AcceptPack, AcceptMerge (após merge) ou KeepLocal; confira o [guia detalhado](INSTRUCOES_DETALHADAS.md).
+`pack-manifest.txt`, `pack-artifacts.txt` e `pack-version.txt` definem arquivos, IDs estáveis/propriedade e versão. `.agent-pack/state.txt` continua sendo o formato/local de estado. Perfis previamente selecionados são preservados; atualizar não adiciona mobile/quality não selecionados. `managed` atualizado somente pela reconciliação, `merge` exige revisão humana das diferenças, `seed` pertence ao projeto. Conflitos mantêm customização e precisam de AcceptPack, AcceptMerge (após merge) ou KeepLocal; confira o [guia detalhado](INSTRUCOES_DETALHADAS.md).
 
-A 3.0 não migra instalações 2.1.1 nem 1.7.0. Catálogos históricos permanecem como registro; `compat/releases/2.1.1.txt` descreve a base 2.1.1, `compat/releases/3.0.0.txt` é a base 3.0.0 corrigida na 3.1.1, `compat/releases/3.1.0.txt` a base 3.1, `compat/releases/3.1.1.txt` a base 3.1.1 e `compat/releases/3.1.2.txt` a base 3.1.2.
+Catálogos históricos permanecem em `compat/releases/` (`1.1.0` a `4.0.0`).
 
 ## Uso diário
 
@@ -66,6 +66,6 @@ O implementador lê o [índice de skills](SKILLS-INDEX.md) e carrega só a skill
 
 Veja [manual e exemplos](MANUAL_DE_USO.md), [adoção e limites](INSTRUCOES_DETALHADAS.md), [capacidades de validação](repo-template/docs/engineering-flow/capabilities.md), [assistente opcional](ASSISTENTE_OPCIONAL.md) e [changelog](CHANGELOG.md).
 
-A instalação/update preserva .gitignore e acrescenta proteção de resíduos operacionais, inclusive `.agent-pack/.runtime/task.lock`, `Planejamento/`, `planejamento/` e `conhecimento/`. Skills/configuração e .agent-pack/state.txt permanecem versionáveis; veja higiene Git no guia detalhado. Regras próprias e arquivos já rastreados exigem revisão quando incompatíveis.
+A instalação/update preserva .gitignore e acrescenta proteção de resíduos operacionais, inclusive `.agent-pack/.runtime/task.lock`, `Planejamento/` e `planejamento/`. Skills/configuração e .agent-pack/state.txt permanecem versionáveis; veja higiene Git no guia detalhado. Regras próprias e arquivos já rastreados exigem revisão quando incompatíveis.
 
 Modo pack local (opcional): o pack fica no projeto sem ser versionado; AGENTS.md e docs/ai continuam versionados. Veja "Modo pack local" no guia detalhado.

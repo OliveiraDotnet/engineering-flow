@@ -15,7 +15,6 @@ coverage/
 .env.*
 *.pfx
 *.snk
-config/maquinas.conf
 
 # Local update state, backups, task lock and transient evidence
 .agent-pack/.runtime/
@@ -33,7 +32,6 @@ config/maquinas.conf
 .grok/worktrees/
 .engineering-flow-evidence/
 
-# Local planning and domain memory (3.1). Real machine config stays unversioned.
+# Local planning workspace (4.0)
 Planejamento/
 planejamento/
-conhecimento/
