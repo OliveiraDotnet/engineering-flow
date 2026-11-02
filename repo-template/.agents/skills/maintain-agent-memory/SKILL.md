@@ -12,10 +12,11 @@ Follow docs/engineering-flow/workflow.md in the target repository. Understand de
 1. Classify the information as a persistent rule, project fact, recurring defect, architecture decision, data rule or temporary observation.
 2. Require evidence: source file, test, issue, commit, CI result or human confirmation. Mark uncertain information as such instead of promoting it to a rule.
 3. Store each fact once:
-   - `AGENTS.md` for short always-relevant operating rules.
+   - `AGENTS.md` for short always-relevant operating rules and project conventions (including `.ai-memory.toml` namespace).
    - `docs/ai/project-map.md` for confirmed navigation and commands.
    - `architecture.md`, `database.md`, `domain-glossary.md` or `recurring-bugs.md` for their respective durable details.
+   - **`ai-memory` (`akitaonrails/ai-memory`)** via MCP (`ai-memory mcp-bridge`) and `.ai-memory.toml` (`workspace` + `project`) for cross-session project memory, workstreams (`AB-<ID>`) and agent handoffs.
 4. Do not change production code or duplicate existing guidance.
-5. Local memory is `conhecimento/`, consulted with `mem` (`$AGENT_PACK_HOME/tools/memoria.sh` or `memoria.ps1`). A dictated card is born `pendente`. A card captured by the bot is born `rascunho`. Confirmation is a manual edit of the front-matter after Matheus's ok. Cards do not expire and there is no ceiling.
+5. Never store sensitive data (CPF, bank details, emails, phone numbers, credentials, connection strings) in `ai-memory` or `docs/ai/`; customer data is restricted to a test username only when strictly useful for testing.
 
-End with the file changed, the evidence and the reason for placement.
+End with the file or `ai-memory` note changed, the evidence and the reason for placement.

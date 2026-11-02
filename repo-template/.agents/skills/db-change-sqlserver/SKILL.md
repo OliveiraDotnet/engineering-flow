@@ -11,13 +11,13 @@ Follow docs/engineering-flow/workflow.md in the target repository. Understand de
 
 Use only when the `sqlserver` profile is installed.
 
-1. Confirm the schema source of truth and the authorized target environment.
+1. Confirm the card (`AB-<ID>`), schema source of truth and the authorized target environment.
 2. Map affected objects and .NET consumers before proposing SQL.
 3. Classify each operation as additive, compatible, or destructive. Read `references/sqlserver-change-gates.md`.
 4. Produce a plan only: objects, expand/contract sequence, data backfill, locks, rollback, and validation. Do not write `.sql`/migration files yet.
 5. Verify that the plan is covered by actual user authorization; reuse approval already given for the same scope. Destructive operations (`DROP`, narrowing `ALTER`, unique indexes on dirty data, `NOT NULL` without backfill) require explicit authorization covering those operations.
-6. After approval, write the smallest idempotent script or migration the repository already uses. Do not execute it against any database unless the user names the environment and has explicitly authorized that execution and target. Prior authorization remains valid if scope and conditions are unchanged.
-7. Update consumers only as required by the approved plan. Keep app and database overlapping versions compatible when releases can drift.
-8. If the project declares a SQL release package in AGENTS.md, consolidate the approved scripts following `docs/engineering-flow/sql-release-package.md`. Execution still requires explicit authorization for the target.
+6. After approval, write the smallest **idempotent and transactional** script (`SET XACT_ABORT ON`, `BEGIN TRAN`/`COMMIT`, `IF NOT EXISTS` / `CREATE OR ALTER`) identified by the card (`AB-<ID>-<slug>.sql` in `scripts/PendentesProducao/`) or the migration pattern the repository already uses. Do not execute it against any database unless the user names the environment and has explicitly authorized that execution and target. Prior authorization remains valid if scope and conditions are unchanged.
+7. Update consumers only as required by the approved plan. Keep app and database overlapping versions compatible when releases can drift in homologation.
+8. If the project declares a SQL release package in AGENTS.md, keep the script isolated per card while in homologation and consolidate only the approved cards into `scripts/Releases/vX.Y.Z_consolidado.sql` (along with `OS-INFRA-vX.Y.Z.md`) when closing production Tag `vX.Y.Z`, following `docs/engineering-flow/sql-release-package.md`. Execution still requires explicit authorization for the target.
 
 Return diagnosis, approved scope, script/migration (only after approval), data and application impact, rollback, and remaining validation.
