@@ -8,5 +8,5 @@ Use `$maintain-agent-memory` for the lesson below.
 
 ## Expected output
 
-- File updated, evidence, and why it belongs there.
-- Local memory is `conhecimento/`, consulted with `mem` (`$AGENT_PACK_HOME/tools/memoria.sh` or `memoria.ps1`). A dictated card is born `pendente`. A card captured by the bot is born `rascunho`. Confirmation is a manual edit of the front-matter after Matheus's ok. Cards do not expire and there is no ceiling.
+- File or `ai-memory` entry updated, evidence, and why it belongs there.
+- Persistent memory uses **`ai-memory` (`akitaonrails/ai-memory`)** configured via `.ai-memory.toml` (`workspace` shared across project repos + repo `project`) and MCP/workstreams, alongside versioned architecture docs in `docs/ai/`. Never store valid CPF, bank details, credentials, connection strings, or sensitive customer data (at most a test username when strictly needed for testing).

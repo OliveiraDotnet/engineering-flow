@@ -41,7 +41,7 @@ Get-ChildItem -LiteralPath $SkillsRoot -Directory | Sort-Object Name | ForEach-O
 function Escape-Cell([string]$Value) { return ($Value -replace '\|', '\|') }
 
 $lines = New-Object System.Collections.Generic.List[string]
-$lines.Add('# Índice de skills — Engineering Flow 3.1') | Out-Null
+$lines.Add('# Índice de skills — Engineering Flow 4.0') | Out-Null
 $lines.Add('') | Out-Null
 $lines.Add('Gerado por `tools/generate-skills-index.sh` a partir do frontmatter `name`/`description` de `repo-template/.agents/skills/*/SKILL.md`. O implementador lê este índice e carrega apenas a skill escolhida.') | Out-Null
 $lines.Add('') | Out-Null
