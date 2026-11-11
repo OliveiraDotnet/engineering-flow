@@ -32,9 +32,7 @@ bash "$INSTALLER" "$GROK_ONLY"
 [ ! -e "$GROK_ONLY/.claude" ]
 [ ! -e "$GROK_ONLY/CLAUDE.md" ]
 [ -z "$(find "$GROK_ONLY/.agents" -name openai.yaml -print)" ]
-grep -q '^integration|grok$' "$GROK_ONLY/.agent-pack/state.txt"
-! grep -q '^integration|codex$' "$GROK_ONLY/.agent-pack/state.txt"
-! grep -q '^integration|claude$' "$GROK_ONLY/.agent-pack/state.txt"
+[ ! -e "$GROK_ONLY/.agent-pack/state.txt" ]
 if bash "$INSTALLER" "$GROK_ONLY" --integration codex,grok; then
   echo 'Installer accepted Codex integration.' >&2
   exit 1
@@ -65,10 +63,14 @@ bash "$INSTALLER" "$REPO"
 [ -f "$REPO/.agents/skills/dotnet-xunit-tests/references/xunit-test-checklist.md" ]
 [ ! -e "$REPO/.agents/skills/flutter-tests/SKILL.md" ]
 [ ! -e "$REPO/.agents/skills/update-engineering-flow/SKILL.md" ]
-[ -f "$REPO/.agent-pack/state.txt" ]
-grep -Fxq "version|$(tr -d '\r\n' < "$PACK_ROOT/pack-version.txt")" "$REPO/.agent-pack/state.txt"
-grep -q '^profile|core$' "$REPO/.agent-pack/state.txt"
-grep -q '^integration|grok$' "$REPO/.agent-pack/state.txt"
+[ ! -e "$REPO/.agent-pack/state.txt" ]
+[ -f "$REPO/.agents/skills/harness-cycle/SKILL.md" ]
+[ -f "$REPO/.agents/skills/harness-cycle/scripts/run-implementor.sh" ]
+[ -f "$REPO/.agents/skills/harness-cycle/scripts/run-tester.sh" ]
+[ -f "$REPO/.agents/skills/harness-cycle/scripts/supervise-harness.sh" ]
+[ -f "$REPO/.grok/skills/harness-cycle/SKILL.md" ]
+[ -f "$REPO/prompts/12-implementor-harness.md" ]
+[ -f "$REPO/prompts/13-tester-harness.md" ]
 [ -f "$REPO/.agents/skills/update-agent-pack/SKILL.md" ]
 [ -f "$REPO/.agents/skills/check-text-encoding/scripts/check-mojibake.ps1" ]
 [ -f "$REPO/.agents/skills/check-text-encoding/scripts/check-mojibake.sh" ]
@@ -115,7 +117,7 @@ bash "$INSTALLER" "$REPO"
 echo '# local customization' >> "$REPO/.agents/skills/bugfix-dotnet/SKILL.md"
 bash "$INSTALLER" "$REPO"
 bash "$INSTALLER" "$REPO"
-grep -Eq '^artifact\|[^|]+\|\.agents/skills/bugfix-dotnet/SKILL.md\|[^|]+\|-\|-\|keep-local\|' "$REPO/.agent-pack/state.txt"
+[ ! -e "$REPO/.agent-pack/state.txt" ]
 grep -q 'local customization' "$REPO/.agents/skills/bugfix-dotnet/SKILL.md"
 
 bash "$INSTALLER" "$REPO" --force

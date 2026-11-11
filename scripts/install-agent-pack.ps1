@@ -432,12 +432,12 @@ function Install-ToRepository {
     foreach ($value in $Integration) {
         foreach ($item in ($value -split ',')) {
             $selected = $item.Trim().ToLowerInvariant()
-            if ($selected -ne 'grok') { throw "Unknown integration: $item. Engineering Flow 3.0 is Grok-only." }
+            if ($selected -ne 'grok') { throw "Unknown integration: $item." }
             $integrations.Add($selected) | Out-Null
         }
     }
     foreach ($integration in (Get-StateRecords -TargetRoot $TargetRoot -Kind "integration")) {
-        if ($integration -ne 'grok') { throw "Unknown integration in state: $integration. Engineering Flow 3.0 is Grok-only." }
+        if ($integration -ne 'grok') { throw "Unknown integration in state: $integration." }
         $integrations.Add($integration) | Out-Null
     }
     if ($integrations.Count -eq 0) { $integrations.Add("grok") | Out-Null }
@@ -479,6 +479,8 @@ function Install-ToRepository {
         Add-CopyAction -Actions $actions -Source $source -Destination $destination
     }
 
+    Assert-NoLinkedPath (Join-Path $TargetRoot '.agent-pack')
+    Assert-NoLinkedPath (Join-Path $TargetRoot '.agent-pack/state.txt')
     Assert-NoLinkedPath (Join-Path $TargetRoot '.agent-pack/state.txt.tmp')
 
     $ignoreHelper = Join-Path $ScriptDir 'protect-engineering-flow-files.ps1'
@@ -487,7 +489,7 @@ function Install-ToRepository {
         Invoke-CopyAction -Action $action
     }
 
-    Write-InstallState -TargetRoot $TargetRoot -PackVersion $PackVersion -Profiles $profiles -Integrations $integrations -ManifestByDestination $ManifestByDestination -ArtifactEntries $ArtifactEntries -Actions $actions
+    # Clean install in 5.0: state.txt is not generated in target repositories.
     if ($DryRun -or $WhatIfPreference) { & $ignoreHelper -RepoPath $TargetRoot -DryRun }
     elseif ($PSCmdlet.ShouldProcess($TargetRoot, 'Protect generated Engineering Flow files in .gitignore')) { & $ignoreHelper -RepoPath $TargetRoot }
 
@@ -582,7 +584,7 @@ else {
 Write-Host "Installing Engineering Flow $packVersion"
 Write-Host "Workspace path: $repoRoot"
 Write-Host ("Repositories: {0}" -f (($targets | ForEach-Object { $_.Path }) -join ', '))
-Write-Host "Grok Build project support enabled."
+Write-Host "Clean installation mode enabled (only AGENTS.md stays versionable)."
 
 foreach ($target in $targets) {
     Install-ToRepository -TargetRoot $target.Path -Kind $target.Kind -PackVersion $packVersion -ManifestEntries $manifestEntries -ManifestByDestination $manifestByDestination -ArtifactEntries $artifactEntries

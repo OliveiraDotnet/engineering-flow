@@ -128,7 +128,7 @@ for governance_file in "$agents_governance" "$work_order_contract" "$delegation_
   [ -f "$governance_file" ] || fail "Missing Grok governance artifact: $governance_file"
 done
 if [ -f "$agents_governance" ] && [ -f "$delegation_contract" ]; then
-  for required in "sole decision authority" "Gate 1" "execution envelope" "Gate 2" "ok explícito do Matheus" "nunca force push" "BLOCKED_BY_DECISION"; do
+  for required in "sole decision authority" "Gate 1" "execution envelope" "Gate 2" "ok explícito do aprovador humano" "nunca force push" "BLOCKED_BY_DECISION" "apenas AGENTS.md"; do
     grep -Fq "$required" "$agents_governance" || fail "AGENTS.md is missing governance marker '$required'"
   done
   for required in "Human-approved scope" "Allowed read areas" "Allowed modification areas" "Decision boundaries" "Escalation conditions" "READY_FOR_MANUAL_VALIDATION" "USER_DECISION_REQUIRED"; do

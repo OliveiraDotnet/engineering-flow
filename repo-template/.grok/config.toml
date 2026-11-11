@@ -1,7 +1,7 @@
 # Shared project safeguards. User/organization settings own authentication,
 # models, sandbox and permission modes. AGENTS.md governs task authorization.
-# Commit is performed only by Grok Build after Matheus's explicit ok.
-# Push is performed only by Jow, or by Matheus manually when Jow is unavailable.
+# Commit is performed only by the Implementor (Harness) after the human approver's explicit ok (Gate 2).
+# Push is performed only by the Reviewer/Delivery role (or Publisher), or by the human approver manually.
 
 [permission]
 rules = [

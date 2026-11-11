@@ -25,7 +25,7 @@ lock_file="$scratch/.agent-pack/.runtime/task.lock"
 # acquire
 lock acquire --task T-1 --bot demand-bot >/dev/null || fail 'acquire'
 [ -f "$lock_file" ] || fail 'lock file missing'
-grep -qx 'harness=Grok Build' "$lock_file" || fail 'default harness'
+grep -qx 'harness=default' "$lock_file" || fail 'default harness'
 grep -qx 'task=T-1' "$lock_file" || fail 'task field'
 grep -qx 'branch=work' "$lock_file" || fail 'default branch'
 grep -qx 'bot=demand-bot' "$lock_file" || fail 'bot field'

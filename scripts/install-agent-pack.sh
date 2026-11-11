@@ -27,7 +27,7 @@ while [ "$#" -gt 0 ]; do
       IFS=',' read -r -a requested <<< "$2"
       [ "${#requested[@]}" -gt 0 ] || { echo "Empty integration selection" >&2; exit 1; }
       for integration in "${requested[@]}"; do
-        case "$integration" in grok) requested_integrations+=("$integration") ;; *) echo "Unknown integration: $integration. Engineering Flow 3.0 is Grok-only." >&2; exit 1 ;; esac
+        case "$integration" in grok) requested_integrations+=("$integration") ;; *) echo "Unknown integration: $integration." >&2; exit 1 ;; esac
       done
       shift 2
       ;;
@@ -300,7 +300,7 @@ install_one() {
   for integration in "${state_values[@]+"${state_values[@]}"}" "${requested_integrations[@]+"${requested_integrations[@]}"}"; do
     case "$integration" in
       grok) ;;
-      *) echo "Unknown integration in state: $integration. Engineering Flow 3.0 is Grok-only." >&2; exit 1 ;;
+      *) echo "Unknown integration in state: $integration." >&2; exit 1 ;;
     esac
   done
 
@@ -375,6 +375,7 @@ install_one() {
     installed_destinations["$destination_relative"]=1
   done < "$MANIFEST"
 
+  assert_no_linked_path "$REPO_ROOT/.agent-pack"
   assert_no_linked_path "$REPO_ROOT/.agent-pack/state.txt"
   assert_no_linked_path "$REPO_ROOT/.agent-pack/state.txt.tmp"
 
@@ -405,7 +406,6 @@ install_one() {
     copy_count=$((copy_count + 1))
   done
 
-  write_state "$REPO_ROOT"
   if [ "$dry_run" = true ]; then bash "$SCRIPT_DIR/protect-engineering-flow-files.sh" "$REPO_ROOT" dry-run
   else bash "$SCRIPT_DIR/protect-engineering-flow-files.sh" "$REPO_ROOT"; fi
   echo "Summary: copied=$copy_count skipped=$skip_count conflicts=$conflict_count"
@@ -446,7 +446,7 @@ fi
 echo "Installing Engineering Flow $PACK_VERSION"
 echo "Workspace path: $WORKSPACE_ROOT"
 echo "Repositories: ${discovered_roots[*]}"
-echo "Grok Build project support enabled."
+echo "Clean installation mode enabled (only AGENTS.md stays versionable)."
 
 for target in "${discovered_roots[@]}"; do
   install_one "$target"

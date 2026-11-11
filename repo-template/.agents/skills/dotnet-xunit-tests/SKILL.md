@@ -17,4 +17,4 @@ Follow docs/engineering-flow/workflow.md in the target repository. Understand de
 6. Run the narrowest confirmed command. If undocumented, derive a candidate from the actual SDK/runner configuration and available help, identify it as inferred, and run when suitable. Verify tests were discovered and executed; zero tests is not a passing validation.
 7. Report changed files, behavior covered, commands, actual results, and gaps. Distinguish assertion failure, setup failure, and unexecuted tests; do not claim measured coverage unless collected.
 
-Use the testing role mapped by project instructions when delegation helps. Grok Build can execute this workflow directly; no named agent is a prerequisite.
+Use the testing role mapped by project instructions when delegation helps. The active harness can execute this workflow directly; no named agent is a prerequisite.

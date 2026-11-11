@@ -18,7 +18,7 @@ A skill `db-change-sqlserver` produz o menor script idempotente e transacional p
 1. **Durante Desenvolvimento e Homologação:**
    O script aprovado da demanda fica isolado em `scripts\PendentesProducao\AB-<ID>-<slug>.sql` (e opcionalmente espelhado no repositório quando configurado em `AGENTS.md`).
 2. **Na Promoção para Produção (Passo 10 e 11 — Merge na `main` e Tag `vX.Y.Z`):**
-   Quando o Matheus autoriza a subida de um ou mais cards aprovados para a `main`/`master` e o bot do projeto fecha a Tag `vX.Y.Z`:
+   Quando o aprovador humano autoriza a subida de um ou mais cards aprovados para a `main`/`master` e o revisor/entrega fecha a Tag `vX.Y.Z`:
    - Os scripts `AB-<ID>-*.sql` **apenas dos cards incluídos na Tag `vX.Y.Z`** são concatenados em ordem cronológica/dependência em `scripts\Releases\vX.Y.Z_consolidado.sql`, acompanhados de `scripts\Releases\vX.Y.Z_relatorio.md`.
    - O bot do projeto gera automaticamente o arquivo `scripts\Releases\OS-INFRA-vX.Y.Z.md` contendo:
      - Repositório, branch (`main`/`master`), Tag exata (`vX.Y.Z`) e hash do commit;

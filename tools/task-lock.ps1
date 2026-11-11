@@ -5,7 +5,7 @@ param(
     [ValidateSet('acquire', 'release', 'status')]
     [string]$Command,
     [string]$Task = '',
-    [string]$Harness = 'Grok Build',
+    [string]$Harness = 'default',
     [string]$Branch = '',
     [string]$Bot = '',
     [string]$Repo = '.',

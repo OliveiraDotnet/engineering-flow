@@ -1,11 +1,11 @@
 # Update the Agent Pack in this repository
 
-Use the native `update-agent-pack` skill in Grok Build.
+Use the native `update-agent-pack` skill in the active harness.
 
 ## Trusted source
 
 - Path to the updated Agent Pack or `AGENT_PACK_HOME`:
-- Desired integrations if they must change (Grok is the only harness in 3.0; example: `grok`):
+- Desired integrations if they must change:
 
 ## Goal
 

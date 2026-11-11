@@ -11,8 +11,8 @@ function Put([string]$Repo,[string]$Path,[string]$Text) {
  [IO.File]::WriteAllText($full,$Text,[Text.UTF8Encoding]::new($false))
 }
 function Assert-Hygiene([string]$Repo) {
- $ignored=@('AGENTS.md.agent-pack.new','AGENTS.md.agent-pack.backup-20261011','.agents/skills/bugfix/SKILL.md.agent-pack.new','.agent-pack/.runtime/.gitignore','.agent-pack/.runtime/backups/2.0.0/backup.txt','.agent-pack/.runtime/retired/old.txt','.agent-pack/.runtime/update.lock','.agent-pack/.runtime/task.lock','.agent-pack/state.txt.tmp','.agent-pack/cache/cache.txt','.agent-pack/logs/run.log','.grok/sessions/session.log','.engineering-flow-evidence/report.txt')
- $visible=@('AGENTS.md','.agent-pack/state.txt','.grok/config.toml','.grok/skills/new-project/SKILL.md','.agents/skills/new-project/SKILL.md','.grok/agents/repo-explorer.md','docs/ai/runbook.md')
+ $ignored=@('AGENTS.md.agent-pack.new','AGENTS.md.agent-pack.backup-20261011','.agents/skills/bugfix/SKILL.md.agent-pack.new','.agents/skills/new-project/SKILL.md','.agent-pack/.runtime/.gitignore','.agent-pack/.runtime/backups/2.0.0/backup.txt','.agent-pack/.runtime/retired/old.txt','.agent-pack/.runtime/update.lock','.agent-pack/.runtime/task.lock','.agent-pack/state.txt','.agent-pack/state.txt.tmp','.agent-pack/cache/cache.txt','.agent-pack/logs/run.log','.grok/config.toml','.grok/skills/new-project/SKILL.md','.grok/agents/repo-explorer.md','.grok/sessions/session.log','docs/ai/runbook.md','docs/engineering-flow/workflow.md','prompts/01-bugfix.md','Planejamento/AB-1.md','.engineering-flow-evidence/report.txt')
+ $visible=@('AGENTS.md')
  foreach ($p in $ignored+$visible) {
   if (-not (Test-Path (Join-Path $Repo $p))) {
    $text=if ($p -eq '.agent-pack/.runtime/.gitignore') {"*`n!.gitignore`n"} else {'fixture-only'}
@@ -23,8 +23,8 @@ function Assert-Hygiene([string]$Repo) {
  foreach ($p in $visible) { & git -C $Repo check-ignore -q -- $p; Assert ($LASTEXITCODE -eq 1) "Necessary project file hidden from Git: $p" }
  $status=@(& git -C $Repo status --short --untracked-files=all)
  Assert ($LASTEXITCODE -eq 0) 'Unable to inspect fixture Git status.'
- Assert (-not (($status -join "`n") -match 'agent-pack\.new|agent-pack\.backup|\.runtime/|sessions/|worktrees/|state\.txt\.tmp|run\.log')) 'Operational Git noise remains.'
- Assert (($status -join "`n").Contains('.agent-pack/state.txt')) 'State is not versionable.'
+ Assert (-not (($status -join "`n") -match 'agent-pack\.new|agent-pack\.backup|\.agent-pack/|\.agents/|\.grok/|docs/ai/|docs/engineering-flow/|prompts/|Planejamento/|\.runtime/|sessions/|worktrees/|state\.txt|run\.log')) 'Operational Git noise remains.'
+ Assert (($status -join "`n").Contains('AGENTS.md')) 'AGENTS.md is not versionable.'
 }
 try {
  [IO.Directory]::CreateDirectory($temp) | Out-Null
@@ -60,7 +60,7 @@ try {
  # The visibility fixture creates a synthetic lock; release it before exercising the updater.
  $fixtureLock=Join-Path $installed '.agent-pack/.runtime/update.lock'
  Assert ([IO.File]::ReadAllText($fixtureLock) -eq 'fixture-only') 'Unexpected lock content in hygiene fixture.'
- Remove-Item -LiteralPath $fixtureLock -Force
+ Remove-Item -LiteralPath $fixtureLock -Force; Remove-Item -LiteralPath (Join-Path $installed '.agent-pack/state.txt') -Force -ErrorAction SilentlyContinue
  Put $installed '.gitignore' "# custom destination`n.env`n"
  & (Join-Path $PSScriptRoot 'update-agent-pack.ps1') -RepoPath $installed -Apply -Confirm:$false
  Assert-Hygiene $installed
