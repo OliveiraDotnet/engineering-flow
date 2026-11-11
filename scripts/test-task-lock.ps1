@@ -37,7 +37,7 @@ try {
     $r = Invoke-Lock acquire -Task T-1 -Bot demand-bot
     Assert-True ($r.Exit -eq 0) 'acquire'
     $content = [IO.File]::ReadAllLines($lockFile)
-    Assert-True ($content -contains 'harness=Grok Build') 'default harness'
+    Assert-True ($content -contains 'harness=default') 'default harness'
     Assert-True ($content -contains 'task=T-1') 'task field'
     Assert-True ($content -contains 'branch=work') 'default branch'
     Assert-True ($content -contains 'bot=demand-bot') 'bot field'

@@ -5,7 +5,7 @@ $ErrorActionPreference='Stop'
 $root=(Resolve-Path -LiteralPath $RepoPath).Path
 $path=Join-Path $root '.gitignore'
 $utf8=[Text.UTF8Encoding]::new($false,$true)
-$patterns=@('*.agent-pack.new','*.agent-pack.backup-*','.agent-pack/.runtime/','.agent-pack/.runtime/task.lock','.agent-pack/*.tmp','.agent-pack/*.lock','.agent-pack/logs/','.agent-pack/cache/','.agent-pack/tmp/','.agent-pack/sessions/','.agent-pack/worktrees/','.engineering-flow-evidence/','.grok/sessions/','.grok/worktrees/','Planejamento/','planejamento/')
+$patterns=@('*.agent-pack.new','*.agent-pack.backup-*','.agent-pack/','.agent-pack/.runtime/','.agent-pack/.runtime/task.lock','.agent-pack/*.tmp','.agent-pack/*.lock','.agent-pack/logs/','.agent-pack/cache/','.agent-pack/tmp/','.agent-pack/sessions/','.agent-pack/worktrees/','.agent-pack/evidencias/','.agents/','.grok/','.grok/sessions/','.grok/worktrees/','docs/engineering-flow/','docs/ai/','prompts/','.engineering-flow-evidence/','Planejamento/','planejamento/')
 $bytes=[byte[]]@()
 $text=''
 if (Test-Path -LiteralPath $path) {
@@ -24,7 +24,7 @@ if ($CheckOnly) { return }
 if ($DryRun) { Write-Host "IGNORE    $path ($($missing.Count) rules, dry-run)"; return }
 $newline=if ($text.Contains("`r`n")) {"`r`n"} else {"`n"}
 $prefix=if ($text -and -not $text.EndsWith("`n")) {$newline} else {''}
-$addition=$prefix+$newline+'# Engineering Flow: generated files only; state.txt and project guidance stay versionable.'+$newline+($missing -join $newline)+$newline
+$addition=$prefix+$newline+'# Engineering Flow 5.0: clean install; only AGENTS.md stays versionable.'+$newline+($missing -join $newline)+$newline
 # Append retains original bytes (including UTF-8 BOM), content and custom rules.
 $stream=[IO.File]::Open($path,[IO.FileMode]::Append,[IO.FileAccess]::Write,[IO.FileShare]::Read)
 try { $extra=$utf8.GetBytes($addition); $stream.Write($extra,0,$extra.Length) } finally { $stream.Dispose() }

@@ -9,7 +9,7 @@ Follow docs/engineering-flow/workflow.md in the target repository. Understand de
 
 # SQL Server structure review
 
-This skill is distributed with the sqlserver profile. Grok Build can run it directly; map any delegated database role through project instructions. Keep analysis read-only.
+This skill is distributed with the sqlserver profile. The active harness can run it directly; map any delegated database role through project instructions. Keep analysis read-only.
 
 1. Read applicable project instructions and existing database notes; identify the requested scope, source of truth, SQL Server version/compatibility when available, and relevant application consumers. Do not require .NET source for a database-only review.
 2. Start with static evidence. Map relevant tables, constraints, indexes, procs, views, functions, triggers, and callers. For a large tree use [reference finder](scripts/find-sqlserver-references.ps1) with an explicit target path and preferably SummaryOnly first; results are candidate locations, not proven dependencies.

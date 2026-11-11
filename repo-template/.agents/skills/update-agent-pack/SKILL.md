@@ -1,6 +1,6 @@
 ---
 name: update-agent-pack
-description: Inspect and safely reconcile an existing repository installation with a newer Agent Pack, including added, changed, renamed, or retired skills, agents, prompts, and rules. Use when the user asks Grok Build to check, update, migrate, synchronize, or repair an installed Agent Pack without losing repository-specific guidance or local customizations.
+description: Inspect and safely reconcile an existing repository installation with a newer Agent Pack, including added, changed, renamed, or retired skills, agents, prompts, and rules. Use when the user asks the active harness to check, update, migrate, synchronize, or repair an installed Agent Pack without losing repository-specific guidance or local customizations.
 ---
 
 ## Engineering Flow 3.0 execution gate
@@ -25,6 +25,6 @@ Follow docs/engineering-flow/workflow.md in the target repository. Understand de
    - PowerShell: replace `-Check` with `-Apply`; pass `-AcceptMerge`, `-AcceptPack`, or `-KeepLocal` artifact IDs as needed. In a non-interactive agent shell, add `-Confirm:$false` only after the reviewed plan is conflict-free.
    - Shell: replace `--check` with `--apply`; repeat `--accept-merge`, `--accept-pack`, or `--keep-local` for the required IDs.
 7. Inspect the resulting diff. Confirm that repository-owned files and production code were not changed unintentionally.
-8. Run the pack validation requested by the plan and the installed `check-text-encoding` skill. Start a new Grok Build session after persistent instructions change.
+8. Run the pack validation requested by the plan and the installed `check-text-encoding` skill. Start a new harness session after persistent instructions change.
 
 Never use the installer's broad force option as an update strategy. If the updater cannot prove ownership from state or a trusted compatibility catalog, preserve the file and report the required decision.

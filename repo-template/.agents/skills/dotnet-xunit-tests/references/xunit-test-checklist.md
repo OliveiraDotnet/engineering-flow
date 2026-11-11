@@ -65,8 +65,8 @@ Portuguese:
 ## .NET Framework 4.8
 
 - Do not assume `msbuild`, `dotnet build` or Visual Studio workloads on the implementer's machine.
-- The plan says: build and 4.8 tests are run by Matheus in VS 2022 (Test Explorer or the Developer Prompt).
-- The implementer delivers the steps. Matheus returns the output (count and `.trx`, or a Test Explorer print) for `logs/`.
+- The plan says: build and 4.8 tests are run by the human approver in VS 2022 (Test Explorer or the Developer Prompt) when CLI runners are unavailable.
+- The implementer delivers the steps. The human approver returns the output (count and `.trx`, or a Test Explorer print) for `logs/`.
 - A confirmed build/test command in the envelope, recorded in `docs/ai/runbook.md`, overrides that default for that task.
 - Playwright, bUnit and Testcontainers remain standard dependencies in the text. The pack installs none of them.
-- R0 still applies: the regression fails before the fix and passes after. The planner (today, Jeff) gives an opinion first. Only Matheus waives it, explicitly, with the reason recorded.
+- R0 still applies: the regression fails before the fix and passes after. The planner gives an opinion first. Only the human approver waives it, explicitly, with the reason recorded.

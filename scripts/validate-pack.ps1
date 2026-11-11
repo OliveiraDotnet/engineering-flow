@@ -1,4 +1,4 @@
-﻿#Requires -Version 7
+#Requires -Version 7
 [CmdletBinding()]
 param()
 
@@ -238,7 +238,7 @@ if (@($governanceFiles.Values | Where-Object { -not (Test-Path -LiteralPath $_ -
     $workOrderContract = Get-Content -LiteralPath $governanceFiles["agent-work-order"] -Raw
     $delegationContract = Get-Content -LiteralPath $governanceFiles["delegate-to-grok-build"] -Raw
 
-    foreach ($required in @("sole decision authority", "Gate 1", "execution envelope", "Gate 2", "ok explícito do Matheus", "nunca force push", "BLOCKED_BY_DECISION")) {
+    foreach ($required in @("sole decision authority", "Gate 1", "execution envelope", "Gate 2", "ok explícito do aprovador humano", "nunca force push", "BLOCKED_BY_DECISION")) {
         if (-not $agentsGovernance.Contains($required)) { Add-Error "AGENTS.md is missing governance marker '$required'." }
     }
     foreach ($required in @("Human-approved scope", "Allowed read areas", "Allowed modification areas", "Decision boundaries", "Escalation conditions", "READY_FOR_MANUAL_VALIDATION", "USER_DECISION_REQUIRED")) {

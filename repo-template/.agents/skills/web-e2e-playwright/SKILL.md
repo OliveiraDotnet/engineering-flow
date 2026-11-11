@@ -42,4 +42,4 @@ Dentro do workspace de planejamento da demanda, em `evidencias/`:
 
 ## R0 de tela
 
-Se o defeito só aparece na tela, o R0 pode ser este e2e: falha antes do fix e passa depois. O planejador (hoje, o Jeff) opina antes. Só o Matheus dispensa, com o motivo no plano. As duas execuções entram na evidência.
+Se o defeito só aparece na tela, o R0 pode ser este e2e: falha antes do fix e passa depois. O planejador opina antes. Só o aprovador humano dispensa, com o motivo no plano. As duas execuções entram na evidência.

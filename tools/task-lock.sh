@@ -17,7 +17,7 @@ USAGE
 command="$1"; shift
 case "$command" in acquire|release|status) ;; -h|--help) usage; exit 0 ;; *) echo "Unknown command: $command" >&2; usage >&2; exit 2 ;; esac
 
-task=""; harness="Grok Build"; branch=""; bot=""; repo="."; force=false
+task=""; harness="default"; branch=""; bot=""; repo="."; force=false
 while [ $# -gt 0 ]; do
   case "$1" in
     --task) task="${2:?--task requires a value}"; shift 2 ;;

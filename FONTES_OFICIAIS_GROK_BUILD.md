@@ -1,43 +1,31 @@
-# Fontes oficiais do Grok Build
+# Integração de Harness e Configuração de Segurança — Engineering Flow 5.0
 
-Este arquivo registra as decisões específicas do Grok Build usadas pelo Engineering Flow 3.0. Consulte novamente as fontes antes de alterar caminhos, formatos ou políticas. O único harness do pack é o Grok Build.
+Este arquivo registra as convenções de integração de harness e salvaguardas locais usadas pelo Engineering Flow 5.0. O método é **agnóstico de ferramenta**: qualquer harness (CLI ou IDE) pode operar como `Implementor` e `Tester`, usando `.agents/skills/` (ou o espelho `.grok/skills/` e `.grok/agents/` quando aplicável).
 
 ## Regras e contexto do projeto
 
-- [Project rules](https://docs.x.ai/build/features/project-rules): o Grok Build lê `AGENTS.md` como instrução de projeto.
-- O pack não cria `GROK.md`: `AGENTS.md` é a fonte de orientação do projeto.
+- `AGENTS.md` na raiz do repositório é a fonte canônica de orientação do projeto e o **único arquivo do Engineering Flow versionado no Git do repositório alvo**.
+- A instalação do Engineering Flow 5.0 não cria arquivos de versão (`.agent-pack/state.txt`) e adiciona `.agents/`, `.grok/`, `.agent-pack/`, `docs/engineering-flow/`, `docs/ai/`, `prompts/` e `Planejamento/` ao `.gitignore` do repositório alvo.
 
-## Skills, agentes e configuração
+## Skills, agentes e salvaguardas locais
 
-- [Skills, plugins and marketplaces](https://docs.x.ai/build/features/skills-plugins-marketplaces): skills locais do projeto usam `.grok/skills`.
-- [Subagents](https://docs.x.ai/build/features/subagents): agentes personalizados usam arquivos Markdown em `.grok/agents`; subagentes podem executar em paralelo e usar isolamento por worktree.
-- [Settings](https://docs.x.ai/build/settings): configuração de projeto usa `.grok/config.toml`.
-- [Permissions](https://docs.x.ai/build/features/permissions): regras de permissão podem permitir, perguntar ou negar comandos específicos.
+- Skills canônicas do projeto ficam em `.agents/skills/` e são espelhadas em `.grok/skills/`.
+- Perfis de subagentes ficam em `.grok/agents/` (`repo-explorer`, `implementer`, `dotnet-implementer`, `test-guardian`, `change-reviewer`, `frontend-web`, `database-sqlserver`, `security-reviewer`, `performance-reviewer`, `release-reviewer`).
+- A configuração `.grok/config.toml` instala uma política mínima de proteção que nega operações destrutivas (`git reset --hard`, `git clean`, `rm -rf`).
+- Commit e push seguem o Gate 2: ok explícito do aprovador humano, commit feito exclusivamente pelo `Implementor` (`--commit-gate2`), push feito exclusivamente pelo revisor/entrega (ou publicador) ou pelo aprovador humano manualmente.
 
-O pack instala em `.grok/config.toml` somente uma política mínima do projeto que nega operações destrutivas. Commit e push seguem o Gate 2: ok explícito do Matheus, commit só pelo Grok Build, push só pelo Jow ou pelo Matheus manualmente. Autenticação, modelo, sandbox e preferências pessoais continuam sob responsabilidade da configuração do usuário.
+## Execução não interativa (Headless CLI) e Ciclo de Harness (`harness-cycle`)
 
-## Worktrees e execução não interativa
+Para evitar bloqueios quando um bot ou supervisor invoca o harness por linha de comando:
+- Utilize os runners `run-implementor.{sh,ps1}`, `run-tester.{sh,ps1}` e `supervise-harness.{sh,ps1}` em `.agents/skills/harness-cycle/scripts/`.
+- Ao passar `--harness-cmd`, utilize o modo headless/não-interativo documentado da ferramenta escolhida para que o processo não trave aguardando input interativo no terminal.
+- O estado do último teste é gravado em `.agent-pack/.runtime/test-status.json` e o relatório detalhado em `.agent-pack/evidencias/<CardId>/EVIDENCIA.md`.
 
-- [Worktrees](https://docs.x.ai/build/features/worktrees): worktrees nativos ficam em `~/.grok/worktrees`, fora do repositório principal; sessões ficam em `~/.grok/sessions`.
-- [CLI reference](https://docs.x.ai/build/cli/reference): `--worktree`, `--ref`, `--output-format` e `--no-auto-update` são opções oficiais.
-- [Headless and scripting](https://docs.x.ai/build/cli/headless-scripting): `grok -p` permite execução headless e saída estruturada.
-- [Grok Build overview](https://docs.x.ai/build/overview): visão geral do produto e instalação.
-- [Official source: getting started](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-pager/docs/user-guide/01-getting-started.md): guia mantido no repositório oficial.
-- [Official source: subagents](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-pager/docs/user-guide/16-subagents.md): detalhes de paralelismo e isolamento.
-- [Announcement](https://x.ai/news/grok-build-cli): anúncio oficial do Grok Build.
+## Decisões deliberadas do pack 5.0
 
-O Grok Build lê o índice de skills, escolhe a skill pertinente, implementa, testa e traz evidências. Sem skill que caiba, pergunta.
-
-Veja também [assistente opcional](ASSISTENTE_OPCIONAL.md), sem dependência ou integração direta assumida.
-
-## Decisões deliberadas do pack
-
-- O Grok Build é o único harness; Codex e Claude saíram na 3.0.
-- Os 10 agentes têm origem em `.grok/agents`.
-- Skills compartilhadas continuam canônicas em `.agents/skills` e são espelhadas em `.grok/skills` para descoberta nativa.
-- Não se versionam worktrees, sessões, transcrições, estado da máquina nem `.agent-pack/.runtime/task.lock`.
-- Não se cria `.ai-collab`, `.grok-worktrees` ou outro diretório de coordenação no repositório.
-- Não se ignora `.grok/` inteira: agentes, skills e configuração de projeto instalados ali são parte intencional e versionável da integração.
-- A automação padrão não usa `--yolo`; permissões amplas exigem decisão explícita do usuário.
+- O Engineering Flow 5.0 não exige nenhuma ferramenta específica: pode ser usado com um único harness standalone ou com múltiplos bots em hierarquia.
+- Os 10 perfis de especialistas têm origem em `.grok/agents`.
+- Skills compartilhadas continuam canônicas em `.agents/skills` e espelhadas em `.grok/skills`.
+- No repositório alvo, **apenas `AGENTS.md` é versionado**; nenhuma pasta operacional ou arquivo de versão do EF é versionado no projeto do usuário.
 - A tarefa não concede automaticamente commit ou push. O Gate 2 define os papéis.
-- Matheus é a única autoridade decisória; plano/aprovação precedem implementação e somente testes aprovados executam.
+- O aprovador humano é a única autoridade decisória; plano/aprovação precedem implementação e somente testes aprovados executam.

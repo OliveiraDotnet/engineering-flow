@@ -1,19 +1,19 @@
 ---
 name: delegate-to-grok-build
-description: Hand a bounded task to an available Grok Build session or native subagent with explicit scope and independent diff review. Use when Grok delegation is requested or useful, not as a prerequisite for standalone work.
+description: Hand a bounded task to an available harness session or native subagent with explicit scope and independent diff review. Use when harness delegation is requested or useful, not as a prerequisite for standalone work.
 ---
 
-## Engineering Flow 3.0 execution gate
+## Engineering Flow 5.0 execution gate
 
 Follow docs/engineering-flow/workflow.md in the target repository. Understand demand, present a technical plan, receive human approval, implement, execute only approved tests, gather criterion-linked evidence, deliver. Existing explicit authorization persists. Investigation/plan do not authorize implementation. Absence of a test request does not automatically authorize tests: highlight missing validation and ask whether to include it. If only implementation is approved, deliver it as unvalidated with pending checks. Material changes in scope, behavior, architecture/contracts, dependencies, security/data or validation return to the human. This gate governs execution steps below; no automatic delegation or second provider is required.
 
-# Delegate to Grok Build
+# Delegate to Harness Session
 
-This skill is the adapter for the current implementer instance (Grok Build). The method itself is role-based (see the Roles section of docs/engineering-flow/workflow.md); another implementer would get its own adapter skill without changing gates, rules or branches.
+This skill is an optional CLI/subagent delegation adapter for a harness instance. The method itself is role-based (see the Roles section of docs/engineering-flow/workflow.md); any harness can operate standalone or via `harness-cycle` without changing gates, rules or branches.
 
-Read the shared [agent work order](../agent-work-order/SKILL.md) and follow its coordinator contract. Grok Build or another authorized agent can coordinate; user authorization establishes the execution envelope.
+Read the shared [agent work order](../agent-work-order/SKILL.md) and follow its coordinator contract. Any authorized agent can coordinate; user authorization establishes the execution envelope.
 
-If already running in Grok Build, prefer its available native subagent mechanism for a useful independent task rather than recursively starting another coordinator. A missing Grok CLI does not block ordinary standalone work.
+If already running inside a harness, prefer its available native subagent mechanism for a useful independent task rather than recursively starting another coordinator. A missing external CLI does not block ordinary standalone work.
 
 For a cross-tool CLI handoff, verify the installed version and supported help, then use a scoped isolated worktree only when the task needs it. A typical supported invocation is:
 

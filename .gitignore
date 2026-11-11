@@ -26,6 +26,7 @@ coverage/
 .agent-pack/tmp/
 .agent-pack/sessions/
 .agent-pack/worktrees/
+.agent-pack/evidencias/
 *.agent-pack.new
 *.agent-pack.backup-*
 .grok/sessions/

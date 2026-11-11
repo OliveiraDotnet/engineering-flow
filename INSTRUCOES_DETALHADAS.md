@@ -1,70 +1,58 @@
-# Adoção — Engineering Flow 4.0
+# Adoção — Engineering Flow 5.0
 
-Instalação e exemplos: [README](README.md) e [manual](MANUAL_DE_USO.md). Versão atual `4.0.0`. A linha 4.0 evolui a 3.x (incompatível com 2.1.1 e 1.7.0; para a linha 2.x use a tag `v2.1.1`). Este pack não instala runtimes nem configura contas externas. O único harness configurado é o Grok Build, operando sob a hierarquia Matheus (aprovador) → Jeff (engenheiro-chefe) → bot de projeto (revisor/entrega) → Grok Build (implementador) e Jow (validador/publicador opcional), com memória persistente no **`ai-memory` (Fábio Akita)**.
+Instalação e exemplos: [README](README.md) e [manual](MANUAL_DE_USO.md). Versão atual `5.0.0`. A linha 5.0 evolui a 4.x tornando o fluxo 100% agnóstico de ferramenta e de persona, introduzindo a camada de harness (`Implementor` + `Tester` + `harness-cycle`) e garantindo instalação limpa nos repositórios destino (**apenas `AGENTS.md` versionado**, sem geração de `.agent-pack/state.txt` na instalação). Este pack não instala runtimes nem configura contas externas.
 
-## Instalação inicial e Instalação Limpa 4.0 (Delegação Jeff → Bot de Projeto)
+## Instalação Limpa 5.0 (Apenas `AGENTS.md` Versionado no Repositório Alvo)
 
 Inspecione com DiscoverOnly/--discover-only, confira Git roots e perfis, faça DryRun/--dry-run e instale dentro do escopo autorizado. Core sempre, web/sqlserver/mobile sugeridos por evidência, quality apenas explícito. Perfil explícito evita autodetecção. Vários repos recebem instalação por Git root; pasta não Git requer AllowNonGit/--allow-non-git. Repo Git vazio recebe instruções e segue new-project para planejar antes de criar aplicação.
 
-Quando o Jeff delega a **Instalação Limpa da v4.0** para um bot de projeto:
-1. O bot executa o instalador com `--force` / `-Force` apontando para o repositório (ex: `bash ./scripts/install-agent-pack.sh /caminho/repo --force --profile web,sqlserver`). O instalador cria backups seguros (`*.agent-pack.backup-*`) de arquivos preexistentes divergentes, instala todas as skills/agentes/regras v4.0 e grava `.agent-pack/state.txt` na versão `4.0.0`.
-2. O bot configura o arquivo `.ai-memory.toml` na raiz de cada repositório (`workspace = "<slug-do-projeto>"` compartilhado entre repos do mesmo sistema e `project = "<slug-do-repo>"`).
-3. O bot preenche as Convenções do Projeto em `AGENTS.md` (branches `main`/`hom`, pacote SQL por Tag e workspace de planejamento) e inicializa `Planejamento/DEMANDAS.md` e `Planejamento/scripts/{PendentesProducao,Releases,Aplicados}`.
+Na **Instalação Limpa da v5.0** em um repositório (executada diretamente pelo desenvolvedor ou pelo agente Revisor/Entrega do repositório):
+1. Executa-se o instalador apontando para o repositório (ex: `bash ./scripts/install-agent-pack.sh /caminho/repo --force --profile web,sqlserver`). O instalador cria backups seguros (`*.agent-pack.backup-*`) de arquivos preexistentes divergentes, instala todas as skills (`.agents/skills/` e espelho `.grok/skills/`), prompts e contratos da v5.0 e **não cria arquivo de versão/estado (`.agent-pack/state.txt`)**.
+2. O script `protect-engineering-flow-files.{sh,ps1}` é executado automaticamente pelo instalador e adiciona ao `.gitignore` todas as pastas e arquivos operacionais do Engineering Flow (`.agents/`, `.grok/`, `.agent-pack/`, `docs/engineering-flow/`, `docs/ai/`, `prompts/`, `Planejamento/`, `planejamento/`, `.engineering-flow-evidence/`, `*.agent-pack.new`, `*.agent-pack.backup-*`).
+3. Dessa forma, **apenas o arquivo `AGENTS.md` na raiz do repositório permanece versionável**. Quando outros desenvolvedores da equipe derem `git pull`, não receberão pastas de agentes, prompts ou arquivos de versão do método.
+4. Opcionalmente, configura-se o arquivo `.ai-memory.toml` local (`workspace = "<slug-do-projeto>"` e `project = "<slug-do-repo>"`), preenchem-se as Convenções do Projeto em `AGENTS.md` e inicializam-se `Planejamento/DEMANDAS.md` e `Planejamento/scripts/{PendentesProducao,Releases,Aplicados}`.
 
-O instalador grava `integration|grok`. `--integration grok` é aceito e é o único valor válido. Instruções persistentes requerem recarga conforme host. Respeite regras personalizadas no destino.
+## Atualização por Reconciliação (`update-agent-pack`) ou Reinstalação Limpa
 
-## Atualizar uma instalação 3.x por reconciliação
+- **Reinstalação Limpa (Recomendado no padrão 5.0):** Como no padrão 5.0 as pastas `.agents/`, `.grok/`, `docs/engineering-flow/` e `prompts/` são locais (ignoradas no Git) e `AGENTS.md` guarda as regras do projeto, atualizar o pack basta rodar `install-agent-pack` novamente (sem `--force`, o instalador preserva `AGENTS.md` e `docs/ai/` locais gerando `.agent-pack.new` se houver diferença; ou com `--force` gerando backup `*.agent-pack.backup-*`).
+- **Reconciliação (`update-agent-pack`):** Mantida para compatibilidade com instalações anteriores que possuam `.agent-pack/state.txt` ou arquivos rastreados pelos catálogos históricos (`compat/releases/1.1.0.txt` a `5.0.0.txt`).
 
-Use update-agent-pack com Check antes de Apply. No PowerShell sem console, `-Apply` inclui `-Confirm:$false`. `.agent-pack/state.txt` continua sendo o formato/local de estado. Catálogos históricos (`1.1.0` a `4.0.0`) permanecem em `compat/releases/`. Bytes próprios ou release anterior diferente não viram arquivo confiável silenciosamente.
-
-| Propriedade | Atualização |
+| Propriedade | Comportamento |
 |---|---|
-| managed | Arquivo intacto conhecido pode atualizar; conteúdo customizado gera conflito/decisão |
-| merge | AGENTS.md e config Grok preservados e proposta de diferenças para revisão/merge |
-| seed | docs/ai existentes permanecem do projeto; não são sobrescritos por template |
+| managed | Skills, prompts e docs do método; atualizados pelo pack |
+| merge | `AGENTS.md` e configuração local preservados com proposta de diferenças para revisão/merge |
+| seed | `docs/ai/*` pertencem ao repositório local; não são sobrescritos silenciosamente por template |
 
-Na instalação existente, não use Force para atualizar. Confira ações propostas, conflitos e seleção de perfis. KeepLocal registra preferência local; AcceptPack escolhe conteúdo do pack conscientemente; AcceptMerge reconhece merge já revisado. PowerShell recebe listas de IDs de artifact; Bash recebe --keep-local/--accept-pack/--accept-merge com os IDs mostrados pelo Check. Caminhos não são IDs; consulte pack-artifacts.txt, por exemplo guidance.agents e skill.shared.bugfix-dotnet. Não use aceitação ampla sem revisar. Updater faz backups e mantém locks/rollback; não remova locks de uma execução ativa. Update não acrescenta perfil mobile/quality não instalado. Para adicionar perfil use instalador com seleção explícita após revisão; ele preserva seleções existentes.
+## Camada de Harness (`Implementor` + `Tester` + `harness-cycle`)
 
-IDs estáveis permitem renomear destino em versões futuras com reconciliação; aposentadoria exige origem conhecida e tratamento de customização. Entradas bootstrap-dotnet-repo, bugfix-dotnet, feature-slice-dotnet, legacy-refactor-dotnet, pr-review-dotnet e update-agent-pack permanecem. Use novos nomes para workflows gerais e antigos quando a especialização for aplicável.
+A versão 5.0 formaliza os dois papéis da base da pirâmide que operam diretamente sobre o código-fonte:
+- **`Implementor` (`prompts/12-implementor-harness.md` e `run-implementor.{sh,ps1}`):** recebe o `TASK_SPEC.md` (e o relatório de falha do Tester quando em retentativa), adquire/valida o `.agent-pack/.runtime/task.lock`, altera o código na branch do card (`feat/AB-<ID>-<slug>` ou `fix/AB-<ID>-<slug>`) sem fazer commit durante o loop, e executa o `git commit` exclusivamente quando invocado com `--commit-gate2` após o ok humano no Gate 2 (expirando o `task.lock`).
+- **`Tester` (`prompts/13-tester-harness.md` e `run-tester.{sh,ps1}`):** nunca altera código de negócio; valida `R0-RED` (falha antes do fix), `R0-GREEN` (passa após o fix) e `FULL`, gravando `.agent-pack/evidencias/<CardId>/EVIDENCIA.md` e `.agent-pack/.runtime/test-status.json`.
+- **Supervisor (`supervise-harness.{sh,ps1}`):** executa o loop fechado pré-Gate 2 entre `run-implementor` e `run-tester` com limite máximo de 3 tentativas.
+- **Comunicação CLI Sólida e Não-Bloqueante:** Quando um bot ou supervisor invoca um harness via CLI em modo headless, o comando deve incluir as flags não-interativas do respectivo CLI para evitar bloqueios aguardando confirmação humana no terminal.
 
 ## Limites verificáveis
 
 Detectores levantam manifests, projetos, CI/scripts e pistas de runtime/provider sem imprimir conexão, script body ou segredo. PowerShell retorna JSON/markdown com metadados; Bash retorna markdown e caminhos para inspeção posterior. Não são parsers universais nem executam app/teste. Verifique versão e comando no repo real. SQL genérico não identifica SQL Server; use provider/T-SQL específico. AndroidManifest, alvos iOS em projeto Xcode, pubspec/MAUI e dependências mobile/híbridas são pistas que precisam confirmação; Kotlin/Swift isolados não selecionam mobile. Tecnologias não reconhecidas continuam investigáveis.
 
-Testes do pack exercitam scripts, instalação, atualização/ownership/seleções, rollback e fixtures. Checks de contrato são estáticos, não prova de obediência de modelos. Browser real, banco, app desktop ou device mobile só são verificados quando executados e autorizados na tarefa. Zero testes, ambiente ausente, falha e evidência incompleta são estados distintos. [Capabilities](repo-template/docs/engineering-flow/capabilities.md) define evidência por área. Os testes PowerShell exigem PowerShell 7 ou mais novo; cada `.ps1` tem equivalente `.sh`.
-
-## Extensão e proteção de contexto
-
-Outros agentes podem consumir o contrato e skills se a ferramenta tiver mecanismo verificado; o pack instala o Grok Build. Skills específicas do repo somente para procedimento recorrente confirmado, com frontmatter e recursos mínimos. Handoff real usa agent-work-order e ferramentas disponíveis, sem API entre provedores inventada. Escritores concorrentes precisam isolamento/contexto local preservado. Não usar clean ref que omita alterações necessárias.
-
-Evidências transitórias usam diretório temporário externo por padrão. Estado `.agent-pack` no destino inclui controle de atualização, backups e conflitos; não é memória do produto e não deve ser commitado com dados sensíveis. O LOCK da tarefa fica em `.agent-pack/.runtime/task.lock` e não é versionado. Conhecimento durável em docs/ai é confirmado, redigido e ligado à fonte/data. Não armazenar tokens, connection strings, sessões ou dumps. Documentação oficial é opcional/sob demanda, não pesquisa obrigatória por tarefa nem motivo para modernizar legado.
+Testes do pack exercitam scripts, instalação limpa, ciclo de harness (`test-harness-cycle`), atualização/ownership/seleções, rollback e fixtures. Checks de contrato são estáticos, não prova de obediência de modelos. Browser real, banco, app desktop ou device mobile só são verificados quando executados e autorizados na tarefa. Zero testes, ambiente ausente, falha e evidência incompleta são estados distintos. [Capabilities](repo-template/docs/engineering-flow/capabilities.md) define evidência por área. Os testes PowerShell exigem PowerShell 7 ou mais novo; cada `.ps1` tem equivalente `.sh`.
 
 ## Higiene Git no destino
 
-Instalação e atualização acrescentam somente padrões faltantes de resíduos do pack ao .gitignore existente, preservando conteúdo e bytes originais. DryRun/WhatIf e Check não escrevem. A proteção é aplicada após instalação/reconciliação bem-sucedida; a checagem prévia rejeita arquivo vinculado, encoding incompatível ou bloqueio de escrita identificado. Se uma escrita de proteção falhar depois da reconciliação, reporte esse passo como falho e confira o estado/diff: não presuma rollback da etapa já concluída.
+Instalação e atualização acrescentam somente padrões faltantes ao `.gitignore` existente, preservando conteúdo, encoding UTF-8, BOM e CRLF originais. DryRun/WhatIf e Check não escrevem.
 
-Permanecem versionáveis AGENTS.md, skills/configurações de projeto em .agents/.grok, docs/ai úteis e .agent-pack/state.txt (IDs/hashes/seleção para futuras atualizações). No modo padrão (versionado), não se ignora nenhuma dessas árvores inteira; para o modo local, veja abaixo. Ignore .agent-pack/.runtime (backups/retired/locks/staging, inclusive `task.lock`), state temporário, caches/logs/sessões/worktrees operacionais, .engineering-flow-evidence e propostas/backups *.agent-pack.new / *.agent-pack.backup-* em qualquer diretório. Revise uma proposta ignorada explicitamente pelo caminho antes de aceitar; Git status não é inventário de conflitos.
-
-Regras próprias preexistentes não são removidas nem sobrepostas. Se já ignorarem state.txt ou instruções necessárias, use git check-ignore -v para localizar a regra e decidir a correção. Arquivos operacionais já rastreados continuam rastreados: .gitignore não os retira do índice; remoção do histórico/índice exige revisão específica. Outros diretórios de saída particulares do projeto/host precisam de regras confirmadas; não se adicionam padrões globais para esconder dados desconhecidos. Segredos/dados continuam sujeitos à revisão, sem promessa de sanitização automática.
-
-### Modo pack local
-
-Opcional, declarado em AGENTS.md (`Versionamento do pack: local`). O pack fica no projeto destino, mas não é versionado. O usuário acrescenta ao .gitignore do destino:
-
+No padrão 5.0, `protect-engineering-flow-files.{sh,ps1}` garante que todas as pastas e artefatos operacionais do Engineering Flow fiquem ignorados no `.gitignore`:
 ```gitignore
+*.agent-pack.new
+*.agent-pack.backup-*
+.agent-pack/
 .agents/
 .grok/
-.agent-pack/
 docs/engineering-flow/
+docs/ai/
 prompts/
+.engineering-flow-evidence/
+Planejamento/
+planejamento/
 ```
-
-AGENTS.md e docs/ai continuam versionados: contêm regras e memória específicas do projeto.
-
-- Updater: lê `.agent-pack/state.txt` do disco e não consulta o Git para decidir a reconciliação. Com state.txt presente localmente, Check e aplicação funcionam normalmente.
-- Clone novo ou outra máquina: o estado não acompanha o repositório. Sem state.txt, o updater só tenta inferir uma instalação por hashes conhecidos (versão atual ou `compat/releases`) dos arquivos presentes; num clone novo os arquivos ignorados também não existem e ele encerra pedindo o instalador. Rode a instalação novamente, com perfis explícitos (sem state.txt não há seleção registrada para preservar). Para arquivos já existentes, o instalador pula os idênticos ao pack; os divergentes não são sobrescritos: a versão do pack vai para `<arquivo>.agent-pack.new` para revisão (Force substitui com backup `*.agent-pack.backup-*`). O state.txt gerado registra idênticos como `tracked` e divergentes/seed como `keep-local` com o hash local.
-- Customizações locais de arquivos do pack não têm histórico Git; mantenha backup próprio se forem relevantes.
-- Arquivos já rastreados não saem do índice por causa do .gitignore; remova com `git rm --cached` revisado (o arquivo permanece no disco).
-- `protect-engineering-flow-files` continua escrevendo apenas as regras padrão (resíduos gerados). As regras do modo local são adicionadas pelo usuário.
-
-PowerShell 7 valida UTF-8 e preserva BOM/CRLF ao acrescentar; Bash preserva bytes, rejeita NUL e verifica UTF-8 quando iconv está disponível. Encoding legado incompatível precisa de mudança revisada; não há transcodificação automática.
+Assim, **apenas `AGENTS.md` permanece visível e versionável no Git do projeto**. Se algum arquivo de versão antigo já estiver rastreado no índice Git de um repositório legado, remova-o do índice com `git rm --cached` revisado (mantendo o arquivo local se desejar).

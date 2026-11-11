@@ -19,4 +19,4 @@ Follow docs/engineering-flow/workflow.md in the target repository. Understand de
 6. Update `docs/ai`, configure `.ai-memory.toml` (`workspace` shared across project repos + repo `project`) when authorized, and replace `[UNVERIFIED]` items and Project Conventions in `AGENTS.md` only with confirmed, always-relevant rules (including main/homologation branches, legacy test health, `Planejamento/DEMANDAS.md` and SQL release package). Keep `AGENTS.md` short; put details in `docs/ai` and `ai-memory`. Use `agents-md-generator` only for that short persistent shell.
 7. End without changing production code. Ask the user to start a new task so updated instructions load.
 
-Grok Build can perform bootstrap directly. Use the repository exploration role mapped by project instructions only when a bounded question benefits from delegation; no named agent is required. Do not fan out reviewers during bootstrap.
+The active harness can perform bootstrap directly. Use the repository exploration role mapped by project instructions only when a bounded question benefits from delegation; no named agent is required. Do not fan out reviewers during bootstrap.

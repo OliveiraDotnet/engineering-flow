@@ -37,8 +37,8 @@ try {
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $grokOnly '.codex'))) 'Grok-only installed Codex agents.'
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $grokOnly '.claude'))) 'Grok-only installed Claude agents.'
     Assert-True (@(Get-ChildItem -LiteralPath (Join-Path $grokOnly '.agents') -Recurse -Filter openai.yaml).Count -eq 0) 'Grok-only installed Codex metadata.'
-    $grokState = Get-Content -LiteralPath (Join-Path $grokOnly '.agent-pack/state.txt') -Raw
-    Assert-True ($grokState -match '(?m)^integration\|grok$' -and $grokState -notmatch '(?m)^integration\|codex$') 'Grok-only state selected Codex.'
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $grokOnly '.agent-pack/state.txt'))) 'Clean install created state.txt in grok-only.'
+    Assert-True (Test-Path -LiteralPath (Join-Path $grokOnly '.agents/skills/harness-cycle/SKILL.md')) 'Harness-cycle skill missing in grok-only.'
     $rejected = $false
     try { & $Installer -RepoPath $grokOnly -Integration codex,grok -Confirm:$false } catch { $rejected = $true }
     Assert-True $rejected 'Installer accepted Codex integration.'
@@ -67,12 +67,12 @@ try {
     Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\agents-md-generator\references\agents-md-checklist.md")) "AGENTS.md generator skill was not installed."
     Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\dotnet-xunit-tests\references\xunit-test-checklist.md")) "xUnit test skill was not installed."
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\update-engineering-flow\SKILL.md"))) "Removed update-engineering-flow skill was installed."
-    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agent-pack\state.txt")) "Installer did not write Agent Pack state."
-    $coreState = Get-Content -LiteralPath (Join-Path $Repo ".agent-pack\state.txt") -Raw
-    $expectedVersion = (Get-Content -LiteralPath (Join-Path (Split-Path -Parent $ScriptDir) 'pack-version.txt') -Raw).Trim()
-    Assert-True ($coreState -match ('(?m)^version\|' + [regex]::Escape($expectedVersion) + '$')) 'Installer state version does not match pack-version.txt.'
-    Assert-True ($coreState -match '(?m)^profile\|core$') "Installer state is missing core."
-    Assert-True ($coreState -match '(?m)^integration\|grok$') "Default install did not select Grok."
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".agent-pack\state.txt"))) "Clean install wrote state.txt."
+    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\harness-cycle\SKILL.md")) "Harness-cycle skill was not installed."
+    Assert-True (Test-Path -LiteralPath (Join-Path $Repo "prompts\12-implementor-harness.md")) "Implementor harness prompt was not installed."
+    Assert-True (Test-Path -LiteralPath (Join-Path $Repo "prompts\13-tester-harness.md")) "Tester harness prompt was not installed."
+    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\harness-cycle\scripts\supervise-harness.ps1")) "Harness supervisor was not installed."
+    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\harness-cycle\scripts\run-implementor.ps1")) "Harness implementor runner was not installed."
     Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\update-agent-pack\SKILL.md")) "Agent Pack update skill was not installed."
     Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".grok\config.toml")) "Grok config was not installed by default."
     Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".grok\agents\repo-explorer.md")) "Grok agent origin was not installed."
@@ -106,8 +106,8 @@ try {
     Add-Content -LiteralPath (Join-Path $Repo ".agents\skills\bugfix-dotnet\SKILL.md") -Value "# local customization"
     & $Installer -RepoPath $Repo -Confirm:$false
     & $Installer -RepoPath $Repo -Confirm:$false
-    $state = Get-Content -LiteralPath (Join-Path $Repo ".agent-pack\state.txt") -Raw
-    Assert-True ($state -match '(?m)^artifact\|[^|]+\|\.agents/skills/bugfix-dotnet/SKILL.md\|[^|]+\|-\|-\|keep-local\|') "Local customization was not recorded as keep-local."
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".agent-pack\state.txt"))) "Clean install wrote state.txt on local customization."
+    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\bugfix-dotnet\SKILL.md.agent-pack.new")) "Local customization sidecar was not created."
     Assert-True ((Get-Content -LiteralPath (Join-Path $Repo ".agents\skills\bugfix-dotnet\SKILL.md") -Raw) -match 'local customization') "Local customization was overwritten."
 
     & $Installer -RepoPath $Repo -Force -Confirm:$false

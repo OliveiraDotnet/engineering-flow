@@ -60,7 +60,7 @@ Follow existing repository guidance. If Agent Pack is installed, reuse its templ
 - Facts to confirm, or confirmed facts after bootstrap
 - Working rules
 - Context and delegation
-- Grok Build delegation when that integration is present
+- Harness delegation when an integration is present
 - Definition of done
 
 Link existing detailed documentation in the repository's chosen location (`docs/ai` only when that convention exists). Retain short, confirmed build/test commands that agents need regularly. Do not create a documentation tree or relocate manual notes merely to match a template. Include database rules only when they are durable, confirmed operating constraints.

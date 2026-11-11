@@ -1,4 +1,4 @@
-# Engineering Flow manifest v4.0.0
+# Engineering Flow manifest v5.0.0
 core|AGENTS.md
 core|docs/ai/project-map.md
 core|docs/ai/architecture.md
@@ -55,6 +55,20 @@ core|.agents/skills/feature-slice/SKILL.md
 grok-core|.agents/skills/feature-slice/SKILL.md|.grok/skills/feature-slice/SKILL.md
 core|.agents/skills/feature-slice-dotnet/SKILL.md
 grok-core|.agents/skills/feature-slice-dotnet/SKILL.md|.grok/skills/feature-slice-dotnet/SKILL.md
+core|.agents/skills/harness-cycle/SKILL.md
+grok-core|.agents/skills/harness-cycle/SKILL.md|.grok/skills/harness-cycle/SKILL.md
+core|.agents/skills/harness-cycle/scripts/run-implementor.ps1
+grok-core|.agents/skills/harness-cycle/scripts/run-implementor.ps1|.grok/skills/harness-cycle/scripts/run-implementor.ps1
+core|.agents/skills/harness-cycle/scripts/run-implementor.sh
+grok-core|.agents/skills/harness-cycle/scripts/run-implementor.sh|.grok/skills/harness-cycle/scripts/run-implementor.sh
+core|.agents/skills/harness-cycle/scripts/run-tester.ps1
+grok-core|.agents/skills/harness-cycle/scripts/run-tester.ps1|.grok/skills/harness-cycle/scripts/run-tester.ps1
+core|.agents/skills/harness-cycle/scripts/run-tester.sh
+grok-core|.agents/skills/harness-cycle/scripts/run-tester.sh|.grok/skills/harness-cycle/scripts/run-tester.sh
+core|.agents/skills/harness-cycle/scripts/supervise-harness.ps1
+grok-core|.agents/skills/harness-cycle/scripts/supervise-harness.ps1|.grok/skills/harness-cycle/scripts/supervise-harness.ps1
+core|.agents/skills/harness-cycle/scripts/supervise-harness.sh
+grok-core|.agents/skills/harness-cycle/scripts/supervise-harness.sh|.grok/skills/harness-cycle/scripts/supervise-harness.sh
 core|.agents/skills/legacy-refactor-dotnet/SKILL.md
 grok-core|.agents/skills/legacy-refactor-dotnet/SKILL.md|.grok/skills/legacy-refactor-dotnet/SKILL.md
 core|.agents/skills/maintain-agent-memory/SKILL.md
@@ -127,6 +141,8 @@ core|prompts/07-investigate-only.md
 core|prompts/08-update-agent-pack.md
 core|prompts/10-new-project.md
 core|prompts/11-complete-task.md
+core|prompts/12-implementor-harness.md
+core|prompts/13-tester-harness.md
 core|docs/engineering-flow/anti-patterns.md
 core|docs/engineering-flow/capabilities.md
 core|docs/engineering-flow/planning-workspace.md
