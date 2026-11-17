@@ -14,7 +14,7 @@ Follow docs/engineering-flow/workflow.md in the target repository. Understand de
 3. Store each fact once:
    - `AGENTS.md` for short always-relevant operating rules and project conventions (including `.ai-memory.toml` namespace).
    - `docs/ai/project-map.md` for confirmed navigation and commands.
-   - `architecture.md`, `database.md`, `domain-glossary.md` or `recurring-bugs.md` for their respective durable details.
+   - `architecture.md`, `database.md`, `domain-glossary.md`, `decisions-and-pendencies.md`, `external-boundaries.md` or `recurring-bugs.md` for their respective durable details.
    - **`ai-memory` (`akitaonrails/ai-memory`)** via MCP (`ai-memory mcp-bridge`) and `.ai-memory.toml` (`workspace` + `project`) for cross-session project memory, workstreams (`AB-<ID>`) and agent handoffs.
 4. Do not change production code or duplicate existing guidance.
 5. Never store sensitive data (CPF, bank details, emails, phone numbers, credentials, connection strings) in `ai-memory` or `docs/ai/`; customer data is restricted to a test username only when strictly useful for testing.

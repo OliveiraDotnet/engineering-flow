@@ -15,8 +15,9 @@ Use only when the `web` profile is installed. Follow the repository's existing U
 2. Read the closest existing screen or endpoint and copy its layout, binding names, validation, and error/empty/loading states.
 3. Keep server-side validation. Client validation may assist; it must not replace server checks.
 4. Preserve model-binding field names, routes, partials, components, antiforgery tokens, and shared scripts.
-5. Do not duplicate domain rules in the UI. Do not change public API contracts unless the request includes them.
-6. Read `references/web-dotnet-checklist.md` before touching Web Forms ViewState, `web.config`, or a mixed Framework/Core solution.
-7. Validate with confirmed repository commands only. Provide a short manual scenario when UI automation is unavailable.
+5. Respect the functional vs. visual boundary: structure, fields, routes, menus, and rules belong to the functional implementation; visual styling, component CSS, and accessibility adjustments must not alter routes, binding, or displayed business behavior.
+6. Do not duplicate domain rules in the UI. Do not change public API contracts unless the request includes them.
+7. Read `references/web-dotnet-checklist.md` before touching Web Forms ViewState, `web.config`, or a mixed Framework/Core solution.
+8. Validate with confirmed repository commands only. Provide a short manual scenario when UI automation is unavailable.
 
 Return stack detected, files changed, preserved contracts, validation, and residual risk.

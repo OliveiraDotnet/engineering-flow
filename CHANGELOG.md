@@ -1,5 +1,15 @@
 # Engineering Flow changelog
 
+## 5.1.0 — 2026-11-17
+
+- **Decisões, Pendências e Liberação Parcial no Gate 1:** Adicionado o template `seed` `docs/ai/decisions-and-pendencies.md` (registro único `Dxx` / `Pxx` com dono, impacto e fase/card bloqueado) e suporte explícito em `workflow.md` e `AGENTS.md` para **liberação parcial** no Gate 1 (ex.: liberar base técnica/persistência dev enquanto regras de negócio seguem bloqueadas).
+- **Inventário de Fronteiras e Saídas Externas:** Adicionado o template `seed` `docs/ai/external-boundaries.md` para mapear origens/destinos, protocolos, políticas de CDN/telemetria e uploads; novas saídas fora do inventário disparam `BLOCKED_BY_DECISION`.
+- **Descoberta Funcional e Rastreabilidade em `new-project`:** Atualizados `.agents/skills/new-project/SKILL.md` e `prompts/10-new-project.md` para separar **fato**, **suposição** e **pergunta aberta**, classificar escopo (**core** vs. **ampliação**), gerar matriz inicial de rastreabilidade (`Requisito → Tela/Endpoint → Cenário → Tabela/Migration`) e exigir verificação do grafo transitivo real via lock files (`RestoreLockedMode`).
+- **Estados Canônicos e Transições Fechadas:** Atualizado `docs/ai/domain-glossary.md` com o padrão de separação entre estado de negócio/externo e estado de processamento, rótulos derivados na UI e tabela fechada de transições permitidas.
+- **Fronteira Funcional × Visual (UI), Fechamento Independente de Segurança e Higiene Preventiva:** Atualizados `workflow.md`, `web-app`, `web-dotnet`, `frontend-web`, `security-review-dotnet`, `security-reviewer`, `review-change`, `db-change-sqlserver` e `maintain-agent-memory`: (1) `Implementor` define estrutura, rotas, campos, menus e regras enquanto refinamentos visuais preservam comportamento; (2) achados corrigidos ficam `Em verificação` e só fecham após reteste independente; (3) conferência de `.gitignore` (`git check-ignore`) antes de criar configs locais ou relatórios (`TestResults/`, `*.trx`), `*.example.*` sem segredos e guarda `IsDevelopment()` obrigatória em exceções de dev.
+- **Instalação Limpa Preservada:** Os novos artefatos `docs/ai/*` herdam a proteção automática no `.gitignore`; apenas `AGENTS.md` segue versionável no repositório destino.
+- `pack-version.txt` = `5.1.0`. `compat/releases/5.1.0.txt`.
+
 ## 5.0.0 — 2026-11-11
 
 - **Arquitetura 100% Genérica e Agnóstica de Ferramenta / Persona:** Removidas referências obrigatórias a ferramentas proprietárias (`Claude Code`, `Grok Build`, `Grok Bot`, `Antigravity`) e nomes pessoais (`Jeff`, `Jow`, `Matheus`) em toda a documentação, prompts, skills e scripts. O Engineering Flow 5.0 define uma hierarquia universal de papéis (`Aprovador humano` → `Planejador / Engenheiro-Chefe` → `Revisor / Entrega (Tech Lead de Repositório)` → `Implementor` + `Tester` no harness → `Publicador / Validador opcional`) que pode ser operada por **um único harness acumulando papéis (standalone)** ou por **múltiplos agentes independentes construídos de baixo para cima**.

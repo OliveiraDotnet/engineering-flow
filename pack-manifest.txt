@@ -1,9 +1,11 @@
-# Engineering Flow manifest v5.0.0
+# Engineering Flow manifest v5.1.0
 core|AGENTS.md
 core|docs/ai/project-map.md
 core|docs/ai/architecture.md
 core|docs/ai/database.md
+core|docs/ai/decisions-and-pendencies.md
 core|docs/ai/domain-glossary.md
+core|docs/ai/external-boundaries.md
 core|docs/ai/recurring-bugs.md
 core|docs/ai/runbook.md
 core|.agents/skills/agent-work-order/SKILL.md

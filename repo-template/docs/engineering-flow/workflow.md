@@ -52,11 +52,11 @@ O plano declara um teto por fase, em leituras de arquivo e/ou minutos (e até 3 
 
 Antes de implementar, apresente objetivo, card (`AB-<ID>`), branch (`feat/AB-<ID>-<slug>`), critérios de aceitação observáveis, escopo/não objetivos, componentes afetados, riscos/decisões, avaliação de saúde de testes no legado, testes propostos, ferramentas/ambiente necessários e evidências esperadas. Investigação e plano não autorizam implementação.
 
-Registre o que foi aprovado: implementação, testes/cenários/comandos, ambiente e ações externas. Ausência de pedido de testes não é autorização automática: destaque a validação faltante e pergunte se deve incluí-la. Autorização explícita existente persiste; não peça novamente por passos cobertos. Se só implementação foi aprovada, entregue como implementado e não validado, com verificações pendentes. Inspeção de código não prova teste executado.
+Registre o que foi aprovado: implementação, testes/cenários/comandos, ambiente e ações externas. O aprovador humano também pode registrar **liberação parcial** no Gate 1 em `docs/ai/decisions-and-pendencies.md` (ex.: liberar base técnica/persistência dev enquanto regras de negócio ou integrações externas seguem bloqueadas por pendências `Pxx`), ficando o agente restrito ao subconjunto liberado. Ausência de pedido de testes não é autorização automática: destaque a validação faltante e pergunte se deve incluí-la. Autorização explícita existente persiste; não peça novamente por passos cobertos. Se só implementação foi aprovada, entregue como implementado e não validado, com verificações pendentes. Inspeção de código não prova teste executado.
 
 Em bug, o R0 entra no plano padrão dos dois modos, então o teste deixa de ser "ausente": a aprovação do Gate 1 cobre o R0. Fora desse plano, a ausência de pedido continua sem autorizar teste.
 
-Mudança material de escopo, comportamento, arquitetura/contratos, dependências, segurança/dados ou validação retorna à decisão humana com evidência, opções e recomendação (BLOCKED_BY_DECISION). Não troque ambiente nem instale ferramentas para contornar uma limitação. Um handoff não amplia permissões.
+Mudança material de escopo, comportamento, arquitetura/contratos, dependências (inclusive transitivas relevantes em lock files), saídas externas fora de `docs/ai/external-boundaries.md`, segurança/dados ou validação retorna à decisão humana com evidência, opções e recomendação (`BLOCKED_BY_DECISION`). Não troque ambiente nem instale ferramentas para contornar uma limitação. Um handoff não amplia permissões.
 
 **Gate 2:** commit e push exigem o ok explícito do aprovador humano, dado depois de ele ver as evidências. O commit é feito só pelo implementador (`Implementor`). O push é feito só pelo revisor/entrega (ou publicador) ou, quando indisponível, pelo aprovador humano manualmente. Nenhum outro agente comita ou dá push. Nunca na main ou na master, nunca force push.
 
@@ -109,6 +109,10 @@ Dependências padrão no texto: Playwright, bUnit e Testcontainers. O pack não 
 ## Implementação e validação
 
 Execute somente o envelope aprovado. Detecte runners, ferramentas e ambiente existentes antes de usá-los; proponha preparação faltante para aprovação. Use [capabilities.md](capabilities.md) para escolher a validação aplicável. Corrija falhas e repita os cenários afetados dentro do envelope, mantendo os critérios; ampliação material precisa de decisão. Zero testes, screenshots isoladas e leitura de código não equivalem a comportamento verificado.
+
+- **Fronteira Funcional vs. Visual (UI):** quem define e programa a estrutura da tela (composição, campos, rotas, menus, binding e permissões) é o `Implementor`. Ajustes visuais (CSS, espaçamento, componentes reutilizáveis, acessibilidade) preservam rotas, contratos e o que o sistema faz ou mostra; se alterarem regra ou conteúdo, retornam ao plano/envelope.
+- **Fechamento independente de Segurança e Revisão:** ao corrigir um achado de segurança ou revisão, o `Implementor` registra o ajuste como `Em verificação`, mas o fechamento definitivo exige reteste e confirmação pelo `Tester` / revisor responsável na evidência.
+- **Higiene preventiva de ambiente e segredos:** confira `.gitignore` (`git check-ignore`) **antes** de criar arquivos locais de configuração (`appsettings*.json`, `.env`) ou diretórios de saída de teste (`TestResults/`, `*.trx`). Mantenha `*.example.*` sem valores reais. Exceções temporárias de desenvolvimento (ex.: relaxar validação de certificado TLS local) exigem guarda explícita de ambiente (`IsDevelopment()`), valor seguro (`false`) por padrão, registro em `docs/ai/decisions-and-pendencies.md` e teste cobrindo o comportamento fora de desenvolvimento.
 
 ## Evidência e entrega
 
