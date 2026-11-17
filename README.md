@@ -1,8 +1,8 @@
-# Engineering Flow 5.0
+# Engineering Flow 5.1
 
 > **Workflow de engenharia agnóstico de ferramenta, baseado em hierarquia de papéis, entrega por card e instalação limpa.**
 
-Versão atual: **`5.0.0`** · [Releases no GitHub](https://github.com/OliveiraDotnet/engineering-flow/releases) · [Índice de Skills](SKILLS-INDEX.md) · [Manual de Uso](MANUAL_DE_USO.md) · [Guia Detalhado](INSTRUCOES_DETALHADAS.md) · [Changelog](CHANGELOG.md)
+Versão atual: **`5.1.0`** · [Releases no GitHub](https://github.com/OliveiraDotnet/engineering-flow/releases) · [Índice de Skills](SKILLS-INDEX.md) · [Manual de Uso](MANUAL_DE_USO.md) · [Guia Detalhado](INSTRUCOES_DETALHADAS.md) · [Changelog](CHANGELOG.md)
 
 ---
 
@@ -71,9 +71,9 @@ Modos de execução: **Trivial** (1 critério observável, sem risco a dados/mig
 
 ---
 
-## Instalação Limpa 5.0 (Apenas `AGENTS.md` Versionado)
+## Instalação Limpa 5.1 (Apenas `AGENTS.md` Versionado)
 
-Na versão **`5.0.0`**, instalar o Engineering Flow em um repositório de equipe é limpo por padrão:
+Na versão **`5.1.0`**, instalar o Engineering Flow em um repositório de equipe é limpo por padrão:
 
 - **Não gera arquivos de versão/estado (`.agent-pack/state.txt`)** no repositório destino.
 - **Atualiza o `.gitignore` automaticamente** para ignorar todas as pastas operacionais do pack (`.agents/`, `.grok/`, `.agent-pack/`, `docs/engineering-flow/`, `docs/ai/`, `prompts/`, `Planejamento/`, `planejamento/`, `.engineering-flow-evidence/`, `*.agent-pack.new`, `*.agent-pack.backup-*`).
@@ -81,10 +81,10 @@ Na versão **`5.0.0`**, instalar o Engineering Flow em um repositório de equipe
 
 ### Baixar ou Clonar
 
-Baixe o pacote da [Release `v5.0.0`](https://github.com/OliveiraDotnet/engineering-flow/releases/tag/v5.0.0) ou clone o repositório:
+Baixe o pacote da [Release `v5.1.0`](https://github.com/OliveiraDotnet/engineering-flow/releases/tag/v5.1.0) ou clone o repositório:
 
 ```bash
-git clone --branch v5.0.0 https://github.com/OliveiraDotnet/engineering-flow.git
+git clone --branch v5.1.0 https://github.com/OliveiraDotnet/engineering-flow.git
 ```
 
 ### Instalar em um Repositório Alvo
@@ -123,7 +123,7 @@ bash ./scripts/update-agent-pack.sh /caminho/do/repositorio --apply
 .\scripts\update-agent-pack.ps1 -RepoPath 'C:\src\Sistema' -Apply -Confirm:$false
 ```
 
-`pack-manifest.txt`, `pack-artifacts.txt` e `pack-version.txt` definem artefatos e propriedade (`managed`, `merge`, `seed`). Catálogos de compatibilidade permanecem em `compat/releases/` (`1.1.0` a `5.0.0`).
+`pack-manifest.txt`, `pack-artifacts.txt` e `pack-version.txt` definem artefatos e propriedade (`managed`, `merge`, `seed`). Catálogos de compatibilidade permanecem em `compat/releases/` (`1.1.0` a `5.1.0`).
 
 ---
 

@@ -3,7 +3,9 @@ guidance.agents|AGENTS.md|merge
 memory.project-map|docs/ai/project-map.md|seed
 memory.architecture|docs/ai/architecture.md|seed
 memory.database|docs/ai/database.md|seed
+memory.decisions-and-pendencies|docs/ai/decisions-and-pendencies.md|seed
 memory.domain-glossary|docs/ai/domain-glossary.md|seed
+memory.external-boundaries|docs/ai/external-boundaries.md|seed
 memory.recurring-bugs|docs/ai/recurring-bugs.md|seed
 memory.runbook|docs/ai/runbook.md|seed
 skill.shared.agent-work-order|.agents/skills/agent-work-order/SKILL.md|managed

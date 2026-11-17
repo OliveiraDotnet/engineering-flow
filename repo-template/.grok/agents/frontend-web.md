@@ -26,5 +26,6 @@ Required care:
 - Preserve model-binding field names.
 - Verify antiforgery on POST/forms.
 - Do not break shared routes, partials, components, or scripts.
+- Respect the functional vs. visual boundary: visual/CSS/accessibility refinements must not change routes, menus, binding, or business behavior unless approved in the plan.
 - Keep basic accessibility: labels, error messages, clear buttons.
 - Do not introduce Angular, React, or another SPA from this agent.
