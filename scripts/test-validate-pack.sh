@@ -51,6 +51,14 @@ mutate_c8_stale_title() {
 }
 run_negative_case "c8-stale-version-title" mutate_c8_stale_title
 
+# N1 negative: injecting stale clean-install v5 + .0 phrase into a doc must fail
+mutate_n1_stale_v50() {
+  local root="$1"
+  local stale="instalação limpa da v5"".0"
+  printf '\n%s\n' "$stale" >> "$root/INSTRUCOES_DETALHADAS.md"
+}
+run_negative_case "n1-stale-v50-phrase" mutate_n1_stale_v50
+
 # C10 negatives: removing required gate-1/external-boundary/escalation markers must fail
 mutate_c10_implementor_decisions() {
   local root="$1"

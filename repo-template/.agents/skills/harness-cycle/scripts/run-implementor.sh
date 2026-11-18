@@ -395,8 +395,11 @@ raw_context+="- Skill: $skill"$'\n\n'
 [ -n "$spec_content" ] && raw_context+="## Especificacao da Tarefa"$'\n'"$spec_content"$'\n\n'
 [ -n "$feedback_section" ] && raw_context+="$feedback_section"$'\n'
 
-masked_context="$(ef_mask_string "$raw_context")"
-context_mask_count="${_EF_LAST_MASK_COUNT:-0}"
+_ef_imp_cnt_tmp="$(mktemp "${TMPDIR:-/tmp}/ef-imp-cnt.XXXXXX")"
+masked_context="$(ef_mask_string "$raw_context" "$_ef_imp_cnt_tmp")"
+context_mask_count="$(tr -d '[:space:]' < "$_ef_imp_cnt_tmp" 2>/dev/null || echo 0)"
+[ -n "$context_mask_count" ] || context_mask_count=0
+rm -f -- "$_ef_imp_cnt_tmp"
 context_file="$RUNTIME_DIR/implementor-prompt-$card_id.md"
 context_tmp="$RUNTIME_DIR/.implementor-prompt-$card_id.tmp.$$"
 printf '%s' "$masked_context" > "$context_tmp"

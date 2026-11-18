@@ -248,9 +248,21 @@ fi
 stale_version_hits=""
 while IFS= read -r rel_file; do
   case "$rel_file" in
-    CHANGELOG.md|compat/*|scripts/update-agent-pack.sh|scripts/update-agent-pack.ps1) continue ;;
+    CHANGELOG.md|compat/*|tests/*|scripts/update-agent-pack.sh|scripts/update-agent-pack.ps1) continue ;;
   esac
-  if grep -InE 'Engineering Flow [345]\.0' "$PACK_ROOT/$rel_file" >/dev/null 2>&1; then
+  if perl -e '
+    use strict; use warnings; use utf8;
+    open my $fh, "<:raw", $ARGV[0] or exit 1;
+    local $/ = undef;
+    my $data = <$fh>;
+    close $fh;
+    exit 1 if !defined($data) || index($data, "\0") >= 0;
+    utf8::decode($data);
+    if ($data =~ /(?:Engineering Flow [345]\.0|\bv5\.0\b(?!\.)|padr[aã]o 5\.0\b(?!\.)|pack 5\.0\b(?!\.)|instala[cç][aã]o limpa(?: da)? v?5\.0\b(?!\.))/i) {
+      exit 0;
+    }
+    exit 1;
+  ' "$PACK_ROOT/$rel_file"; then
     stale_version_hits="${stale_version_hits}${stale_version_hits:+, }$rel_file"
   fi
 done < <(cd "$PACK_ROOT" && find . -path './.git' -prune -o -type f -print | sed 's|^\./||' | sort)

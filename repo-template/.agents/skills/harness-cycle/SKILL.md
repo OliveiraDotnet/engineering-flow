@@ -72,11 +72,13 @@ pwsh -File ./.agents/skills/harness-cycle/scripts/run-implementor.ps1 `
   - Harness session logs are sensitive: reading any file that contains a secret (even an authorized file such as consolidated SQL) places that secret in the transcript. Avoid reading secret-bearing files unnecessarily. Old ad hoc wrapper logs must be scanned with `ef_scan` or deleted with Tech Lead approval.
   - Project secret configuration: `EF_SECRET_VALUES_FILE` (outside repo, `EF_HARNESS_LOG_DIR`, `evidencias/`, and `.runtime/`), `EF_SECRET_NAMES`, and `AGENTS.md` line `- Nomes sensíveis (mascaramento): ...`.
   - Post-run `ef_scan` checks logs, `evidencias/<CardId>/`, and `.runtime/`. Any finding masks in-place, sets `test-status.json` `reason="SECRET_IN_LOG"`, and exits `6` (`supervise-harness` aborts immediately). A subsequent clean `run-tester --phase validate` resets `passed=true`, `reason=null`, `secretScan.status="clean"` and unblocks Gate 2.
+  - **Known limitations (secret masking & scanning):** `ef_mask` and `ef_scan` decode JSON escapes (such as `\"`, `\\`, `\/`, `\u003d`, `\u003c`, `\u003e`, `\u0026`, `\u0027`) per line before matching, while preserving the original JSON line outside masked spans. However, base64-encoded secrets, URL-encoded secrets, and secret values split across multiple `stream-json` events are **NOT** detected.
 - **Gate 1 pendencies and external boundaries:**
   - Read `docs/ai/decisions-and-pendencies.md` before changing anything linked to a `Pxx` pendency or a partial Gate 1 release, and do not touch blocked items.
   - Read `docs/ai/external-boundaries.md` before creating any external output (HTTP, CDN, telemetry, upload).
   - Stop with `BLOCKED_BY_DECISION` whenever a decision is missing or an external output is not listed in the inventory.
 - **Gate 2 staging and branch protection:**
   - `--commit-gate2` stages only `--paths` or the `<!-- ef:paths:begin -->`...`<!-- ef:paths:end -->` block of `--task-spec` (default `.agent-pack/.runtime/TASK_SPEC.md`); missing/empty/forbidden paths exit `5`.
+  - `--paths` / `-Paths` (and `ef:paths`) entries must be individual file paths; a directory entry is refused with exit `5`.
   - Protected branches (`main`, `master`, `HEAD`, `AGENTS.md` `- Branches protegidas (harness): ...`, and `EF_PROTECTED_BRANCHES`) exit `3`.
   - `--allow-unvalidated` requires `--reason "<text>"` (at least 10 characters; exit `2` otherwise) and never bypasses `SECRET_IN_LOG` (`exit 6`).

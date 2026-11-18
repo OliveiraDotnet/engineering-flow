@@ -153,6 +153,71 @@ function ef_load_secrets {
     return 0
 }
 
+function ConvertFrom-EfJsonEscapesWithMap {
+    param([string]$Orig)
+    $len = $Orig.Length
+    $sb = [System.Text.StringBuilder]::new($len)
+    $ostart = [System.Collections.Generic.List[int]]::new($len)
+    $oend = [System.Collections.Generic.List[int]]::new($len)
+    $i = 0
+    while ($i -lt $len) {
+        $ch = $Orig[$i]
+        if ($ch -eq '\' -and ($i + 1) -lt $len) {
+            $nxt = $Orig[$i + 1]
+            if ($nxt -eq '"' -or $nxt -eq '\' -or $nxt -eq '/') {
+                [void]$sb.Append($nxt)
+                $ostart.Add($i)
+                $oend.Add($i + 2)
+                $i += 2
+                continue
+            }
+            if ($nxt -eq 'u' -and ($i + 5) -lt $len) {
+                $hex = $Orig.Substring($i + 2, 4)
+                if ($hex -match '^[0-9a-fA-F]{4}$') {
+                    $code = [Convert]::ToInt32($hex, 16)
+                    if ($code -ne 0 -and -not ($code -ge 0xD800 -and $code -le 0xDFFF)) {
+                        [void]$sb.Append([char]$code)
+                        $ostart.Add($i)
+                        $oend.Add($i + 6)
+                        $i += 6
+                        continue
+                    }
+                }
+            }
+        }
+        [void]$sb.Append($ch)
+        $ostart.Add($i)
+        $oend.Add($i + 1)
+        $i += 1
+    }
+    return [pscustomobject]@{
+        Decoded   = $sb.ToString()
+        OrigStart = $ostart
+        OrigEnd   = $oend
+    }
+}
+
+function Invoke-EfReplaceSpans {
+    param(
+        [string]$Orig,
+        [System.Collections.Generic.List[int]]$OrigStart,
+        [System.Collections.Generic.List[int]]$OrigEnd,
+        [System.Collections.Generic.List[int[]]]$Spans
+    )
+    if ($Spans.Count -eq 0) { return $Orig }
+    $sb = [System.Text.StringBuilder]::new($Orig)
+    for ($k = $Spans.Count - 1; $k -ge 0; $k--) {
+        $ds = $Spans[$k][0]
+        $de = $Spans[$k][1]
+        if ($de -le $ds) { continue }
+        $os = $OrigStart[$ds]
+        $oe = $OrigEnd[$de - 1]
+        [void]$sb.Remove($os, $oe - $os)
+        [void]$sb.Insert($os, '[EF-MASKED]')
+    }
+    return $sb.ToString()
+}
+
 function ef_mask_line {
     param(
         [string]$Line,
@@ -161,46 +226,66 @@ function ef_mask_line {
     if ($null -eq $Line -or $Line.Length -eq 0) { return $Line }
     $count = 0
     $out = $Line
+    $map = ConvertFrom-EfJsonEscapesWithMap -Orig $out
 
     foreach ($v in $script:EfSecretValues) {
+        $spans = [System.Collections.Generic.List[int[]]]::new()
         $idx = 0
-        $found = 0
-        while (($pos = $out.IndexOf($v, $idx, [StringComparison]::Ordinal)) -ge 0) {
-            $found++
+        while (($pos = $map.Decoded.IndexOf($v, $idx, [StringComparison]::Ordinal)) -ge 0) {
+            $spans.Add([int[]]@($pos, ($pos + $v.Length)))
             $idx = $pos + $v.Length
         }
-        if ($found -gt 0) {
-            $out = $out.Replace($v, '[EF-MASKED]')
-            $count += $found
+        if ($spans.Count -gt 0) {
+            $out = Invoke-EfReplaceSpans -Orig $out -OrigStart $map.OrigStart -OrigEnd $map.OrigEnd -Spans $spans
+            $count += $spans.Count
+            $map = ConvertFrom-EfJsonEscapesWithMap -Orig $out
         }
     }
 
-    $out = $script:EfBearerRegex.Replace($out, [System.Text.RegularExpressions.MatchEvaluator]{
-        param($m)
-        $count++
-        return $m.Groups[1].Value + '[EF-MASKED]'
-    })
+    $spans = [System.Collections.Generic.List[int[]]]::new()
+    foreach ($m in $script:EfBearerRegex.Matches($map.Decoded)) {
+        $g = $m.Groups[2]
+        $spans.Add([int[]]@($g.Index, ($g.Index + $g.Length)))
+    }
+    if ($spans.Count -gt 0) {
+        $out = Invoke-EfReplaceSpans -Orig $out -OrigStart $map.OrigStart -OrigEnd $map.OrigEnd -Spans $spans
+        $count += $spans.Count
+        $map = ConvertFrom-EfJsonEscapesWithMap -Orig $out
+    }
 
-    $out = $script:EfTokenPrefixRegex.Replace($out, [System.Text.RegularExpressions.MatchEvaluator]{
-        param($m)
-        $count++
-        return '[EF-MASKED]'
-    })
+    $spans = [System.Collections.Generic.List[int[]]]::new()
+    foreach ($m in $script:EfTokenPrefixRegex.Matches($map.Decoded)) {
+        $spans.Add([int[]]@($m.Index, ($m.Index + $m.Length)))
+    }
+    if ($spans.Count -gt 0) {
+        $out = Invoke-EfReplaceSpans -Orig $out -OrigStart $map.OrigStart -OrigEnd $map.OrigEnd -Spans $spans
+        $count += $spans.Count
+        $map = ConvertFrom-EfJsonEscapesWithMap -Orig $out
+    }
 
-    $out = $script:EfConnStrRegex.Replace($out, [System.Text.RegularExpressions.MatchEvaluator]{
-        param($m)
-        if ($m.Groups[2].Value -eq '[EF-MASKED]') { return $m.Value }
-        $count++
-        return $m.Groups[1].Value + '[EF-MASKED]'
-    })
+    $spans = [System.Collections.Generic.List[int[]]]::new()
+    foreach ($m in $script:EfConnStrRegex.Matches($map.Decoded)) {
+        $g = $m.Groups[2]
+        if ($g.Value -eq '[EF-MASKED]') { continue }
+        $spans.Add([int[]]@($g.Index, ($g.Index + $g.Length)))
+    }
+    if ($spans.Count -gt 0) {
+        $out = Invoke-EfReplaceSpans -Orig $out -OrigStart $map.OrigStart -OrigEnd $map.OrigEnd -Spans $spans
+        $count += $spans.Count
+        $map = ConvertFrom-EfJsonEscapesWithMap -Orig $out
+    }
 
     if ($null -ne $script:EfCustomKeyRegex) {
-        $out = $script:EfCustomKeyRegex.Replace($out, [System.Text.RegularExpressions.MatchEvaluator]{
-            param($m)
-            if ($m.Groups[2].Value -eq '[EF-MASKED]') { return $m.Value }
-            $count++
-            return $m.Groups[1].Value + '[EF-MASKED]'
-        })
+        $spans = [System.Collections.Generic.List[int[]]]::new()
+        foreach ($m in $script:EfCustomKeyRegex.Matches($map.Decoded)) {
+            $g = $m.Groups[2]
+            if ($g.Value -eq '[EF-MASKED]') { continue }
+            $spans.Add([int[]]@($g.Index, ($g.Index + $g.Length)))
+        }
+        if ($spans.Count -gt 0) {
+            $out = Invoke-EfReplaceSpans -Orig $out -OrigStart $map.OrigStart -OrigEnd $map.OrigEnd -Spans $spans
+            $count += $spans.Count
+        }
     }
 
     if ($null -ne $CountRef) {

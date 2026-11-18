@@ -143,6 +143,139 @@ ef_load_secrets() {
   return 0
 }
 
+read -r -d '' _EF_PERL_MASK_HELPERS <<'EF_PERL_EOF' || true
+sub ef_decode_with_map {
+  my ($orig) = @_;
+  my $dec = "";
+  my @ostart;
+  my @oend;
+  my $len = length($orig);
+  my $i = 0;
+  while ($i < $len) {
+    my $ch = substr($orig, $i, 1);
+    if ($ch eq "\\" && ($i + 1) < $len) {
+      my $nxt = substr($orig, $i + 1, 1);
+      if ($nxt eq "\"" || $nxt eq "\\" || $nxt eq "/") {
+        $dec .= $nxt;
+        push @ostart, $i;
+        push @oend, $i + 2;
+        $i += 2;
+        next;
+      }
+      if ($nxt eq "u" && ($i + 5) < $len) {
+        my $hex = substr($orig, $i + 2, 4);
+        if ($hex =~ /^[0-9a-fA-F]{4}$/) {
+          my $code = hex($hex);
+          if ($code != 0 && !($code >= 0xD800 && $code <= 0xDFFF)) {
+            my $u = chr($code);
+            utf8::encode($u) if $code >= 0x80;
+            for my $b (split //, $u) {
+              $dec .= $b;
+              push @ostart, $i;
+              push @oend, $i + 6;
+            }
+            $i += 6;
+            next;
+          }
+        }
+      }
+    }
+    $dec .= $ch;
+    push @ostart, $i;
+    push @oend, $i + 1;
+    $i += 1;
+  }
+  return ($dec, \@ostart, \@oend);
+}
+
+sub ef_replace_spans {
+  my ($orig, $ostart, $oend, $spans) = @_;
+  return $orig unless @$spans;
+  my $out = $orig;
+  for my $sp (reverse @$spans) {
+    my ($ds, $de) = @$sp;
+    next unless $de > $ds;
+    my $os = $ostart->[$ds];
+    my $oe = $oend->[$de - 1];
+    substr($out, $os, $oe - $os, "[EF-MASKED]");
+  }
+  return $out;
+}
+
+sub ef_mask_line {
+  my ($orig, $vals_ref, $key_re) = @_;
+  my $line = $orig;
+  my $cnt = 0;
+  my ($dec, $ostart, $oend) = ef_decode_with_map($line);
+
+  for my $v (@$vals_ref) {
+    my @spans;
+    my $pos = 0;
+    my $vlen = length($v);
+    while ((my $idx = index($dec, $v, $pos)) >= 0) {
+      push @spans, [$idx, $idx + $vlen];
+      $pos = $idx + $vlen;
+    }
+    if (@spans) {
+      $line = ef_replace_spans($line, $ostart, $oend, \@spans);
+      $cnt += scalar(@spans);
+      ($dec, $ostart, $oend) = ef_decode_with_map($line);
+    }
+  }
+
+  {
+    my @spans;
+    while ($dec =~ /\b(Bearer\s+)([A-Za-z0-9._~+\/=-]+)/gi) {
+      push @spans, [$-[2], $+[2]];
+    }
+    if (@spans) {
+      $line = ef_replace_spans($line, $ostart, $oend, \@spans);
+      $cnt += scalar(@spans);
+      ($dec, $ostart, $oend) = ef_decode_with_map($line);
+    }
+  }
+
+  {
+    my @spans;
+    while ($dec =~ /(?i)(?:gho_|ghp_|github_pat_)[A-Za-z0-9_]{10,}|AKIA[0-9A-Z]{16}/g) {
+      push @spans, [$-[0], $+[0]];
+    }
+    if (@spans) {
+      $line = ef_replace_spans($line, $ostart, $oend, \@spans);
+      $cnt += scalar(@spans);
+      ($dec, $ostart, $oend) = ef_decode_with_map($line);
+    }
+  }
+
+  {
+    my @spans;
+    while ($dec =~ /(?i)(\b(?:Password|User\s+ID)\s*=\s*["']?)([^;"'\r\n]+)(?=["']?\s*;)/g) {
+      next if $2 eq "[EF-MASKED]";
+      push @spans, [$-[2], $+[2]];
+    }
+    if (@spans) {
+      $line = ef_replace_spans($line, $ostart, $oend, \@spans);
+      $cnt += scalar(@spans);
+      ($dec, $ostart, $oend) = ef_decode_with_map($line);
+    }
+  }
+
+  {
+    my @spans;
+    while ($dec =~ /$key_re/g) {
+      next if $2 eq "[EF-MASKED]";
+      push @spans, [$-[2], $+[2]];
+    }
+    if (@spans) {
+      $line = ef_replace_spans($line, $ostart, $oend, \@spans);
+      $cnt += scalar(@spans);
+    }
+  }
+
+  return ($line, $cnt);
+}
+EF_PERL_EOF
+
 ef_mask() {
   local count_file=""
   while [ "$#" -gt 0 ]; do
@@ -162,7 +295,7 @@ ef_mask() {
   EF_INT_VALS_HEX="${_EF_SECRET_VALS_HEX}" \
   EF_INT_NAMES_HEX="${_EF_SECRET_NAMES_HEX}" \
   EF_INT_CNT_FILE="$tmp_cnt" \
-  perl -e '
+  perl -e "$_EF_PERL_MASK_HELPERS"'
     use strict; use warnings;
     $| = 1;
     my @vals = map { pack("H*", $_) } grep { length($_) } split(/:/, $ENV{EF_INT_VALS_HEX} // "");
@@ -172,27 +305,9 @@ ef_mask() {
 
     my $total = 0;
     while (my $line = <STDIN>) {
-      for my $v (@vals) {
-        my $n = ($line =~ s/\Q$v\E/[EF-MASKED]/g);
-        $total += $n if $n;
-      }
-      my $nb = ($line =~ s/\b(Bearer\s+)([A-Za-z0-9._~+\/=-]+)/$1\[EF-MASKED\]/gi);
-      $total += $nb if $nb;
-
-      my $nt = ($line =~ s/(?i)(?:gho_|ghp_|github_pat_)[A-Za-z0-9_]{10,}|AKIA[0-9A-Z]{16}/[EF-MASKED]/g);
-      $total += $nt if $nt;
-
-      $line =~ s/(?i)(\b(?:Password|User\s+ID)\s*=\s*["'\'']?)([^;"'\''\r\n]+)(?=["'\'']?\s*;)/
-        my ($p, $v) = ($1, $2);
-        if ($v eq "[EF-MASKED]") { "$p$v" } else { $total++; "$p\[EF-MASKED\]" }
-      /ge;
-
-      $line =~ s/$key_re/
-        my ($p, $v) = ($1, $2);
-        if ($v eq "[EF-MASKED]") { "$p$v" } else { $total++; "$p\[EF-MASKED\]" }
-      /ge;
-
-      print $line;
+      my ($masked, $n) = ef_mask_line($line, \@vals, $key_re);
+      $total += $n;
+      print $masked;
     }
 
     if (open my $cfh, ">", $ENV{EF_INT_CNT_FILE}) {
@@ -213,12 +328,16 @@ ef_mask() {
 
 ef_mask_string() {
   local input="$1"
+  local ext_cnt_file="${2:-}"
   local tmp_out tmp_cnt
   tmp_out="$(mktemp "${TMPDIR:-/tmp}/ef-mask-str.XXXXXX")"
   tmp_cnt="$(mktemp "${TMPDIR:-/tmp}/ef-mask-cnt.XXXXXX")"
   printf '%s' "$input" | ef_mask --count-file "$tmp_cnt" > "$tmp_out"
   _EF_LAST_MASK_COUNT="$(tr -d '[:space:]' < "$tmp_cnt")"
   [ -n "$_EF_LAST_MASK_COUNT" ] || _EF_LAST_MASK_COUNT=0
+  if [ -n "$ext_cnt_file" ]; then
+    printf '%s\n' "$_EF_LAST_MASK_COUNT" > "$ext_cnt_file"
+  fi
   cat "$tmp_out"
   rm -f -- "$tmp_out" "$tmp_cnt"
 }
@@ -235,7 +354,7 @@ ef_scan() {
   local report
   report="$(EF_INT_VALS_HEX="${_EF_SECRET_VALS_HEX}" \
     EF_INT_NAMES_HEX="${_EF_SECRET_NAMES_HEX}" \
-    perl -MFile::Find -MFile::Spec -MCwd=abs_path -e '
+    perl -MFile::Find -MFile::Spec -MCwd=abs_path -e "$_EF_PERL_MASK_HELPERS"'
       use strict; use warnings;
       my ($repo, $card, $logdir) = @ARGV;
       my $repo_abs = abs_path($repo) // File::Spec->rel2abs($repo);
@@ -288,27 +407,9 @@ ef_scan() {
         my @lines = split(/(?<=\n)/, $raw, -1);
         for my $line (@lines) {
           next unless length($line);
-          for my $v (@vals) {
-            my $n = ($line =~ s/\Q$v\E/[EF-MASKED]/g);
-            $count += $n if $n;
-          }
-          my $nb = ($line =~ s/\b(Bearer\s+)([A-Za-z0-9._~+\/=-]+)/$1\[EF-MASKED\]/gi);
-          $count += $nb if $nb;
-
-          my $nt = ($line =~ s/(?i)(?:gho_|ghp_|github_pat_)[A-Za-z0-9_]{10,}|AKIA[0-9A-Z]{16}/[EF-MASKED]/g);
-          $count += $nt if $nt;
-
-          $line =~ s/(?i)(\b(?:Password|User\s+ID)\s*=\s*["'\'']?)([^;"'\''\r\n]+)(?=["'\'']?\s*;)/
-            my ($p, $v) = ($1, $2);
-            if ($v eq "[EF-MASKED]") { "$p$v" } else { $count++; "$p\[EF-MASKED\]" }
-          /ge;
-
-          $line =~ s/$key_re/
-            my ($p, $v) = ($1, $2);
-            if ($v eq "[EF-MASKED]") { "$p$v" } else { $count++; "$p\[EF-MASKED\]" }
-          /ge;
-
-          $out .= $line;
+          my ($masked, $n) = ef_mask_line($line, \@vals, $key_re);
+          $count += $n;
+          $out .= $masked;
         }
 
         if ($count > 0) {

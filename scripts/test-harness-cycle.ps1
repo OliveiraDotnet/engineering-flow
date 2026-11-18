@@ -520,7 +520,143 @@ if ($env:EF_FAKE_XAPI) {
     Assert-True ($s4fG2.ExitCode -eq 0) "S4-f: Gate 2 commit failed after clean validate (rc=$($s4fG2.ExitCode)): $($s4fG2.Stderr)"
     Assert-True (((& git -C $repoS4 log -1 --pretty=%s | Select-Object -First 1).Trim()) -eq 'fix(AB-540): clean gate2 commit') 'S4-f: Commit subject mismatch.'
 
-    Write-Host 'Harness cycle PowerShell tests passed: B0, S1-a..e, S2-a, S3-a..f, S4-a..f.'
+    # ==========================================================================
+    # B1: Fixed-pattern-only and EF_SECRET_NAMES-only scan/count (no EF_SECRET_VALUES_FILE)
+    # ==========================================================================
+    $repoB1 = Join-Path $TempRoot 'repo-b1'
+    Initialize-TestRepo $repoB1 'feat/AB-541-b1'
+    [IO.File]::WriteAllText((Join-Path $repoB1 'a.txt'), "a0`n", $Utf8NoBom)
+    & git -C $repoB1 add a.txt
+    & git -C $repoB1 commit -q -m 'add a'
+
+    $fakeB1a = 'EFFAKE' + $ticks + 'B1PatA'
+    $fakeB1b = 'EFFAKE' + $ticks + 'B1PatB'
+    $fakeB1c = 'EFFAKE' + $ticks + 'B1ScanC'
+    $fakeB1d = 'EFFAKE' + $ticks + 'B1NameD'
+
+    $efSecretsPs1 = Join-Path $HarnessDir 'ef-secrets.ps1'
+    $b1Unit = & $Pwsh -NoProfile -Command @"
+`$env:EF_SECRET_VALUES_FILE = ''
+. '$efSecretsPs1'
+`$null = ef_load_secrets -RepoRoot '$repoB1' -HarnessLogDir '$(Join-Path $repoB1 '.agent-pack/logs/AB-541')'
+`$cnt = 0
+`$mOut = ef_mask_string -Text 'password=$fakeB1a' -CountRef ([ref]`$cnt)
+Write-Output "`$cnt|`$mOut"
+"@
+    $b1Parts = ($b1Unit | Select-Object -First 1).Split('|', 2)
+    Assert-True ([int]$b1Parts[0] -gt 0) "B1: ef_mask count must be > 0 for fixed-pattern-only line (got $($b1Parts[0]))."
+    Assert-True ($b1Parts[1] -eq 'password=[EF-MASKED]') "B1: unexpected ef_mask_string output: $($b1Parts[1])"
+
+    $b1Val = Invoke-PwshScript -ScriptPath $Tester -ScriptArgs @(
+        '-Repo', $repoB1, '-CardId', 'AB-541', '-DemandType', 'Feature', '-Phase', 'validate',
+        '-TestCommand', "Write-Output 'password=$fakeB1a'; Write-Output 'Authorization: Bearer $fakeB1b'"
+    ) -EnvOverrides @{ EF_SECRET_VALUES_FILE = '' }
+    Assert-True ($b1Val.ExitCode -eq 0) "B1: tester validate failed (rc=$($b1Val.ExitCode))."
+    $evB1 = Get-Content -LiteralPath (Join-Path $repoB1 '.agent-pack/evidencias/AB-541/EVIDENCIA.md') -Raw
+    Assert-True ($evB1.Contains('masked: 2)')) "B1: Expected 'masked: 2)' in EVIDENCIA.md, got: $evB1"
+    $b1RepoDirs = @((Join-Path $repoB1 '.agent-pack/evidencias'), (Join-Path $repoB1 '.agent-pack/.runtime'), (Join-Path $repoB1 '.agent-pack/logs'))
+    Assert-NoLiteral $fakeB1a $b1RepoDirs
+    Assert-NoLiteral $fakeB1b $b1RepoDirs
+
+    $b1LogDir = Join-Path $TempRoot 'b1-ext-logs'
+    New-Item -ItemType Directory -Force -Path $b1LogDir | Out-Null
+    $b1Adhoc = Join-Path $b1LogDir 'adhoc.jsonl'
+    [IO.File]::WriteAllText((Join-Path $repoB1 'a.txt'), "a1`n", $Utf8NoBom)
+    $headB1 = (& git -C $repoB1 rev-parse HEAD).Trim()
+
+    [IO.File]::WriteAllText($b1Adhoc, "{`"content`":`"password=$fakeB1c`"}`n{`"content`":`"X-Api-Key: $fakeB1d`"}`n", $Utf8NoBom)
+    $b1Gate1 = Invoke-PwshScript -ScriptPath $Implementor -ScriptArgs @(
+        '-Repo', $repoB1, '-CardId', 'AB-541', '-CommitGate2', '-Paths', 'a.txt', '-CommitMessage', 'feat(AB-541): should fail b1'
+    ) -EnvOverrides @{
+        EF_SECRET_VALUES_FILE = ''
+        EF_HARNESS_LOG_DIR    = $b1LogDir
+        EF_SECRET_NAMES       = 'X-Api-Key'
+    }
+    Assert-True ($b1Gate1.ExitCode -eq 6) "B1: Expected exit 6 on -CommitGate2 with fixed/name adhoc log, got $($b1Gate1.ExitCode)."
+    Assert-True (((& git -C $repoB1 rev-parse HEAD).Trim()) -eq $headB1) 'B1: HEAD changed during blocked Gate 2.'
+    Assert-NoLiteral $fakeB1c @($b1LogDir, (Join-Path $repoB1 '.agent-pack'))
+    Assert-NoLiteral $fakeB1d @($b1LogDir, (Join-Path $repoB1 '.agent-pack'))
+
+    # Reset test-status.json to passed=true and test again with -AllowUnvalidated -Reason
+    $b1Reset = Invoke-PwshScript -ScriptPath $Tester -ScriptArgs @(
+        '-Repo', $repoB1, '-CardId', 'AB-541', '-DemandType', 'Feature', '-Phase', 'validate', '-TestCommand', 'Write-Output ok'
+    ) -EnvOverrides @{ EF_SECRET_VALUES_FILE = '' }
+    Assert-True ($b1Reset.ExitCode -eq 0) 'B1: tester reset validate failed.'
+    [IO.File]::WriteAllText($b1Adhoc, "{`"content`":`"password=$fakeB1c`"}`n{`"content`":`"X-Api-Key: $fakeB1d`"}`n", $Utf8NoBom)
+    $b1Gate2 = Invoke-PwshScript -ScriptPath $Implementor -ScriptArgs @(
+        '-Repo', $repoB1, '-CardId', 'AB-541', '-CommitGate2', '-Paths', 'a.txt',
+        '-AllowUnvalidated', '-Reason', 'Tentativa de contornar B1', '-CommitMessage', 'feat(AB-541): should fail b1 allow'
+    ) -EnvOverrides @{
+        EF_SECRET_VALUES_FILE = ''
+        EF_HARNESS_LOG_DIR    = $b1LogDir
+        EF_SECRET_NAMES       = 'X-Api-Key'
+    }
+    Assert-True ($b1Gate2.ExitCode -eq 6) "B1: Expected exit 6 with -AllowUnvalidated on fixed/name adhoc log, got $($b1Gate2.ExitCode)."
+    Assert-True (((& git -C $repoB1 rev-parse HEAD).Trim()) -eq $headB1) 'B1: HEAD changed with -AllowUnvalidated.'
+    Assert-NoLiteral $fakeB1c @($b1LogDir, (Join-Path $repoB1 '.agent-pack'))
+    Assert-NoLiteral $fakeB1d @($b1LogDir, (Join-Path $repoB1 '.agent-pack'))
+
+    # ==========================================================================
+    # B2: JSON \uXXXX escapes (\u003d, \u0026, etc.) in ef_mask and ef_scan
+    # ==========================================================================
+    $repoB2 = Join-Path $TempRoot 'repo-b2'
+    Initialize-TestRepo $repoB2 'feat/AB-542-b2'
+    $fakeB2a = 'EFFAKE' + $ticks + 'JsonU3d'
+    $fakeB2bPrefix = 'EFFAKE' + $ticks + 'Eq'
+    $fakeB2bMid = 'Mid'
+    $fakeB2bEnd = 'AmpEnd'
+    $fakeB2b = $fakeB2bPrefix + '=' + $fakeB2bMid + '&' + $fakeB2bEnd
+    $fakeB2bUesc = $fakeB2bPrefix + '\u003d' + $fakeB2bMid + '\u0026' + $fakeB2bEnd
+
+    $b2Unit = & $Pwsh -NoProfile -Command @"
+`$env:EF_SECRET_VALUES_FILE = ''
+. '$efSecretsPs1'
+`$null = ef_load_secrets -RepoRoot '$repoB2' -HarnessLogDir '$(Join-Path $repoB2 '.agent-pack/logs/AB-542')'
+`$cnt = 0
+`$mOut = ef_mask_string -Text '{"content":"password\u003d$fakeB2a"}' -CountRef ([ref]`$cnt)
+Write-Output "`$cnt|`$mOut"
+"@
+    $b2Parts = ($b2Unit | Select-Object -First 1).Split('|', 2)
+    Assert-True ([int]$b2Parts[0] -eq 1) "B2-a: Expected mask count 1, got $($b2Parts[0])."
+    Assert-True ($b2Parts[1] -eq '{"content":"password\u003d[EF-MASKED]"}') "B2-a: Unexpected masked line: $($b2Parts[1])"
+
+    $b2LogDir = Join-Path $repoB2 '.agent-pack/logs/AB-542'
+    New-Item -ItemType Directory -Force -Path $b2LogDir | Out-Null
+    $b2AdhocA = Join-Path $b2LogDir 'adhoc-b2a.jsonl'
+    [IO.File]::WriteAllText($b2AdhocA, "{`"content`":`"password\u003d$fakeB2a`"}`n", $Utf8NoBom)
+    $b2TestA = Invoke-PwshScript -ScriptPath $Tester -ScriptArgs @(
+        '-Repo', $repoB2, '-CardId', 'AB-542', '-DemandType', 'Feature', '-Phase', 'validate', '-TestCommand', 'Write-Output ok'
+    ) -EnvOverrides @{ EF_SECRET_VALUES_FILE = '' }
+    Assert-True ($b2TestA.ExitCode -eq 6) "B2-a: Expected exit 6 on \u003d secret in adhoc log, got $($b2TestA.ExitCode)."
+    Assert-True ((Get-Content -LiteralPath $b2AdhocA -Raw).Contains('password\u003d[EF-MASKED]')) 'B2-a: adhoc-b2a.jsonl not masked preserving original escape.'
+    $b2Dirs = @((Join-Path $repoB2 '.agent-pack/logs'), (Join-Path $repoB2 '.agent-pack/evidencias'), (Join-Path $repoB2 '.agent-pack/.runtime'))
+    Assert-NoLiteral $fakeB2a $b2Dirs
+
+    $b2ValsFile = Join-Path $TempRoot 'b2-outside-secrets.txt'
+    [IO.File]::WriteAllText($b2ValsFile, "$fakeB2b`n", $Utf8NoBom)
+    $b2Imp = Invoke-PwshScript -ScriptPath $Implementor -ScriptArgs @(
+        '-Repo', $repoB2, '-CardId', 'AB-542',
+        '-HarnessCommand', ('Write-Output ''{"type":"tool_result","content":"' + $fakeB2bUesc + '"}''')
+    ) -EnvOverrides @{
+        EF_SECRET_VALUES_FILE = $b2ValsFile
+        EF_ATTEMPT            = '1'
+    }
+    Assert-True ($b2Imp.ExitCode -eq 0) "B2-b: run-implementor failed (rc=$($b2Imp.ExitCode))."
+    $b2Cap = Join-Path $repoB2 '.agent-pack/logs/AB-542/AB-542_implementor_attempt1.jsonl'
+    Assert-True ((Get-Content -LiteralPath $b2Cap -Raw).Contains('{"type":"tool_result","content":"[EF-MASKED]"}')) 'B2-b: Captured stream-json did not mask \u003d/\u0026 value.'
+    Assert-NoLiteral $fakeB2b $b2Dirs
+    Assert-NoLiteral $fakeB2bUesc $b2Dirs
+
+    $b2AdhocB = Join-Path $b2LogDir 'adhoc-b2b.jsonl'
+    [IO.File]::WriteAllText($b2AdhocB, "{`"type`":`"tool_result`",`"content`":`"$fakeB2bUesc`"}`n", $Utf8NoBom)
+    $b2TestB = Invoke-PwshScript -ScriptPath $Tester -ScriptArgs @(
+        '-Repo', $repoB2, '-CardId', 'AB-542', '-DemandType', 'Feature', '-Phase', 'validate', '-TestCommand', 'Write-Output ok'
+    ) -EnvOverrides @{ EF_SECRET_VALUES_FILE = $b2ValsFile }
+    Assert-True ($b2TestB.ExitCode -eq 6) "B2-b: Expected exit 6 on \u003d/\u0026 value in adhoc log, got $($b2TestB.ExitCode)."
+    Assert-NoLiteral $fakeB2b $b2Dirs
+    Assert-NoLiteral $fakeB2bUesc $b2Dirs
+
+    Write-Host 'Harness cycle PowerShell tests passed: B0, B1, B2, S1-a..e, S2-a, S3-a..f, S4-a..f.'
 }
 finally {
     if (Test-Path -LiteralPath $TempRoot) {

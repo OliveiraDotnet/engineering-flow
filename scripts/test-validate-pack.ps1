@@ -67,6 +67,14 @@ try {
         [IO.File]::AppendAllText($readme, "`n$stale`n", $Utf8NoBom)
     }
 
+    # N1 negative: injecting stale clean-install v5 + .0 phrase into a doc must fail
+    Invoke-NegativeCase -Name 'n1-stale-v50-phrase' -Mutator {
+        param([string]$Root)
+        $doc = Join-Path $Root 'INSTRUCOES_DETALHADAS.md'
+        $stale = 'instalação limpa da v5' + '.0'
+        [IO.File]::AppendAllText($doc, "`n$stale`n", $Utf8NoBom)
+    }
+
     # C10 negatives: removing required gate-1/external-boundary/escalation markers must fail
     Invoke-NegativeCase -Name 'c10-implementor-missing-decisions' -Mutator {
         param([string]$Root)

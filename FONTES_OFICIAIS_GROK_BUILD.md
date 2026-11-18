@@ -21,7 +21,7 @@ Para evitar bloqueios quando um bot ou supervisor invoca o harness por linha de 
 - Ao passar `--harness-cmd`, utilize o modo headless/não-interativo documentado da ferramenta escolhida para que o processo não trave aguardando input interativo no terminal.
 - O estado do último teste é gravado em `.agent-pack/.runtime/test-status.json` e o relatório detalhado em `.agent-pack/evidencias/<CardId>/EVIDENCIA.md`.
 
-## Decisões deliberadas do pack 5.0
+## Decisões deliberadas do pack 5.1
 
 - O Engineering Flow 5.1 não exige nenhuma ferramenta específica: pode ser usado com um único harness standalone ou com múltiplos bots em hierarquia.
 - Os 10 perfis de especialistas têm origem em `.grok/agents`.

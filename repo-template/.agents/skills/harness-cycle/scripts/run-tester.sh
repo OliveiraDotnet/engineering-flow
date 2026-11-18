@@ -174,8 +174,11 @@ raw_output="$(cd "$REPO_ROOT" && bash -c "$test_cmd" 2>&1; rc=$?; printf '\001';
 test_exit_code=$?
 raw_output="${raw_output%$'\001'}"
 
-masked_output="$(ef_mask_string "$raw_output")"
-mask_count="${_EF_LAST_MASK_COUNT:-0}"
+_ef_cnt_tmp="$(mktemp "${TMPDIR:-/tmp}/ef-tester-cnt.XXXXXX")"
+masked_output="$(ef_mask_string "$raw_output" "$_ef_cnt_tmp")"
+mask_count="$(tr -d '[:space:]' < "$_ef_cnt_tmp" 2>/dev/null || echo 0)"
+[ -n "$mask_count" ] || mask_count=0
+rm -f -- "$_ef_cnt_tmp"
 if [ -n "$masked_output" ] && [ "${masked_output: -1}" != $'\n' ]; then
   masked_output+=$'\n'
 fi

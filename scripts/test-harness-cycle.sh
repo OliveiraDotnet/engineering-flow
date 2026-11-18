@@ -475,4 +475,135 @@ grep -Eq '"status"[[:space:]]*:[[:space:]]*"clean"' "$REPO_S4/.agent-pack/.runti
 EF_SECRET_VALUES_FILE="$secret_vals_outside" bash "$IMPLEMENTOR" --repo "$REPO_S4" --card-id "AB-540" --commit-gate2 --paths "value.txt" --commit-message "fix(AB-540): clean gate2 commit" >/dev/null
 [ "$(git -C "$REPO_S4" log -1 --pretty=%s)" = "fix(AB-540): clean gate2 commit" ] || fail "S4-f: Gate 2 commit failed after clean validate"
 
-echo "Harness cycle Bash tests passed: B0, S1-a..e, S2-a, S3-a..f, S4-a..f."
+# ==============================================================================
+# B1: Fixed-pattern-only and EF_SECRET_NAMES-only scan/count (no EF_SECRET_VALUES_FILE)
+# ==============================================================================
+REPO_B1="$TEMP_ROOT/repo-b1"
+init_repo "$REPO_B1" "feat/AB-541-b1"
+printf 'a0\n' > "$REPO_B1/a.txt"
+git -C "$REPO_B1" add a.txt
+git -C "$REPO_B1" commit -q -m "add a"
+
+fake_b1_a="EFFAKE""${ts_ns}""B1PatA"
+fake_b1_b="EFFAKE""${ts_ns}""B1PatB"
+fake_b1_c="EFFAKE""${ts_ns}""B1ScanC"
+fake_b1_d="EFFAKE""${ts_ns}""B1NameD"
+
+(
+  unset EF_SECRET_VALUES_FILE || true
+  source "$HARNESS_DIR/ef-secrets.sh"
+  ef_load_secrets "$REPO_B1" "$REPO_B1/.agent-pack/logs/AB-541"
+  b1_mout_file="$TEMP_ROOT/b1-mout.txt"
+  ef_mask_string "password=$fake_b1_a" > "$b1_mout_file"
+  [ "$_EF_LAST_MASK_COUNT" -gt 0 ] || fail "B1: ef_mask count must be > 0 for fixed-pattern-only line (got $_EF_LAST_MASK_COUNT)"
+  m_out="$(cat "$b1_mout_file")"
+  [ "$m_out" = "password=[EF-MASKED]" ] || fail "B1: unexpected ef_mask_string output: $m_out"
+)
+
+(
+  unset EF_SECRET_VALUES_FILE || true
+  bash "$TESTER" --repo "$REPO_B1" --card-id "AB-541" --demand-type "Feature" --phase validate \
+    --test-cmd "echo password=$fake_b1_a; echo Authorization: Bearer $fake_b1_b" >/dev/null
+)
+ev_b1="$REPO_B1/.agent-pack/evidencias/AB-541/EVIDENCIA.md"
+grep -Fq "masked: 2)" "$ev_b1" || fail "B1: Expected masked: 2 in EVIDENCIA.md for fixed-pattern-only output"
+assert_no_literal "$fake_b1_a" "$REPO_B1/.agent-pack/evidencias" "$REPO_B1/.agent-pack/.runtime" "$REPO_B1/.agent-pack/logs"
+assert_no_literal "$fake_b1_b" "$REPO_B1/.agent-pack/evidencias" "$REPO_B1/.agent-pack/.runtime" "$REPO_B1/.agent-pack/logs"
+
+b1_log_dir="$TEMP_ROOT/b1-ext-logs"
+mkdir -p "$b1_log_dir"
+b1_adhoc="$b1_log_dir/adhoc.jsonl"
+printf 'a1\n' > "$REPO_B1/a.txt"
+head_b1="$(git -C "$REPO_B1" rev-parse HEAD)"
+
+printf '{"content":"password=%s"}\n{"content":"X-Api-Key: %s"}\n' "$fake_b1_c" "$fake_b1_d" > "$b1_adhoc"
+rc=0
+(
+  unset EF_SECRET_VALUES_FILE || true
+  export EF_HARNESS_LOG_DIR="$b1_log_dir"
+  export EF_SECRET_NAMES="X-Api-Key"
+  bash "$IMPLEMENTOR" --repo "$REPO_B1" --card-id "AB-541" --commit-gate2 --paths "a.txt" --commit-message "feat(AB-541): should fail b1" >/dev/null 2>&1
+) || rc=$?
+[ "$rc" -eq 6 ] || fail "B1: Expected exit 6 on --commit-gate2 with fixed/name adhoc log, got $rc"
+[ "$(git -C "$REPO_B1" rev-parse HEAD)" = "$head_b1" ] || fail "B1: HEAD changed during blocked Gate 2"
+assert_no_literal "$fake_b1_c" "$b1_log_dir" "$REPO_B1/.agent-pack"
+assert_no_literal "$fake_b1_d" "$b1_log_dir" "$REPO_B1/.agent-pack"
+
+# Reset test-status.json to passed=true and test again with --allow-unvalidated --reason
+(
+  unset EF_SECRET_VALUES_FILE || true
+  bash "$TESTER" --repo "$REPO_B1" --card-id "AB-541" --demand-type "Feature" --phase validate --test-cmd "echo ok" >/dev/null
+)
+printf '{"content":"password=%s"}\n{"content":"X-Api-Key: %s"}\n' "$fake_b1_c" "$fake_b1_d" > "$b1_adhoc"
+rc=0
+(
+  unset EF_SECRET_VALUES_FILE || true
+  export EF_HARNESS_LOG_DIR="$b1_log_dir"
+  export EF_SECRET_NAMES="X-Api-Key"
+  bash "$IMPLEMENTOR" --repo "$REPO_B1" --card-id "AB-541" --commit-gate2 --paths "a.txt" \
+    --allow-unvalidated --reason "Tentativa de contornar B1" --commit-message "feat(AB-541): should fail b1 allow" >/dev/null 2>&1
+) || rc=$?
+[ "$rc" -eq 6 ] || fail "B1: Expected exit 6 with --allow-unvalidated on fixed/name adhoc log, got $rc"
+[ "$(git -C "$REPO_B1" rev-parse HEAD)" = "$head_b1" ] || fail "B1: HEAD changed with --allow-unvalidated"
+assert_no_literal "$fake_b1_c" "$b1_log_dir" "$REPO_B1/.agent-pack"
+assert_no_literal "$fake_b1_d" "$b1_log_dir" "$REPO_B1/.agent-pack"
+
+# ==============================================================================
+# B2: JSON \uXXXX escapes (\u003d, \u0026, etc.) in ef_mask and ef_scan
+# ==============================================================================
+REPO_B2="$TEMP_ROOT/repo-b2"
+init_repo "$REPO_B2" "feat/AB-542-b2"
+fake_b2_a="EFFAKE""${ts_ns}""JsonU3d"
+fake_b2_b_prefix="EFFAKE""${ts_ns}""Eq"
+fake_b2_b_mid="Mid"
+fake_b2_b_end="AmpEnd"
+fake_b2_b="${fake_b2_b_prefix}=${fake_b2_b_mid}&${fake_b2_b_end}"
+fake_b2_b_uesc="${fake_b2_b_prefix}\\u003d${fake_b2_b_mid}\\u0026${fake_b2_b_end}"
+
+# (a) password\u003d<fake> -> masked by ef_mask and flagged by ef_scan (exit 6)
+(
+  unset EF_SECRET_VALUES_FILE || true
+  source "$HARNESS_DIR/ef-secrets.sh"
+  ef_load_secrets "$REPO_B2" "$REPO_B2/.agent-pack/logs/AB-542"
+  b2_line="{\"content\":\"password\\u003d$fake_b2_a\"}"
+  b2_mout_file="$TEMP_ROOT/b2-mout.txt"
+  ef_mask_string "$b2_line" > "$b2_mout_file"
+  [ "$_EF_LAST_MASK_COUNT" -eq 1 ] || fail "B2-a: Expected mask count 1, got $_EF_LAST_MASK_COUNT"
+  b2_masked="$(cat "$b2_mout_file")"
+  [ "$b2_masked" = '{"content":"password\u003d[EF-MASKED]"}' ] || fail "B2-a: Unexpected masked line: $b2_masked"
+)
+
+b2_log_dir="$REPO_B2/.agent-pack/logs/AB-542"
+mkdir -p "$b2_log_dir"
+printf '{"content":"password\\u003d%s"}\n' "$fake_b2_a" > "$b2_log_dir/adhoc-b2a.jsonl"
+rc=0
+(
+  unset EF_SECRET_VALUES_FILE || true
+  bash "$TESTER" --repo "$REPO_B2" --card-id "AB-542" --demand-type "Feature" --phase validate --test-cmd "echo ok" >/dev/null 2>&1
+) || rc=$?
+[ "$rc" -eq 6 ] || fail "B2-a: Expected exit 6 on \\u003d secret in adhoc log, got $rc"
+grep -Fq 'password\u003d[EF-MASKED]' "$b2_log_dir/adhoc-b2a.jsonl" || fail "B2-a: adhoc-b2a.jsonl not masked preserving original escape"
+assert_no_literal "$fake_b2_a" "$REPO_B2/.agent-pack/logs" "$REPO_B2/.agent-pack/evidencias" "$REPO_B2/.agent-pack/.runtime"
+
+# (b) values file containing = and & appearing as \u003d/\u0026 in stream -> masked, raw and escaped forms absent
+b2_vals_file="$TEMP_ROOT/b2-outside-secrets.txt"
+printf '%s\n' "$fake_b2_b" > "$b2_vals_file"
+(
+  export EF_SECRET_VALUES_FILE="$b2_vals_file"
+  export EF_ATTEMPT=1
+  bash "$IMPLEMENTOR" --repo "$REPO_B2" --card-id "AB-542" \
+    --harness-cmd "printf '{\"type\":\"tool_result\",\"content\":\"%s\"}\n' '$fake_b2_b_uesc'" >/dev/null
+)
+b2_cap="$REPO_B2/.agent-pack/logs/AB-542/AB-542_implementor_attempt1.jsonl"
+grep -Fq '{"type":"tool_result","content":"[EF-MASKED]"}' "$b2_cap" || fail "B2-b: Captured stream-json did not mask \\u003d/\\u0026 value"
+assert_no_literal "$fake_b2_b" "$REPO_B2/.agent-pack/logs" "$REPO_B2/.agent-pack/evidencias" "$REPO_B2/.agent-pack/.runtime"
+assert_no_literal "$fake_b2_b_uesc" "$REPO_B2/.agent-pack/logs" "$REPO_B2/.agent-pack/evidencias" "$REPO_B2/.agent-pack/.runtime"
+
+printf '{"type":"tool_result","content":"%s"}\n' "$fake_b2_b_uesc" > "$b2_log_dir/adhoc-b2b.jsonl"
+rc=0
+EF_SECRET_VALUES_FILE="$b2_vals_file" bash "$TESTER" --repo "$REPO_B2" --card-id "AB-542" --demand-type "Feature" --phase validate --test-cmd "echo ok" >/dev/null 2>&1 || rc=$?
+[ "$rc" -eq 6 ] || fail "B2-b: Expected exit 6 on \\u003d/\\u0026 value in adhoc log, got $rc"
+assert_no_literal "$fake_b2_b" "$REPO_B2/.agent-pack/logs" "$REPO_B2/.agent-pack/evidencias" "$REPO_B2/.agent-pack/.runtime"
+assert_no_literal "$fake_b2_b_uesc" "$REPO_B2/.agent-pack/logs" "$REPO_B2/.agent-pack/evidencias" "$REPO_B2/.agent-pack/.runtime"
+
+echo "Harness cycle Bash tests passed: B0, B1, B2, S1-a..e, S2-a, S3-a..f, S4-a..f."

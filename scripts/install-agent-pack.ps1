@@ -559,7 +559,7 @@ function Install-ToRepository {
         Invoke-CopyAction -Action $action
     }
 
-    # Clean install in 5.0: state.txt is not generated in target repositories.
+    # Clean install in 5.1: state.txt is not generated in target repositories.
     if ($DryRun -or $WhatIfPreference) { & $ignoreHelper -RepoPath $TargetRoot -DryRun }
     elseif ($PSCmdlet.ShouldProcess($TargetRoot, 'Protect generated Engineering Flow files in .gitignore')) { & $ignoreHelper -RepoPath $TargetRoot }
 

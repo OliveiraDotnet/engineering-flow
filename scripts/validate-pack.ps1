@@ -321,16 +321,17 @@ foreach ($term in @("Aptos", "M & Y TECH", "Portal de Vendas", "projetos/")) {
     if ($allText -match [regex]::Escape($term)) { Add-Error "Obsolete organization-specific reference found: $term" }
 }
 
+$staleVersionPattern = '(?i)(?:Engineering Flow [345]\.0|\bv5\.0\b(?!\.)|padr[aã]o 5\.0\b(?!\.)|pack 5\.0\b(?!\.)|instala[cç][aã]o limpa(?: da)? v?5\.0\b(?!\.))'
 $staleVersionHits = New-Object System.Collections.Generic.List[string]
 $allPackFiles = @(Get-ChildItem -LiteralPath $PackRoot -File -Recurse -Force)
 foreach ($packFile in $allPackFiles) {
     $relFile = Get-RelativePath $PackRoot $packFile.FullName
     if ($relFile -eq '.git' -or $relFile.StartsWith('.git/')) { continue }
-    if ($relFile -eq 'CHANGELOG.md' -or $relFile.StartsWith('compat/') -or $relFile -in @('scripts/update-agent-pack.sh', 'scripts/update-agent-pack.ps1')) { continue }
+    if ($relFile -eq 'CHANGELOG.md' -or $relFile.StartsWith('compat/') -or $relFile.StartsWith('tests/') -or $relFile -in @('scripts/update-agent-pack.sh', 'scripts/update-agent-pack.ps1')) { continue }
     $bytes = [IO.File]::ReadAllBytes($packFile.FullName)
     if ($bytes -contains 0) { continue }
     $fileText = [Text.Encoding]::UTF8.GetString($bytes)
-    if ($fileText -match 'Engineering Flow [345]\.0') {
+    if ([regex]::IsMatch($fileText, $staleVersionPattern)) {
         $staleVersionHits.Add($relFile) | Out-Null
     }
 }
