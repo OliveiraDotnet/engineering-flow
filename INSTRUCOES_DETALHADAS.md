@@ -1,6 +1,6 @@
 # Adoção — Engineering Flow 5.1
 
-Instalação e exemplos: [README](README.md) e [manual](MANUAL_DE_USO.md). Versão atual `5.0.0`. A linha 5.0 evolui a 4.x tornando o fluxo 100% agnóstico de ferramenta e de persona, introduzindo a camada de harness (`Implementor` + `Tester` + `harness-cycle`) e garantindo instalação limpa nos repositórios destino (**apenas `AGENTS.md` versionado**, sem geração de `.agent-pack/state.txt` na instalação). Este pack não instala runtimes nem configura contas externas.
+Instalação e exemplos: [README](README.md) e [manual](MANUAL_DE_USO.md). Versão atual `5.1.0`. A linha 5.0 evolui a 4.x tornando o fluxo 100% agnóstico de ferramenta e de persona, introduzindo a camada de harness (`Implementor` + `Tester` + `harness-cycle`) e garantindo instalação limpa nos repositórios destino (**apenas `AGENTS.md` versionado**, sem geração de `.agent-pack/state.txt` na instalação). Este pack não instala runtimes nem configura contas externas.
 
 ## Instalação Limpa 5.0 (Apenas `AGENTS.md` Versionado no Repositório Alvo)
 

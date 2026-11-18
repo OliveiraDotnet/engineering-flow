@@ -1,6 +1,6 @@
-# Diretriz: hierarquia de papéis, instalação limpa, ciclo de harness e entrega (Engineering Flow 5.1, tag v5.0.0)
+# Diretriz: hierarquia de papéis, instalação limpa, ciclo de harness e entrega (Engineering Flow 5.1, tag v5.1.0)
 
-Revisão 5 (Engineering Flow 5.1): generaliza todos os papéis removendo nomes pessoais e acoplamento a ferramentas específicas, introduz o ciclo fechado `Implementor` ↔ `Tester` (`harness-cycle`) na base da pirâmide e estabelece que a instalação nos repositórios destino é limpa, sem gerar arquivos de versão (`.agent-pack/state.txt`) e versionando **apenas o arquivo `AGENTS.md`**.
+Revisão 6 (5.1.0, reemissão de 18/11/2026) (Engineering Flow 5.1): generaliza todos os papéis removendo nomes pessoais e acoplamento a ferramentas específicas, introduz o ciclo fechado `Implementor` ↔ `Tester` (`harness-cycle`) na base da pirâmide e estabelece que a instalação nos repositórios destino é limpa, sem gerar arquivos de versão (`.agent-pack/state.txt`) e versionando **apenas o arquivo `AGENTS.md`**.
 
 ## Papéis e Hierarquia
 As diretrizes seguem o Engineering Flow 5.1. O fluxo pode ser operado por um único harness acumulando papéis ou por agentes separados em hierarquia:
