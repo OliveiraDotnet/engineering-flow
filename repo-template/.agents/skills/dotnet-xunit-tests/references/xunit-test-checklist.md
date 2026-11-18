@@ -65,8 +65,8 @@ Portuguese:
 ## .NET Framework 4.8
 
 - Do not assume `msbuild`, `dotnet build` or Visual Studio workloads on the implementer's machine.
-- The plan says: build and 4.8 tests are run by the human approver in VS 2022 (Test Explorer or the Developer Prompt) when CLI runners are unavailable.
-- The implementer delivers the steps. The human approver returns the output (count and `.trx`, or a Test Explorer print) for `logs/`.
+- The harness may build and run .NET Framework 4.8 locally when MSBuild (`where msbuild` or `vswhere`), Developer Prompt, IIS Express, and an execution copy outside Git are detected (without installing anything); without MSBuild detected, status is `pendente` with the exact blocker. Only release/publish stays with the human approver in VS 2022.
+- When manual validation or release/publish output is returned by the human approver, record the output (count and `.trx`, or print) for `logs/`.
 - A confirmed build/test command in the envelope, recorded in `docs/ai/runbook.md`, overrides that default for that task.
 - Playwright, bUnit and Testcontainers remain standard dependencies in the text. The pack installs none of them.
 - R0 still applies: the regression fails before the fix and passes after. The planner gives an opinion first. Only the human approver waives it, explicitly, with the reason recorded.

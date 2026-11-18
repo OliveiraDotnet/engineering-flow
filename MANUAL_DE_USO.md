@@ -1,4 +1,4 @@
-# Manual do Engineering Flow 5.0
+# Manual do Engineering Flow 5.1
 
 O fluxo é definido por papéis em hierarquia clara: **aprovador humano → planejador/engenheiro-chefe → revisor/entrega por repositório → Implementor + Tester (no harness) → publicador/validador opcional** (veja a seção Papéis do [workflow.md](repo-template/docs/engineering-flow/workflow.md)). O fluxo não depende de nenhuma ferramenta específica: o desenvolvedor pode operar **com um único harness acumulando todos os papéis** (modo standalone) ou **distribuir os papéis entre agentes/bots independentes**. O fluxo completo está em [workflow.md](repo-template/docs/engineering-flow/workflow.md). Escolha a skill pelo [índice](SKILLS-INDEX.md).
 
@@ -44,7 +44,7 @@ No Completo, a tabela e a bateria completa fecham o Gate 2. A imagem é obrigat�
 
 ## Feature complexa
 
-Pedido (Card `AB-1045`): “Novo filtro por status com API e listagem”. Plano explicita card, branch `feat/AB-1045-filtro-status` (a partir da `main`), critérios, rotas/payloads, autenticação, consultas/índices, script SQL idempotente `AB-1045-filtro-status.sql`, componentes, riscos e a camada saudável da pirâmide (unitário, integração xUnit, e2e Playwright). Mudança de contrato ou novo acesso a banco não cabe como detalhe mecânico; retorna ao humano. Não instale runner/browser automaticamente. Cada critério tem cenário e observado. Falha fica como falha até corrigir e reexecutar dentro do envelope. .NET Framework 4.8 sem CLI: o aprovador humano roda build e testes no VS 2022.
+Pedido (Card `AB-1045`): “Novo filtro por status com API e listagem”. Plano explicita card, branch `feat/AB-1045-filtro-status` (a partir da `main`), critérios, rotas/payloads, autenticação, consultas/índices, script SQL idempotente `AB-1045-filtro-status.sql`, componentes, riscos e a camada saudável da pirâmide (unitário, integração xUnit, e2e Playwright). Mudança de contrato ou novo acesso a banco não cabe como detalhe mecânico; retorna ao humano. Não instale runner/browser automaticamente. Cada critério tem cenário e observado. Falha fica como falha até corrigir e reexecutar dentro do envelope. .NET Framework 4.8: o harness pode compilar e subir localmente detectando MSBuild (`where msbuild`/`vswhere`), IIS Express e cópia de execução fora do Git (sem instalar nada); sem MSBuild, o estado é `pendente` com o bloqueio exato. Apenas release/publish fica com o humano no VS 2022.
 
 ## Projeto novo e mobile
 

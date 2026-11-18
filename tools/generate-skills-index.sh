@@ -4,9 +4,14 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 PACK_ROOT="$(cd "$SCRIPT_DIR/.." && pwd -P)"
 SKILLS_ROOT="$PACK_ROOT/repo-template/.agents/skills"
+PACK_VERSION_FILE="$PACK_ROOT/pack-version.txt"
 OUTPUT="$PACK_ROOT/SKILLS-INDEX.md"
 
 [ -d "$SKILLS_ROOT" ] || { echo "Missing skills root: $SKILLS_ROOT" >&2; exit 1; }
+[ -f "$PACK_VERSION_FILE" ] || { echo "Missing pack version file: $PACK_VERSION_FILE" >&2; exit 1; }
+pack_version="$(tr -d '\r\n[:space:]' < "$PACK_VERSION_FILE")"
+[[ "$pack_version" =~ ^([0-9]+\.[0-9]+)\.[0-9]+$ ]] || { echo "Invalid semantic version in $PACK_VERSION_FILE: $pack_version" >&2; exit 1; }
+major_minor="${BASH_REMATCH[1]}"
 
 trim() {
   local value="$1"
@@ -53,7 +58,7 @@ while IFS= read -r skill; do
 done < <(find "$SKILLS_ROOT" -mindepth 2 -maxdepth 2 -type f -name SKILL.md | sort)
 
 {
-  printf '%s\n' '# Índice de skills — Engineering Flow 4.0'
+  printf '# Índice de skills — Engineering Flow %s\n' "$major_minor"
   printf '\n'
   printf '%s\n' 'Gerado por `tools/generate-skills-index.sh` a partir do frontmatter `name`/`description` de `repo-template/.agents/skills/*/SKILL.md`. O implementador lê este índice e carrega apenas a skill escolhida.'
   printf '\n'

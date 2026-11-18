@@ -1,4 +1,4 @@
-# Engineering Flow 5.0 — contrato de execução
+# Engineering Flow 5.1 — contrato de execução
 
 Triagem por card (`AB-<ID>`) → entender a demanda → plano técnico (Gate 1) → aprovação humana → implementar na branch do card (`Implementor` + `Tester` em loop fechado) → reunir evidências → Gate 2 (commit) → homologação → produção isolada, Tag, SQL e OS de Infra.
 
@@ -10,8 +10,8 @@ O fluxo é definido por papéis e hierarquia de trabalho, não por ferramentas e
 |---|---|---|
 | Aprovador humano | Única autoridade decisória (`sole decision authority`): aprova o Gate 1 (envelope), o Gate 2 (commit e push), decide `BLOCKED_BY_DECISION` / `UNABLE_TO_VALIDATE` e qualquer ida para produção. Não é delegável. | Sempre o usuário humano (ok explícito do aprovador humano). |
 | Planejador (Engenheiro-Chefe) | Está no topo da coordenação. Recebe demandas (cards, chat ou e-mail), garante a existência do card (`AB-<ID>`), consulta o `ai-memory`, fecha o plano técnico e o envelope do Gate 1 com o aprovador, acompanha o `Planejamento/DEMANDAS.md` (incluindo cobrança de demandas paradas em homologação) e delega a execução/instalação ao papel Revisor/Entrega. | No modo standalone, o próprio harness planeja com o usuário; no modo multi-bot, um agente planejador/engenheiro-chefe dedicado conduz a triagem. |
-| Revisor/entrega (Tech Lead de Repositório) | Responsável operacional pelo(s) repositório(s) do projeto: executa a instalação limpa do pack (onde **apenas `AGENTS.md` é versionado**), confere e cria o LOCK (`task.lock`), mantém `.ai-memory.toml` e `Planejamento/DEMANDAS.md`, escreve o `TASK_SPEC.md`, supervisiona o ciclo `Implementor` ↔ `Tester`, revisa diff e evidência, faz push e merge na homologação (mantendo a branch do card viva) e, após ok explícito do aprovador humano, promove a branch do card para a `main`, gera a Tag `vX.Y.Z`, consolida o SQL da release, gera a OS da Infra e exclui a branch do card. | No modo standalone, acumulado pelo harness ou usuário; no modo multi-bot, 1 bot especialista por repositório/projeto. |
-| Implementor (Harness Coder) | Executa só o envelope aprovado na branch do card (`feat/AB-<ID>-<slug>` ou `fix/AB-<ID>-<slug>`): altera o código-fonte, consome falhas apontadas pelo `Tester`, nunca faz push e é o **único** que executa `git commit` depois do ok explícito no Gate 2 (`--commit-gate2`, expirando o `task.lock`). | Qualquer harness CLI ou IDE (invocado diretamente ou via `harness-cycle/scripts/run-implementor.{sh,ps1}`). |
+| Revisor/entrega (Tech Lead de Repositório) | Responsável operacional pelo(s) repositório(s) do projeto: executa a instalação limpa do pack (onde **apenas `AGENTS.md` é versionado**), confere e adquire o LOCK (`.agent-pack/.runtime/task.lock` via `tools/task-lock.{sh,ps1} acquire`), mantém `.ai-memory.toml` e `Planejamento/DEMANDAS.md`, escreve o `TASK_SPEC.md` (com o bloco `ef:paths`), acompanha o ciclo `Implementor` ↔ `Tester` (só o harness executa `supervise-harness`, `run-*` e `--commit-gate2`), revisa diff e evidência, faz push e merge na homologação (mantendo a branch do card viva) e, após ok explícito do aprovador humano, promove a branch do card para a `main`, gera a Tag `vX.Y.Z`, consolida o SQL da release, gera a OS da Infra e exclui a branch do card. | No modo standalone, acumulado pelo harness ou usuário; no modo multi-bot, 1 bot especialista por repositório/projeto. |
+| Implementor (Harness Coder) | Executa só o envelope aprovado na branch do card (`feat/AB-<ID>-<slug>` ou `fix/AB-<ID>-<slug>`): altera o código-fonte, consome falhas apontadas pelo `Tester`, nunca faz push e é o **único** que executa `git commit` depois do ok explícito no Gate 2 (`--commit-gate2`, removendo o `task.lock` após o commit bem-sucedido; `run-implementor` não cria nem valida o lock). | Qualquer harness CLI ou IDE (invocado diretamente ou via `harness-cycle/scripts/run-implementor.{sh,ps1}`). |
 | Tester (Harness QA / Validador) | Nunca altera código de negócio. Valida o `R0-RED` (falha antes do fix) e o `R0-GREEN` (passa depois do fix) em bugs, roda as suítes aprovadas (unitário/integração ou Playwright E2E completo quando legado acoplado) e grava `.agent-pack/evidencias/<CardId>/EVIDENCIA.md` e `.agent-pack/.runtime/test-status.json`. | Mesmo harness em passo de verificação ou runner dedicado via `harness-cycle/scripts/run-tester.{sh,ps1}`. |
 | Publicador / Validador (opcional) | Audita branches/releases ou executa push quando acionado explicitamente pelo aprovador humano. | Opcional. |
 
@@ -21,16 +21,18 @@ Um mesmo agente pode acumular papéis: trabalhando sozinho com apenas um harness
 
 Para não poluir repositórios compartilhados com outros desenvolvedores da equipe:
 - O instalador (`install-agent-pack.{sh,ps1}`) faz uma instalação limpa e **não gera arquivos de versão/estado (`.agent-pack/state.txt`)** no repositório alvo.
-- O script `protect-engineering-flow-files.{sh,ps1}` adiciona todas as pastas operacionais do Engineering Flow (`.agents/`, `.grok/`, `.agent-pack/`, `docs/engineering-flow/`, `docs/ai/`, `prompts/`, `Planejamento/`, `planejamento/`, `.engineering-flow-evidence/`, `*.agent-pack.new`, `*.agent-pack.backup-*`) ao `.gitignore` do repositório alvo.
+- O script `protect-engineering-flow-files.{sh,ps1}` adiciona todas as pastas operacionais do Engineering Flow (`.agents/`, `.grok/`, `.agent-pack/`, `.ai-memory.toml`, `docs/engineering-flow/`, `docs/ai/`, `prompts/`, `Planejamento/`, `planejamento/`, `.engineering-flow-evidence/`, `*.agent-pack.new`, `*.agent-pack.backup-*`) ao `.gitignore` do repositório alvo.
+- Se um `.gitignore` herdado (ex.: EF 3.0) estiver ignorando `AGENTS.md`, o instalador aciona `protect-engineering-flow-files.{sh,ps1}` no modo `unignore-agents-md` (`-UnignoreAgentsMd`) durante o preflight para acrescentar `!AGENTS.md` ao fim do `.gitignore` (preservando regras existentes, UTF-8, BOM e CRLF; sai com código `5` se continuar ignorado).
 - **Somente o arquivo `AGENTS.md` na raiz permanece versionável** no Git do projeto.
 
 ## Triagem (Intake) e Ciclo de Branches por Card
 
 - **Regra Sem Card = Sem Branch:** Toda demanda deve ter um card correspondente (`AB-<ID>`) registrado antes da abertura da branch e da OS. O estado de todas as demandas do projeto é rastreado em `Planejamento/DEMANDAS.md` (`TRIAGEM` → `EM_DEV` → `EM_HOMOLOGACAO` → `APROVADA_PROD` → `EM_PRODUCAO`).
 - **Branch por Card:** Toda branch de trabalho inclui o ID do card no nome (`feat/AB-<ID>-<slug>` ou `fix/AB-<ID>-<slug>`) e **nasce obrigatoriamente a partir da `main` (`master`)**, salvo exceção explícita documentada por projeto na diretriz de entrega.
-- **Loop Fechado de Harness (`Implementor` ↔ `Tester` antes do Gate 2):** Com o `task.lock` ativo, o supervisor (`supervise-harness.{sh,ps1}`) ou o agente ativo executa: (1) em bugs, `Tester` em `R0-RED` confirmando a falha antes do fix; (2) `Implementor` aplicando o fix/feature na working tree sem comitar; (3) `Tester` em `R0-GREEN` / `FULL`; se falhar, retorna o log ao `Implementor` (até 3 tentativas; se exceder, para com `UNABLE_TO_VALIDATE`). Só quando `STATUS=PASSED` as evidências sobem para o Gate 2.
+- **Loop Fechado de Harness (`Implementor` ↔ `Tester` antes do Gate 2):** Com o `task.lock` ativo, **só o harness** (`Implementor` ou `Tester`, ou o mesmo agente acumulando papéis no modo standalone) executa `supervise-harness.{sh,ps1}`, `run-implementor`, `run-tester` e `--commit-gate2`: (1) em bugs, `Tester` em `R0-RED` confirmando a falha antes do fix; (2) `Implementor` aplicando o fix/feature na working tree sem comitar; (3) `Tester` em `R0-GREEN` / `FULL`; se falhar, retorna o log ao `Implementor` (até 3 tentativas; se exceder, para com `UNABLE_TO_VALIDATE`). O revisor/entrega escreve o `TASK_SPEC.md` (com `ef:paths`), revisa diff e evidência e conduz push, PR e merge. Só quando `STATUS=PASSED` as evidências sobem para o Gate 2.
 - **Homologação sem travar Produção:** Após o commit aprovado no Gate 2, o revisor/entrega faz push da branch do card e realiza o merge na branch de integração/homologação (`hom`, `develop` ou `hml`), **sem excluir a branch do card**.
 - **Promoção Isolada para Produção:** Quando uma demanda é aprovada para produção (com ok explícito do aprovador humano), o revisor/entrega faz o merge **da branch do card (`feat/AB-<ID>-<slug>`) diretamente na `main`/`master`**. Isso garante que apenas a demanda validada suba para produção, enquanto a branch de homologação preserva todas as demandas em teste.
+- **Exceção "repositório sem branch de homologação":** A regra da branch de homologação vale por padrão. A exceção só vale quando registrada explicitamente no `AGENTS.md` do repositório (`- Exceção sem homologação: sim — aprovado por <aprovador humano> em <data>, motivo: <...>`) com ok explícito do aprovador humano; nesse caso, o merge vai da branch do card diretamente para `main`/`master`, com o mesmo ok explícito de produção. Sem esse registro em `AGENTS.md`, a regra de homologação continua valendo.
 - **Fechamento de Versão e Limpeza:** Após o merge na `main`/`master`, o revisor/entrega cria a Tag semântica (`vX.Y.Z`), consolida apenas os scripts SQL dos cards daquela Tag em `Planejamento/scripts/Releases/vX.Y.Z_consolidado.sql`, gera o resumo da OS para a Infra (`OS-INFRA-vX.Y.Z.md`) e **só então exclui a branch do card**.
 
 ## Modos de operação
@@ -60,7 +62,7 @@ Mudança material de escopo, comportamento, arquitetura/contratos, dependências
 
 **Gate 2:** commit e push exigem o ok explícito do aprovador humano, dado depois de ele ver as evidências. O commit é feito só pelo implementador (`Implementor`). O push é feito só pelo revisor/entrega (ou publicador) ou, quando indisponível, pelo aprovador humano manualmente. Nenhum outro agente comita ou dá push. Nunca na main ou na master, nunca force push.
 
-## Diretriz de entrega (versão 5.0)
+## Diretriz de entrega (versão 5.1)
 
 As regras detalhadas de entrega por card, promoção isolada para `main`, tag e convenções por projeto ficam na raiz do repositório engineering-flow, em `diretrizes/DIRETRIZ-entrega-pelo-bot-de-projeto.md`.
 
@@ -68,9 +70,9 @@ As regras detalhadas de entrega por card, promoção isolada para `main`, tag e 
 
 O LOCK fica em `.agent-pack/.runtime/task.lock` no repositório em trabalho. O arquivo não é versionado.
 
-- Quem cria: o revisor/entrega do repositório (ou o runner `run-implementor`), depois de conferir que não existe outro LOCK ativo.
+- Quem cria: quem abre a tarefa (ex.: o revisor/entrega ou o coordenador standalone), executando `tools/task-lock.{sh,ps1} acquire` após conferir que não existe outro LOCK ativo. O runner `run-implementor` não cria nem valida o lock; ele apenas o remove depois de um commit do Gate 2 bem-sucedido.
 - Conteúdo: o harness (`default` ou nome informado), a tarefa (card), a branch, o responsável (campo `bot`), `acquired_at` e `head`.
-- Quando expira: no commit da tarefa (quando `HEAD` avança no Gate 2).
+- Quando expira: no commit da tarefa (removido pelo `run-implementor` após o commit do Gate 2 bem-sucedido, ou invalidado quando `HEAD` avança).
 - Trava esquecida: quem libera é o revisor/entrega da demanda (`task-lock.{sh,ps1} release --force`).
 
 ## Descoberta proporcional
@@ -94,14 +96,14 @@ Dependências padrão no texto: Playwright, bUnit e Testcontainers. O pack não 
   - **Se não for saudável no legado:** É proibido forçar refatoração estrutural arriscada apenas para viabilizar teste unitário artificial. A validação (incluindo o `R0` em bugs) sobe obrigatoriamente para o **Teste E2E Completo (Playwright)**, validando o fluxo real de ponta a ponta antes e depois da alteração.
 - **R0, regressão obrigatória em bug.** O teste falha antes do fix (`R0-RED`) e passa depois (`R0-GREEN`). As duas execuções entram na evidência com comando, código de saída e contagem. O planejador opina antes. Só o aprovador humano dispensa, de forma explícita e registrada no plano com o motivo.
 - **Sem teste de integração:** isso tem de ser reportado explicitamente na evidência (junto com a justificativa de saúde do legado, quando substituído por E2E completo). Não se omite a camada.
-- **.NET Framework 4.8:** quando não houver runner CLI configurado no ambiente, build e testes rodam com o aprovador humano no VS 2022. O implementador entrega os passos e não presume `msbuild` nem `dotnet build` sem verificar.
+- **.NET Framework 4.8:** o harness pode compilar e subir localmente detectando MSBuild ou Developer Prompt (`where msbuild` ou `vswhere`, sem presumir que existem), IIS Express e uma cópia de execução fora do Git; apenas release/publish fica com o aprovador humano no VS 2022. Sem MSBuild detectado, o estado é `pendente` com o bloqueio exato, e o harness não instala nada.
 - **SQL:** teste que toca banco só roda pelo harness de teste contra o servidor de teste confirmado no envelope (pelo nome, nunca pela credencial). Sem confirmação: `pendente`.
 
 ### Validação no Gate 1
 
 | ID | Critério | Camada | Teste/cenário | Quem executa | Evidência esperada | Obrigatório |
 |---|---|---|---|---|---|---|
-| R0 | Regressão do bug | unit / integração (se saudável) ou Playwright E2E completo (legado acoplado) | teste automatizado ou E2E | Tester (harness) ou aprovador humano (4.8 no VS 2022) | antes falhou (`R0-RED`), depois passou (`R0-GREEN`) | sim, em bug |
+| R0 | Regressão do bug | unit / integração (se saudável) ou Playwright E2E completo (legado acoplado) | teste automatizado ou E2E | Tester (harness; em 4.8 com MSBuild detectado, ou pendente se ausente) | antes falhou (`R0-RED`), depois passou (`R0-GREEN`) | sim, em bug |
 | C | Critério observável | camada saudável do critério (ou E2E completo no legado) | teste aprovado | Tester (harness) | print / `.trx` | conforme o modo |
 | B | Bateria completa | unit + integração (ou E2E completo quando legado sem suíte saudável) | suítes dos projetos afetados | Tester (harness) ou aprovador humano | `.trx`, prints E2E e contagem | sim, no Completo |
 | T | Resumo do Trivial | manual + teste focado se houver | arquivo alterado | Implementor / Tester | resumo curto com o arquivo | sim, no Trivial |
@@ -113,6 +115,10 @@ Execute somente o envelope aprovado. Detecte runners, ferramentas e ambiente exi
 - **Fronteira Funcional vs. Visual (UI):** quem define e programa a estrutura da tela (composição, campos, rotas, menus, binding e permissões) é o `Implementor`. Ajustes visuais (CSS, espaçamento, componentes reutilizáveis, acessibilidade) preservam rotas, contratos e o que o sistema faz ou mostra; se alterarem regra ou conteúdo, retornam ao plano/envelope.
 - **Fechamento independente de Segurança e Revisão:** ao corrigir um achado de segurança ou revisão, o `Implementor` registra o ajuste como `Em verificação`, mas o fechamento definitivo exige reteste e confirmação pelo `Tester` / revisor responsável na evidência.
 - **Higiene preventiva de ambiente e segredos:** confira `.gitignore` (`git check-ignore`) **antes** de criar arquivos locais de configuração (`appsettings*.json`, `.env`) ou diretórios de saída de teste (`TestResults/`, `*.trx`). Mantenha `*.example.*` sem valores reais. Exceções temporárias de desenvolvimento (ex.: relaxar validação de certificado TLS local) exigem guarda explícita de ambiente (`IsDevelopment()`), valor seguro (`false`) por padrão, registro em `docs/ai/decisions-and-pendencies.md` e teste cobrindo o comportamento fora de desenvolvimento.
+- **Logs de sessão do harness e captura segura (`ef_mask` / `ef_scan`):**
+  - Logs de sessão do harness são **sensíveis**. Ler qualquer arquivo que contenha segredo — mesmo um arquivo autorizado do escopo, como um script SQL consolidado — coloca o segredo no transcript da sessão.
+  - Invocar a CLI do harness por meio de **wrapper ad hoc** fora de `run-implementor` / `run-tester`, ou redirecionar `1>` / `2>` diretamente para arquivo, é uma **violação documentada**. Use sempre os runners do pack (`--harness agy|claude|grok`) para garantir captura mascarada em `$EF_HARNESS_LOG_DIR` (`.agent-pack/logs/<CardId>/`).
+  - Logs antigos gerados por wrappers ad hoc devem ser varridos no lugar com `ef_scan` ou apagados com o ok explícito do Tech Lead. Se `ef_scan` acusar `SECRET_IN_LOG` (`exit 6`), o Gate 2 fica bloqueado (inclusive com `--allow-unvalidated`) até uma nova execução limpa de `run-tester --phase validate`.
 
 ## Evidência e entrega
 
@@ -140,7 +146,7 @@ O relatório de evidência tem a seção "Lições e regras". O implementador pr
 
 ## Memória Persistente (`ai-memory` + `docs/ai` local) e Isolamento entre Papéis
 
-O Engineering Flow 5.0 utiliza o **`ai-memory` (`akitaonrails/ai-memory`)** quando disponível no ambiente, em conjunto com a documentação local em `docs/ai/` e os artefatos de handoff (`TASK_SPEC.md`, `Planejamento/DEMANDAS.md`, `EVIDENCIA.md`).
+O Engineering Flow 5.1 utiliza o **`ai-memory` (`akitaonrails/ai-memory`)** quando disponível no ambiente, em conjunto com a documentação local em `docs/ai/` e os artefatos de handoff (`TASK_SPEC.md`, `Planejamento/DEMANDAS.md`, `EVIDENCIA.md`).
 
 - **Isolamento de Memória entre Bots e Harness:** Agentes externos (como bots de planejamento ou de revisão que rodam fora do harness) podem não compartilhar a mesma instância MCP do `ai-memory` do harness de execução. Por isso, toda passagem de bastão entre papéis deve ser explícita e autossuficiente via arquivos locais (`TASK_SPEC.md`, `EVIDENCIA.md`, `test-status.json`, `Planejamento/DEMANDAS.md` e `AGENTS.md`), garantindo que cada agente tenha sua função estritamente separada sem depender de estado implícito.
 - **Namespacing Multi-Repo (`.ai-memory.toml`):** Quando o `ai-memory` é utilizado, define-se `workspace = "<slug-do-projeto>"` e `project = "<slug-do-repositorio>"`.

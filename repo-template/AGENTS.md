@@ -1,6 +1,8 @@
-# Engineering Flow 5.0 — orientação do projeto
+<!-- ef:managed:begin:header -->
+# Engineering Flow 5.1 — orientação do projeto
 
 Template ativo: [UNVERIFIED] não é evidência do repo. Use bootstrap-repo quando faltar contexto; reuse mapa confirmado e a memória do projeto (`docs/ai` e `ai-memory` quando configurado). Recarregue instruções quando o host exigir.
+<!-- ef:managed:end:header -->
 
 ## Fatos a confirmar
 
@@ -10,6 +12,7 @@ Template ativo: [UNVERIFIED] não é evidência do repo. Use bootstrap-repo quan
 
 Confirme em código, manifests, scripts e CI. Registre fontes/data em docs/ai/project-map.md e no `ai-memory` somente quando útil; preserve regras próprias.
 
+<!-- ef:managed:begin:contract -->
 ## Contrato, hierarquia e autorização
 
 Leia docs/engineering-flow/workflow.md para a demanda; capabilities.md somente para a área afetada. O aprovador humano é a sole decision authority (papel de aprovador humano). Papéis e hierarquia do fluxo: aprovador humano, planejador/engenheiro-chefe, revisor/entrega (tech lead do repositório), Implementor (harness de código), Tester (harness de validação/QA) e publicador/validador opcional; a tabela completa está em workflow.md, seção Papéis. O fluxo funciona tanto com um único harness acumulando papéis quanto com agentes separados por função.
@@ -22,11 +25,11 @@ Em bug, o teste de regressão `R0` (falha antes do fix `R0-RED`, passa depois `R
 
 ## Instalação Limpa e Versionamento
 
-A instalação do Engineering Flow 5.0 no repositório é limpa: **não gera arquivos de versão/estado (`.agent-pack/state.txt`)** e protege todas as pastas operacionais no `.gitignore` (`.agents/`, `.grok/`, `.agent-pack/`, `docs/engineering-flow/`, `docs/ai/`, `prompts/`, `Planejamento/`). **Apenas este arquivo `AGENTS.md` é versionado** no repositório, evitando ruído para outros desenvolvedores da equipe.
+A instalação do Engineering Flow 5.1 no repositório é limpa: **não gera arquivos de versão/estado (`.agent-pack/state.txt`)** e protege todas as pastas operacionais no `.gitignore` (`.agents/`, `.grok/`, `.agent-pack/`, `docs/engineering-flow/`, `docs/ai/`, `prompts/`, `Planejamento/`). **Apenas este arquivo `AGENTS.md` é versionado** no repositório, evitando ruído para outros desenvolvedores da equipe.
 
 ## LOCK
 
-O revisor/entrega do repositório (ou o runner `run-implementor`) confere se já existe `.agent-pack/.runtime/task.lock` e então cria o dele. O arquivo não é versionado. Conteúdo: o harness, a tarefa (card), a branch, o responsável (campo `bot`), `acquired_at` e `head`. O LOCK expira no commit da tarefa (Gate 2). Trava esquecida: quem libera é o revisor/entrega da demanda.
+Quem abre a tarefa (ex.: o revisor/entrega do repositório ou o operador standalone) confere se já existe `.agent-pack/.runtime/task.lock` e adquire o lock via `tools/task-lock.{sh,ps1} acquire`. O runner `run-implementor` não cria nem valida o lock; apenas o remove depois de um commit do Gate 2 bem-sucedido. O arquivo não é versionado. Conteúdo: o harness, a tarefa (card), a branch, o responsável (campo `bot`), `acquired_at` e `head`. O LOCK expira no commit da tarefa (Gate 2) ou quando `HEAD` avança. Trava esquecida: quem libera é o revisor/entrega da demanda.
 
 ## Modos, anti-padrões e limites
 
@@ -49,6 +52,7 @@ Pesquise antes de abrir arquivos (consultando primeiro `docs/ai/project-map.md`,
 Detecte ferramentas/runners antes de executar somente testes aprovados. Confira `.gitignore` (`git check-ignore`) antes de criar arquivos locais de configuração ou relatórios (`TestResults/`, `*.trx`) e valide lock files / dependências transitivas quando aplicável. Checks de encoding também entram no envelope; preserve encoding legado confirmado e reporte limitações. Vincule critério → cenário → esperado → observado → artefato → status. Separe implementado, verificado, falhou e pendente/não verificado. Revise diff/novos arquivos; não declare teste aprovado por leitura de código ou resumo.
 
 Mantenha evidências/sessões/estado transitório fora de memória versionada. Em docs/ai e no `ai-memory` guarde só conhecimento durável verificado, fonte/data e dados mínimos redigidos. Entregue causa/motivação, arquivos, resultados reais, links, decisões e riscos.
+<!-- ef:managed:end:contract -->
 
 ## Convenções do projeto
 
@@ -56,6 +60,9 @@ Template (AGENTS.md é artefato `merge` e o único arquivo do fluxo versionado n
 
 - Branch principal (produção): [`main`|`master`]
 - Branch de homologação/integração: [`hom`|`develop`|`hml`]
+- Exceção sem homologação: [não | sim — aprovado por <aprovador humano> em <data>, motivo: <...>]
+- Branches protegidas (harness): [...]
+- Nomes sensíveis (mascaramento): [...]
 - Workspace de planejamento (planning-workspace.md, inclui `DEMANDAS.md`): [on|off]; raiz: [<caminho>]
 - Pacote SQL de release por Tag e OS da Infra (sql-release-package.md): [on|off]
 - Cópia duplicada dos scripts pendentes no repo: [sim|não]; caminho: [<caminho>]
@@ -64,6 +71,8 @@ Template (AGENTS.md é artefato `merge` e o único arquivo do fluxo versionado n
 - Namespacing `.ai-memory.toml` (opcional): `workspace = "[<slug-projeto>]"`, `project = "[<slug-repo>]"`
 - Provider (GitHub/Azure DevOps) não é declarado aqui.
 
+<!-- ef:managed:begin:memory -->
 ## Memória Persistente e Isolamento de Contexto
 
 A memória de longo prazo pode utilizar o **`ai-memory` (`akitaonrails/ai-memory`)** via MCP e `.ai-memory.toml`, complementando a documentação local em `docs/ai/`. Como agentes externos (bots de planejamento ou revisão) podem não compartilhar a mesma memória MCP do harness, toda comunicação entre papéis utiliza artefatos explícitos em disco (`TASK_SPEC.md`, `EVIDENCIA.md`, `test-status.json`, `Planejamento/DEMANDAS.md` e `AGENTS.md`). Dado de cliente só entra se for útil para teste, e no máximo o username. CPF, dado bancário, credenciais e dado sensível nunca entram.
+<!-- ef:managed:end:memory -->

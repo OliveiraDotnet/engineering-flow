@@ -3,7 +3,7 @@ name: update-agent-pack
 description: Inspect and safely reconcile an existing repository installation with a newer Agent Pack, including added, changed, renamed, or retired skills, agents, prompts, and rules. Use when the user asks the active harness to check, update, migrate, synchronize, or repair an installed Agent Pack without losing repository-specific guidance or local customizations.
 ---
 
-## Engineering Flow 3.0 execution gate
+## Engineering Flow execution gate
 
 Follow docs/engineering-flow/workflow.md in the target repository. Understand demand, present a technical plan, receive human approval, implement, execute only approved tests, gather criterion-linked evidence, deliver. Existing explicit authorization persists. Investigation/plan do not authorize implementation. Absence of a test request does not automatically authorize tests: highlight missing validation and ask whether to include it. If only implementation is approved, deliver it as unvalidated with pending checks. Material changes in scope, behavior, architecture/contracts, dependencies, security/data or validation return to the human. This gate governs execution steps below; no automatic delegation or second provider is required.
 
@@ -14,7 +14,7 @@ Follow docs/engineering-flow/workflow.md in the target repository. Understand de
 3. Run the updater in check mode:
    - Windows: `pwsh -File "$env:AGENT_PACK_HOME\scripts\update-agent-pack.ps1" -RepoPath . -Check`
    - Linux/macOS: `bash "$AGENT_PACK_HOME/scripts/update-agent-pack.sh" . --check`
-   - Engineering Flow 3.0 is Grok-only. Pass `-Integration grok` or `--integration grok` when stating the harness explicitly.
+   - The installer integration is Grok-only. Pass `-Integration grok` or `--integration grok` when stating the harness explicitly.
 4. Review every planned action and its evidence. The deterministic updater owns file selection; do not invent extra files or profiles.
 5. Resolve conflicts by artifact:
    - Preserve confirmed project facts, commands and rules.

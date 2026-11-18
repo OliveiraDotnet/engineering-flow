@@ -26,6 +26,8 @@ $ArtifactsPath = Join-Path $PackRoot "pack-artifacts.txt"
 $VersionPath = Join-Path $PackRoot "pack-version.txt"
 $GlobalGuidance = Join-Path $PackRoot "global\AGENTS.md"
 $InspectScript = Join-Path $TemplateRoot ".agents\skills\bootstrap-repo\scripts\inspect-repo.ps1"
+$MergeHelper = Join-Path $ScriptDir "merge-managed-blocks.ps1"
+$script:AgentsMergeSkipped = $false
 $ValidProfiles = @("core", "web", "sqlserver", "quality", "mobile")
 $AutoDetectableProfiles = @("web", "sqlserver", "mobile")
 $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
@@ -256,7 +258,8 @@ function Add-CopyAction {
     param(
         [Parameter(Mandatory = $true)]$Actions,
         [Parameter(Mandatory = $true)][string]$Source,
-        [Parameter(Mandatory = $true)][string]$Destination
+        [Parameter(Mandatory = $true)][string]$Destination,
+        [string]$RelativeDestination = ""
     )
 
     if (-not (Test-Path -LiteralPath $Source -PathType Leaf)) {
@@ -279,7 +282,12 @@ function Add-CopyAction {
             $state = "SKIP"
         }
         elseif ($Force) {
-            $state = "REPLACE"
+            if ($RelativeDestination -eq "AGENTS.md") {
+                $state = "MERGE"
+            }
+            else {
+                $state = "REPLACE"
+            }
         }
         else {
             $sidecar = "$Destination.agent-pack.new"
@@ -311,6 +319,57 @@ function Add-CopyAction {
 
 function Invoke-CopyAction {
     param([Parameter(Mandatory = $true)]$Action)
+
+    if ($Action.State -eq "MERGE") {
+        if ($DryRun -or $WhatIfPreference) {
+            Assert-NoLinkedPath $Action.Destination
+            $blocksOut = (& $MergeHelper -TemplatePath $Action.Source -TargetPath $Action.Destination -CheckOnly -Quiet) | Out-String
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host ("WOULD-MERGE {0} (blocks: {1})" -f $Action.Destination, $blocksOut.Trim())
+            }
+            else {
+                Write-Host ("WOULD-SKIP-MERGE {0}" -f $Action.Destination)
+            }
+            return
+        }
+
+        if (-not $PSCmdlet.ShouldProcess($Action.Destination, "MERGE")) {
+            return
+        }
+
+        Assert-NoLinkedPath $Action.Destination
+        Assert-NoLinkedPath "$($Action.Destination).agent-pack.new"
+        $destinationDirectory = Split-Path -Parent $Action.Destination
+        if (-not (Test-Path -LiteralPath $destinationDirectory)) {
+            New-Item -ItemType Directory -Force -Path $destinationDirectory | Out-Null
+        }
+
+        Copy-Item -LiteralPath $Action.Source -Destination "$($Action.Destination).agent-pack.new" -Force
+        $blocksOut = (& $MergeHelper -TemplatePath $Action.Source -TargetPath $Action.Destination -CheckOnly) | Out-String
+        $mergeRc = $LASTEXITCODE
+        if ($mergeRc -eq 7) {
+            $script:AgentsMergeSkipped = $true
+            Write-Host ("SKIP-MERGE {0}" -f $Action.Destination)
+            return
+        }
+        elseif ($mergeRc -ne 0) {
+            exit $mergeRc
+        }
+
+        $backup = Get-AvailableBackupPath $Action.OriginalDestination
+        Assert-NoLinkedPath $backup
+        Copy-Item -LiteralPath $Action.OriginalDestination -Destination $backup -Force
+        Write-Host ("BACKUP    {0}" -f $backup)
+
+        $blocksOut = (& $MergeHelper -TemplatePath $Action.Source -TargetPath $Action.Destination) | Out-String
+        if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+        }
+        Remove-Item -LiteralPath "$($Action.Destination).agent-pack.new" -Force -ErrorAction SilentlyContinue
+        $Action.Completed = $true
+        Write-Host ("MERGE AGENTS.md (blocks: {0})" -f $blocksOut.Trim())
+        return
+    }
 
     Write-Host ("{0,-9} {1}" -f $Action.State, $Action.Destination)
 
@@ -476,7 +535,7 @@ function Install-ToRepository {
         if (-not (Test-PathWithin $TargetRoot $destination)) {
             throw "Manifest destination path escapes the repository root: $($entry.Destination)"
         }
-        Add-CopyAction -Actions $actions -Source $source -Destination $destination
+        Add-CopyAction -Actions $actions -Source $source -Destination $destination -RelativeDestination $entry.Destination
     }
 
     Assert-NoLinkedPath (Join-Path $TargetRoot '.agent-pack')
@@ -485,6 +544,17 @@ function Install-ToRepository {
 
     $ignoreHelper = Join-Path $ScriptDir 'protect-engineering-flow-files.ps1'
     & $ignoreHelper -RepoPath $TargetRoot -CheckOnly
+    if (-not $AllowNonGit) {
+        if ($DryRun -or $WhatIfPreference) {
+            & $ignoreHelper -RepoPath $TargetRoot -UnignoreAgentsMd -DryRun
+        }
+        else {
+            & $ignoreHelper -RepoPath $TargetRoot -UnignoreAgentsMd
+            if ($LASTEXITCODE -ne 0) {
+                exit $LASTEXITCODE
+            }
+        }
+    }
     foreach ($action in $actions) {
         Invoke-CopyAction -Action $action
     }
@@ -599,3 +669,9 @@ if ($InstallGlobal -and -not $DiscoverOnly) {
         Invoke-CopyAction -Action $action
     }
 }
+
+if ($script:AgentsMergeSkipped) {
+    exit 7
+}
+$global:LASTEXITCODE = 0
+exit 0
