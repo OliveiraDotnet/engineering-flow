@@ -152,5 +152,6 @@ prompt.13-tester-harness|prompts/13-tester-harness.md|managed
 flow.anti-patterns|docs/engineering-flow/anti-patterns.md|managed
 flow.capabilities|docs/engineering-flow/capabilities.md|managed
 flow.planning-workspace|docs/engineering-flow/planning-workspace.md|managed
+flow.roles-and-handoffs|docs/engineering-flow/roles-and-handoffs.md|managed
 flow.sql-release-package|docs/engineering-flow/sql-release-package.md|managed
 flow.workflow|docs/engineering-flow/workflow.md|managed

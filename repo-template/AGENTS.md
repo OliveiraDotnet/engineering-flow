@@ -15,7 +15,7 @@ Confirme em código, manifests, scripts e CI. Registre fontes/data em docs/ai/pr
 <!-- ef:managed:begin:contract -->
 ## Contrato, hierarquia e autorização
 
-Leia docs/engineering-flow/workflow.md para a demanda; capabilities.md somente para a área afetada. O aprovador humano é a sole decision authority (papel de aprovador humano). Papéis e hierarquia do fluxo: aprovador humano, planejador/engenheiro-chefe, revisor/entrega (tech lead do repositório), Implementor (harness de código), Tester (harness de validação/QA) e publicador/validador opcional; a tabela completa está em workflow.md, seção Papéis. O fluxo funciona tanto com um único harness acumulando papéis quanto com agentes separados por função.
+Leia docs/engineering-flow/workflow.md para a demanda; docs/engineering-flow/roles-and-handoffs.md para a divisão de responsabilidades entre sessões ("cada um no seu quadrado") e passagem de bastão; capabilities.md somente para a área afetada. O aprovador humano é a sole decision authority (papel de aprovador humano). Papéis e hierarquia do fluxo: aprovador humano, planejador/engenheiro-chefe, revisor/entrega (tech lead do repositório), Implementor (harness de código), Tester (harness de validação/QA), UI/Ajuste Visual opcional e publicador/validador opcional; a tabela completa está em workflow.md e roles-and-handoffs.md. Em `sessao-por-papel` (padrão caso não seja especificado outro modo), cada conversa assume exatamente um papel, nunca invade o quadrado de outro papel e sempre encerra gerando o bloco `PROMPT PARA: <Próximo Papel>`.
 
 Triagem por card (`AB-<ID>`) → entender → plano técnico (Gate 1) → aprovação humana (total ou liberação parcial registrada em `docs/ai/decisions-and-pendencies.md`) → implementar na branch do card (`Implementor` + `Tester` em loop fechado) → testes aprovados → evidências → Gate 2 (commit) → homologação → produção isolada, Tag, SQL e OS de Infra. Gate 1 define o execution envelope: card, branch (`feat/AB-<ID>-<slug>` ou `fix/AB-<ID>-<slug>` criada a partir da `main`/`master`), objetivo, critérios, escopo/não objetivos, componentes, riscos/decisões, saúde de testes no legado (unitário/integração se saudável, ou Playwright E2E completo quando acoplado), ferramentas/ambiente e evidências. Investigação/plano não autorizam implementar. Autorização explícita existente persiste; não peça novamente por passos cobertos.
 
@@ -60,6 +60,7 @@ Template (AGENTS.md é artefato `merge` e o único arquivo do fluxo versionado n
 
 - Branch principal (produção): [`main`|`master`]
 - Branch de homologação/integração: [`hom`|`develop`|`hml`]
+- Modo de operação dos papéis: `sessao-por-papel` *(padrão se não especificado; ou `standalone`)*
 - Exceção sem homologação: [não | sim — aprovado por <aprovador humano> em <data>, motivo: <...>]
 - Branches protegidas (harness): [...]
 - Nomes sensíveis (mascaramento): [...]
