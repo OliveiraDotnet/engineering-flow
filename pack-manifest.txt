@@ -152,5 +152,6 @@ core|prompts/13-tester-harness.md
 core|docs/engineering-flow/anti-patterns.md
 core|docs/engineering-flow/capabilities.md
 core|docs/engineering-flow/planning-workspace.md
+core|docs/engineering-flow/roles-and-handoffs.md
 core|docs/engineering-flow/sql-release-package.md
 core|docs/engineering-flow/workflow.md

@@ -1,6 +1,6 @@
 # Engineering Flow release compatibility catalog v5.1.0
 # Format: artifact_id|destination_relative_path|normalized_lf_sha256
-guidance.agents|AGENTS.md|581dbb33a2caf0b1a544d5e383401134c04b36ce6dc4f7a757b8f5ea5ea18278
+guidance.agents|AGENTS.md|e8bb57b6e19d6ef9dc931c5298171dbbe7d2c12d37ba19f623fac957e8804f0f
 memory.project-map|docs/ai/project-map.md|c0a6225ec8f2f88703fc4941351472ab6352b9f8f2f1fbff82daa49ba9018952
 memory.architecture|docs/ai/architecture.md|46492a93bf803d82a92bb22e4df5bc0e57f60b797c7c8bf8484bbcc522746994
 memory.database|docs/ai/database.md|2202dda7a13102e466f2583d749741473622a77df116716c195ee3404af7eb6e
@@ -16,14 +16,14 @@ skill.grok.agents-md-generator|.grok/skills/agents-md-generator/SKILL.md|b9a3c92
 skill.shared.agents-md-generator.metadata|.agents/skills/agents-md-generator/agents/openai.yaml|9c453e2c0911d8af8bae7539b6663e0e303e4724e5db0809f7131b0b6f379305
 skill.shared.agents-md-generator.checklist|.agents/skills/agents-md-generator/references/agents-md-checklist.md|7abccaba3dfd6f6320a4d60e4233442b5516197b0a8bf97975170ab7cc7dfc12
 skill.grok.agents-md-generator.checklist|.grok/skills/agents-md-generator/references/agents-md-checklist.md|7abccaba3dfd6f6320a4d60e4233442b5516197b0a8bf97975170ab7cc7dfc12
-skill.shared.bootstrap-dotnet|.agents/skills/bootstrap-dotnet-repo/SKILL.md|74e949a3f912a8269706c380592cd2b357d4bb6af2d5ad6ec27963772d5d8dc4
-skill.grok.bootstrap-dotnet|.grok/skills/bootstrap-dotnet-repo/SKILL.md|74e949a3f912a8269706c380592cd2b357d4bb6af2d5ad6ec27963772d5d8dc4
+skill.shared.bootstrap-dotnet|.agents/skills/bootstrap-dotnet-repo/SKILL.md|f05eb8e6ce8762cb36f18eca1a67808ea47329507eda68182130d2e88513aa26
+skill.grok.bootstrap-dotnet|.grok/skills/bootstrap-dotnet-repo/SKILL.md|f05eb8e6ce8762cb36f18eca1a67808ea47329507eda68182130d2e88513aa26
 skill.shared.bootstrap-dotnet.inspect-powershell|.agents/skills/bootstrap-dotnet-repo/scripts/inspect-dotnet-repo.ps1|33912535ecd8ba838d849bb0b9f37b6d1179e243ce0ae57897824cdf558333ab
 skill.grok.bootstrap-dotnet.inspect-powershell|.grok/skills/bootstrap-dotnet-repo/scripts/inspect-dotnet-repo.ps1|33912535ecd8ba838d849bb0b9f37b6d1179e243ce0ae57897824cdf558333ab
 skill.shared.bootstrap-dotnet.inspect-shell|.agents/skills/bootstrap-dotnet-repo/scripts/inspect-dotnet-repo.sh|9f4152edd908fdf90255d076ff8c31b2374f72424d2b9afd5f12ec3ac241ccb4
 skill.grok.bootstrap-dotnet.inspect-shell|.grok/skills/bootstrap-dotnet-repo/scripts/inspect-dotnet-repo.sh|9f4152edd908fdf90255d076ff8c31b2374f72424d2b9afd5f12ec3ac241ccb4
-skill.shared.bootstrap-repo|.agents/skills/bootstrap-repo/SKILL.md|97f645a13cd070493589560543016785280ed52afc8d923af447a495df201030
-skill.grok.bootstrap-repo|.grok/skills/bootstrap-repo/SKILL.md|97f645a13cd070493589560543016785280ed52afc8d923af447a495df201030
+skill.shared.bootstrap-repo|.agents/skills/bootstrap-repo/SKILL.md|182d8e913e781c5a20951d7829f195f505a5559f1302493ef2c00beb628515ad
+skill.grok.bootstrap-repo|.grok/skills/bootstrap-repo/SKILL.md|182d8e913e781c5a20951d7829f195f505a5559f1302493ef2c00beb628515ad
 skill.shared.bootstrap-repo.inspect-ps1|.agents/skills/bootstrap-repo/scripts/inspect-repo.ps1|8fabab85ee89176f40d61a278ff0b8c9a497394b0ae0d9d2765352287f2ff7cd
 skill.grok.bootstrap-repo.inspect-ps1|.grok/skills/bootstrap-repo/scripts/inspect-repo.ps1|8fabab85ee89176f40d61a278ff0b8c9a497394b0ae0d9d2765352287f2ff7cd
 skill.shared.bootstrap-repo.inspect-sh|.agents/skills/bootstrap-repo/scripts/inspect-repo.sh|2617f55eea20d2c3e3a7b9549930c68b75d1c6d9e55d1e9a48188dbf4bdc6a6a
@@ -153,5 +153,6 @@ prompt.13-tester-harness|prompts/13-tester-harness.md|d55e1fba4fc418ec46d79cd967
 flow.anti-patterns|docs/engineering-flow/anti-patterns.md|d722aee68b975b68c29cf193389f2ab848a56e27f1cc2068ba6ef17c7d82c1c9
 flow.capabilities|docs/engineering-flow/capabilities.md|3f197985cc09b633461a26e4fdd53f635436e9d28a220749255e6a1b98f6ce3a
 flow.planning-workspace|docs/engineering-flow/planning-workspace.md|7e5cce21bdb021cdb9e631a2f1fa7285486d1788a57c5954bcbeefdff1200bb9
+flow.roles-and-handoffs|docs/engineering-flow/roles-and-handoffs.md|2e6f4f7be22561f107d84f076829aea670096ef6fa5409badbda6de535a1e956
 flow.sql-release-package|docs/engineering-flow/sql-release-package.md|2c330067089ca1b5eb481bf4c7c78fd525a656de6adcc79035db52e553840443
 flow.workflow|docs/engineering-flow/workflow.md|c06186463ae555e79e109096dc96af1d1ab8a2c7b356063b5884e1f7823adcd1
