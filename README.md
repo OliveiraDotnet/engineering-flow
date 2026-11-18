@@ -6,7 +6,7 @@ Versão atual: **`5.1.0`** · [Releases no GitHub](https://github.com/OliveiraDo
 
 ---
 
-## O que é o Engineering Flow 5.0
+## O que é o Engineering Flow 5.1
 
 O **Engineering Flow** é um método prático para descobrir sistemas, triar demandas por card (`AB-<ID>`), planejar tecnicamente, implementar em loop fechado com validação real e entregar mudanças em homologação e produção com rastreabilidade.
 
@@ -96,7 +96,6 @@ Execute a partir da raiz do `engineering-flow`, apontando para o repositório Gi
 bash ./scripts/install-agent-pack.sh /caminho/do/repositorio --discover-only
 bash ./scripts/install-agent-pack.sh /caminho/do/repositorio --profile web,sqlserver --dry-run
 bash ./scripts/install-agent-pack.sh /caminho/do/repositorio --profile web,sqlserver
-bash ./scripts/install-agent-pack.sh /caminho/do/repositorio --profile web,sqlserver --force
 ```
 
 ```powershell
@@ -104,10 +103,9 @@ bash ./scripts/install-agent-pack.sh /caminho/do/repositorio --profile web,sqlse
 .\scripts\install-agent-pack.ps1 -RepoPath 'C:\src\Sistema' -DiscoverOnly
 .\scripts\install-agent-pack.ps1 -RepoPath 'C:\src\Sistema' -Profile web,sqlserver -DryRun
 .\scripts\install-agent-pack.ps1 -RepoPath 'C:\src\Sistema' -Profile web,sqlserver
-.\scripts\install-agent-pack.ps1 -RepoPath 'C:\src\Sistema' -Profile web,sqlserver -Force
 ```
 
-> Para pastas deliberadamente sem Git, use `--allow-non-git` / `-AllowNonGit`. Em atualizações sobre instalações antigas ou ignoradas no `.gitignore`, `--force` / `-Force` atualiza preservando backups `*.agent-pack.backup-*` caso algum arquivo tenha sido alterado localmente.
+> Para pastas deliberadamente sem Git, use `--allow-non-git` / `-AllowNonGit`. Sem `--force`, divergências geram sidecars `*.agent-pack.new` para revisão sem sobrescrever customizações. Use `--force` / `-Force` apenas para **merge por blocos gerenciados** (`ef:managed`) no `AGENTS.md` (ou reset explícito dos demais arquivos com backup `*.agent-pack.backup-*`); se o `AGENTS.md` atual não tiver marcadores `ef:managed`, o instalador preserva o arquivo e o sidecar e sai com código `7` para migração única.
 
 ### Atualização Reconciliada (Repositórios com `state.txt` da linha 3.x / 4.x)
 

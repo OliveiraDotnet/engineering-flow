@@ -7,11 +7,20 @@ Set-StrictMode -Version Latest
 
 $PackRoot = Split-Path -Parent $PSScriptRoot
 $SkillsRoot = Join-Path $PackRoot 'repo-template/.agents/skills'
+$PackVersionFile = Join-Path $PackRoot 'pack-version.txt'
 $Output = Join-Path $PackRoot 'SKILLS-INDEX.md'
 
 if (-not (Test-Path -LiteralPath $SkillsRoot -PathType Container)) {
     throw "Missing skills root: $SkillsRoot"
 }
+if (-not (Test-Path -LiteralPath $PackVersionFile -PathType Leaf)) {
+    throw "Missing pack version file: $PackVersionFile"
+}
+$packVersion = (Get-Content -LiteralPath $PackVersionFile -Raw).Trim()
+if ($packVersion -notmatch '^(\d+\.\d+)\.\d+$') {
+    throw "Invalid semantic version in ${PackVersionFile}: $packVersion"
+}
+$majorMinor = $Matches[1]
 
 function Get-FrontmatterValue {
     param([string]$Content, [string]$Key)
@@ -41,7 +50,7 @@ Get-ChildItem -LiteralPath $SkillsRoot -Directory | Sort-Object Name | ForEach-O
 function Escape-Cell([string]$Value) { return ($Value -replace '\|', '\|') }
 
 $lines = New-Object System.Collections.Generic.List[string]
-$lines.Add('# Índice de skills — Engineering Flow 4.0') | Out-Null
+$lines.Add("# Índice de skills — Engineering Flow $majorMinor") | Out-Null
 $lines.Add('') | Out-Null
 $lines.Add('Gerado por `tools/generate-skills-index.sh` a partir do frontmatter `name`/`description` de `repo-template/.agents/skills/*/SKILL.md`. O implementador lê este índice e carrega apenas a skill escolhida.') | Out-Null
 $lines.Add('') | Out-Null

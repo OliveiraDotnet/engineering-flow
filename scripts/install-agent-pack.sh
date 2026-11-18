@@ -316,7 +316,7 @@ install_one() {
   declare -A installed_destinations=()
 
   add_action() {
-    local source="$1" destination="$2" state="COPY" effective="$2" sidecar
+    local source="$1" destination="$2" dest_rel="${3:-}" state="COPY" effective="$2" sidecar
     [ -f "$source" ] || { echo "Manifest source is missing: $source" >&2; exit 1; }
     assert_no_linked_path "$destination"
     assert_no_linked_path "$destination.agent-pack.new"
@@ -326,7 +326,11 @@ install_one() {
       if same_content "$source" "$destination"; then
         state="SKIP"
       elif [ "$force" = true ]; then
-        state="REPLACE"
+        if [ "$dest_rel" = "AGENTS.md" ]; then
+          state="MERGE"
+        else
+          state="REPLACE"
+        fi
       else
         sidecar="$destination.agent-pack.new"
         if [ -e "$sidecar" ]; then
@@ -371,7 +375,7 @@ install_one() {
     destination="$REPO_ROOT/$destination_relative"
     is_within "$TEMPLATE_ROOT" "$source" || { echo "Manifest source path escapes template: $source_relative" >&2; exit 1; }
     is_within "$REPO_ROOT" "$destination" || { echo "Manifest destination path escapes repository: $destination_relative" >&2; exit 1; }
-    add_action "$source" "$destination"
+    add_action "$source" "$destination" "$destination_relative"
     installed_destinations["$destination_relative"]=1
   done < "$MANIFEST"
 
@@ -381,6 +385,19 @@ install_one() {
 
   copy_count=0
   bash "$SCRIPT_DIR/protect-engineering-flow-files.sh" "$REPO_ROOT" check
+  if [ "$allow_non_git" != true ]; then
+    if [ "$dry_run" = true ]; then
+      bash "$SCRIPT_DIR/protect-engineering-flow-files.sh" "$REPO_ROOT" unignore-agents-md --dry-run
+    else
+      set +e
+      bash "$SCRIPT_DIR/protect-engineering-flow-files.sh" "$REPO_ROOT" unignore-agents-md
+      unignore_rc=$?
+      set -e
+      if [ "$unignore_rc" -ne 0 ]; then
+        exit "$unignore_rc"
+      fi
+    fi
+  fi
   skip_count=0
   conflict_count=0
   for index in "${!action_state[@]}"; do
@@ -388,6 +405,45 @@ install_one() {
     source="${action_source[$index]}"
     destination="${action_destination[$index]}"
     original="${action_original[$index]}"
+    if [ "$state" = MERGE ]; then
+      if [ "$dry_run" = true ]; then
+        set +e
+        blocks_out="$(bash "$SCRIPT_DIR/merge-managed-blocks.sh" --template "$source" --target "$destination" --check --quiet)"
+        merge_rc=$?
+        set -e
+        if [ "$merge_rc" -eq 0 ]; then
+          printf 'WOULD-MERGE %s (blocks: %s)\n' "$destination" "$blocks_out"
+        else
+          printf 'WOULD-SKIP-MERGE %s\n' "$destination"
+        fi
+        continue
+      fi
+      assert_no_linked_path "$destination"
+      assert_no_linked_path "$destination.agent-pack.new"
+      mkdir -p "$(dirname "$destination")"
+      cp "$source" "$destination.agent-pack.new"
+      set +e
+      blocks_out="$(bash "$SCRIPT_DIR/merge-managed-blocks.sh" --template "$source" --target "$destination" --check)"
+      merge_rc=$?
+      set -e
+      if [ "$merge_rc" -eq 7 ]; then
+        agents_merge_skipped=true
+        skip_count=$((skip_count + 1))
+        printf 'SKIP-MERGE %s\n' "$destination"
+        continue
+      elif [ "$merge_rc" -ne 0 ]; then
+        exit "$merge_rc"
+      fi
+      backup="$(backup_path "$original")"
+      assert_no_linked_path "$backup"
+      cp "$original" "$backup"
+      printf '%-9s %s\n' "BACKUP" "$backup"
+      blocks_out="$(bash "$SCRIPT_DIR/merge-managed-blocks.sh" --template "$source" --target "$destination")"
+      rm -f "$destination.agent-pack.new"
+      printf 'MERGE AGENTS.md (blocks: %s)\n' "$blocks_out"
+      copy_count=$((copy_count + 1))
+      continue
+    fi
     printf '%-9s %s\n' "$state" "$destination"
     case "$state" in
       SKIP) skip_count=$((skip_count + 1)); continue ;;
@@ -448,6 +504,7 @@ echo "Workspace path: $WORKSPACE_ROOT"
 echo "Repositories: ${discovered_roots[*]}"
 echo "Clean installation mode enabled (only AGENTS.md stays versionable)."
 
+agents_merge_skipped=false
 for target in "${discovered_roots[@]}"; do
   install_one "$target"
 done
@@ -497,4 +554,8 @@ if [ "$install_global" = true ] && [ "$discover_only" != true ]; then
     cp "$source" "$effective"
   }
   add_global "$GLOBAL_GUIDANCE" "$GROK_HOME_RESOLVED/AGENTS.md"
+fi
+
+if [ "$agents_merge_skipped" = true ]; then
+  exit 7
 fi

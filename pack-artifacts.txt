@@ -59,6 +59,10 @@ skill.shared.feature-slice-dotnet|.agents/skills/feature-slice-dotnet/SKILL.md|m
 skill.grok.feature-slice-dotnet|.grok/skills/feature-slice-dotnet/SKILL.md|managed
 skill.shared.harness-cycle|.agents/skills/harness-cycle/SKILL.md|managed
 skill.grok.harness-cycle|.grok/skills/harness-cycle/SKILL.md|managed
+skill.shared.harness-cycle.ef-secrets-ps1|.agents/skills/harness-cycle/scripts/ef-secrets.ps1|managed
+skill.grok.harness-cycle.ef-secrets-ps1|.grok/skills/harness-cycle/scripts/ef-secrets.ps1|managed
+skill.shared.harness-cycle.ef-secrets-sh|.agents/skills/harness-cycle/scripts/ef-secrets.sh|managed
+skill.grok.harness-cycle.ef-secrets-sh|.grok/skills/harness-cycle/scripts/ef-secrets.sh|managed
 skill.shared.harness-cycle.run-implementor-ps1|.agents/skills/harness-cycle/scripts/run-implementor.ps1|managed
 skill.grok.harness-cycle.run-implementor-ps1|.grok/skills/harness-cycle/scripts/run-implementor.ps1|managed
 skill.shared.harness-cycle.run-implementor-sh|.agents/skills/harness-cycle/scripts/run-implementor.sh|managed

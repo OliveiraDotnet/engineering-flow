@@ -1,4 +1,4 @@
-# Exemplo pessoal opcional — Engineering Flow 5.0
+# Exemplo pessoal opcional — Engineering Flow 5.1
 
 Adapte às suas preferências; regras do projeto e autorização humana definem a tarefa. O harness de implementação pode entregar sozinho, acumulando planejamento, testes e revisão, ou operar sob a coordenação de um planejador (engenheiro-chefe) e de um revisor/entrega (tech lead de repositório). Colaboração e múltiplos agentes são opcionais. Papéis e hierarquia: workflow.md do pack, seção Papéis.
 
@@ -10,4 +10,4 @@ Revise diff/novos arquivos e ligue critério, cenário, esperado, observado, art
 
 O aprovador humano é a sole decision authority.
 
-**Gate 2:** commit e push exigem o ok explícito do aprovador humano, dado depois de ele ver as evidências. O commit é feito só pelo Implementor. O push é feito só pelo revisor/entrega (ou publicador) ou, quando indisponível, pelo aprovador humano manualmente. Nenhum outro agente comita ou dá push. Nunca na main ou na master, nunca force push. Nos repositórios instalados com o Engineering Flow 5.0, apenas o `AGENTS.md` é versionado no Git.
+**Gate 2:** commit e push exigem o ok explícito do aprovador humano, dado depois de ele ver as evidências. O commit é feito só pelo Implementor. O push é feito só pelo revisor/entrega (ou publicador) ou, quando indisponível, pelo aprovador humano manualmente. Nenhum outro agente comita ou dá push. Nunca na main ou na master, nunca force push. Nos repositórios instalados com o Engineering Flow 5.1, apenas o `AGENTS.md` é versionado no Git.

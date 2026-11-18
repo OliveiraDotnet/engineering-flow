@@ -140,6 +140,27 @@ if [ -f "$agents_governance" ] && [ -f "$delegation_contract" ]; then
   grep -Fq "agent work order" "$delegation_contract" || fail "Grok delegation entrypoint must reference the shared agent work-order contract"
 fi
 
+harness_skill="$TEMPLATE_ROOT/.agents/skills/harness-cycle/SKILL.md"
+if [ ! -f "$harness_skill" ]; then
+  fail "Missing harness-cycle skill: $harness_skill"
+else
+  grep -Fq "only the harness (Implementor/Tester) runs the runners" "$harness_skill" || fail "harness-cycle/SKILL.md must state 'only the harness (Implementor/Tester) runs the runners'"
+fi
+
+for c10_rel in \
+  "prompts/12-implementor-harness.md" \
+  "prompts/13-tester-harness.md" \
+  ".agents/skills/harness-cycle/SKILL.md"; do
+  c10_file="$TEMPLATE_ROOT/$c10_rel"
+  if [ ! -f "$c10_file" ]; then
+    fail "Missing C10 harness contract file: $c10_rel"
+  else
+    for c10_marker in "docs/ai/decisions-and-pendencies.md" "docs/ai/external-boundaries.md" "BLOCKED_BY_DECISION"; do
+      grep -Fq "$c10_marker" "$c10_file" || fail "$c10_rel must reference '$c10_marker'"
+    done
+  fi
+done
+
 while IFS= read -r file; do
   relative="${file#"$TEMPLATE_ROOT"/}"
   found=false
@@ -222,6 +243,31 @@ done
 
 if grep -RInE 'Aptos|M & Y TECH|Portal de Vendas|projetos/' "$TEMPLATE_ROOT" "$PACK_ROOT/README.md" "$PACK_ROOT/MANUAL_DE_USO.md" "$PACK_ROOT/INSTRUCOES_DETALHADAS.md" "$PACK_ROOT/FONTES_OFICIAIS_GROK_BUILD.md" "$PACK_ROOT/global/AGENTS.md" >/dev/null 2>&1; then
   fail "Obsolete organization-specific references found"
+fi
+
+stale_version_hits=""
+while IFS= read -r rel_file; do
+  case "$rel_file" in
+    CHANGELOG.md|compat/*|tests/*|scripts/update-agent-pack.sh|scripts/update-agent-pack.ps1) continue ;;
+  esac
+  if perl -e '
+    use strict; use warnings; use utf8;
+    open my $fh, "<:raw", $ARGV[0] or exit 1;
+    local $/ = undef;
+    my $data = <$fh>;
+    close $fh;
+    exit 1 if !defined($data) || index($data, "\0") >= 0;
+    utf8::decode($data);
+    if ($data =~ /(?:Engineering Flow [345]\.0|\bv5\.0\b(?!\.)|padr[aã]o 5\.0\b(?!\.)|pack 5\.0\b(?!\.)|instala[cç][aã]o limpa(?: da)? v?5\.0\b(?!\.))/i) {
+      exit 0;
+    }
+    exit 1;
+  ' "$PACK_ROOT/$rel_file"; then
+    stale_version_hits="${stale_version_hits}${stale_version_hits:+, }$rel_file"
+  fi
+done < <(cd "$PACK_ROOT" && find . -path './.git' -prune -o -type f -print | sed 's|^\./||' | sort)
+if [ -n "$stale_version_hits" ]; then
+  fail "Obsolete version title (3.0/4.0/5.0) found in: $stale_version_hits"
 fi
 
 encoding_checker="$TEMPLATE_ROOT/.agents/skills/check-text-encoding/scripts/check-mojibake.sh"

@@ -1,11 +1,11 @@
-# Integração de Harness e Configuração de Segurança — Engineering Flow 5.0
+# Integração de Harness e Configuração de Segurança — Engineering Flow 5.1
 
-Este arquivo registra as convenções de integração de harness e salvaguardas locais usadas pelo Engineering Flow 5.0. O método é **agnóstico de ferramenta**: qualquer harness (CLI ou IDE) pode operar como `Implementor` e `Tester`, usando `.agents/skills/` (ou o espelho `.grok/skills/` e `.grok/agents/` quando aplicável).
+Este arquivo registra as convenções de integração de harness e salvaguardas locais usadas pelo Engineering Flow 5.1. O método é **agnóstico de ferramenta**: qualquer harness (CLI ou IDE) pode operar como `Implementor` e `Tester`, usando `.agents/skills/` (ou o espelho `.grok/skills/` e `.grok/agents/` quando aplicável).
 
 ## Regras e contexto do projeto
 
 - `AGENTS.md` na raiz do repositório é a fonte canônica de orientação do projeto e o **único arquivo do Engineering Flow versionado no Git do repositório alvo**.
-- A instalação do Engineering Flow 5.0 não cria arquivos de versão (`.agent-pack/state.txt`) e adiciona `.agents/`, `.grok/`, `.agent-pack/`, `docs/engineering-flow/`, `docs/ai/`, `prompts/` e `Planejamento/` ao `.gitignore` do repositório alvo.
+- A instalação do Engineering Flow 5.1 não cria arquivos de versão (`.agent-pack/state.txt`) e adiciona `.agents/`, `.grok/`, `.agent-pack/`, `docs/engineering-flow/`, `docs/ai/`, `prompts/` e `Planejamento/` ao `.gitignore` do repositório alvo.
 
 ## Skills, agentes e salvaguardas locais
 
@@ -21,9 +21,9 @@ Para evitar bloqueios quando um bot ou supervisor invoca o harness por linha de 
 - Ao passar `--harness-cmd`, utilize o modo headless/não-interativo documentado da ferramenta escolhida para que o processo não trave aguardando input interativo no terminal.
 - O estado do último teste é gravado em `.agent-pack/.runtime/test-status.json` e o relatório detalhado em `.agent-pack/evidencias/<CardId>/EVIDENCIA.md`.
 
-## Decisões deliberadas do pack 5.0
+## Decisões deliberadas do pack 5.1
 
-- O Engineering Flow 5.0 não exige nenhuma ferramenta específica: pode ser usado com um único harness standalone ou com múltiplos bots em hierarquia.
+- O Engineering Flow 5.1 não exige nenhuma ferramenta específica: pode ser usado com um único harness standalone ou com múltiplos bots em hierarquia.
 - Os 10 perfis de especialistas têm origem em `.grok/agents`.
 - Skills compartilhadas continuam canônicas em `.agents/skills` e espelhadas em `.grok/skills`.
 - No repositório alvo, **apenas `AGENTS.md` é versionado**; nenhuma pasta operacional ou arquivo de versão do EF é versionado no projeto do usuário.

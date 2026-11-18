@@ -1,4 +1,4 @@
-#Requires -Version 7
+﻿#Requires -Version 7
 [CmdletBinding()]
 param()
 
@@ -250,6 +250,36 @@ if (@($governanceFiles.Values | Where-Object { -not (Test-Path -LiteralPath $_ -
     if (-not $delegationContract.Contains("agent work order")) { Add-Error "Grok delegation entrypoint must reference the shared agent work-order contract." }
 }
 
+$harnessSkillPath = Join-Path $TemplateRoot ".agents\skills\harness-cycle\SKILL.md"
+if (-not (Test-Path -LiteralPath $harnessSkillPath -PathType Leaf)) {
+    Add-Error "Missing harness-cycle skill: $harnessSkillPath"
+}
+else {
+    $harnessSkillContent = Get-Content -LiteralPath $harnessSkillPath -Raw
+    if (-not $harnessSkillContent.Contains("only the harness (Implementor/Tester) runs the runners")) {
+        Add-Error "harness-cycle/SKILL.md must state 'only the harness (Implementor/Tester) runs the runners'."
+    }
+}
+
+foreach ($c10Rel in @(
+    "prompts/12-implementor-harness.md",
+    "prompts/13-tester-harness.md",
+    ".agents/skills/harness-cycle/SKILL.md"
+)) {
+    $c10File = Join-Path $TemplateRoot $c10Rel
+    if (-not (Test-Path -LiteralPath $c10File -PathType Leaf)) {
+        Add-Error "Missing C10 harness contract file: $c10Rel"
+    }
+    else {
+        $c10Content = Get-Content -LiteralPath $c10File -Raw
+        foreach ($c10Marker in @("docs/ai/decisions-and-pendencies.md", "docs/ai/external-boundaries.md", "BLOCKED_BY_DECISION")) {
+            if (-not $c10Content.Contains($c10Marker)) {
+                Add-Error "$c10Rel must reference '$c10Marker'."
+            }
+        }
+    }
+}
+
 $skillFiles = Get-ChildItem -LiteralPath (Join-Path $TemplateRoot ".agents\skills") -File -Filter "SKILL.md" -Recurse -ErrorAction SilentlyContinue
 foreach ($skill in $skillFiles) {
     $content = Get-Content -LiteralPath $skill.FullName -Raw
@@ -289,6 +319,24 @@ $genericFiles = @(
 $allText = ($genericFiles | ForEach-Object { Get-Content -LiteralPath $_.FullName -Raw }) -join "`n"
 foreach ($term in @("Aptos", "M & Y TECH", "Portal de Vendas", "projetos/")) {
     if ($allText -match [regex]::Escape($term)) { Add-Error "Obsolete organization-specific reference found: $term" }
+}
+
+$staleVersionPattern = '(?i)(?:Engineering Flow [345]\.0|\bv5\.0\b(?!\.)|padr[aã]o 5\.0\b(?!\.)|pack 5\.0\b(?!\.)|instala[cç][aã]o limpa(?: da)? v?5\.0\b(?!\.))'
+$staleVersionHits = New-Object System.Collections.Generic.List[string]
+$allPackFiles = @(Get-ChildItem -LiteralPath $PackRoot -File -Recurse -Force)
+foreach ($packFile in $allPackFiles) {
+    $relFile = Get-RelativePath $PackRoot $packFile.FullName
+    if ($relFile -eq '.git' -or $relFile.StartsWith('.git/')) { continue }
+    if ($relFile -eq 'CHANGELOG.md' -or $relFile.StartsWith('compat/') -or $relFile.StartsWith('tests/') -or $relFile -in @('scripts/update-agent-pack.sh', 'scripts/update-agent-pack.ps1')) { continue }
+    $bytes = [IO.File]::ReadAllBytes($packFile.FullName)
+    if ($bytes -contains 0) { continue }
+    $fileText = [Text.Encoding]::UTF8.GetString($bytes)
+    if ([regex]::IsMatch($fileText, $staleVersionPattern)) {
+        $staleVersionHits.Add($relFile) | Out-Null
+    }
+}
+if ($staleVersionHits.Count -gt 0) {
+    Add-Error ("Obsolete version title (3.0/4.0/5.0) found in: " + (($staleVersionHits | Sort-Object) -join ', '))
 }
 
 foreach ($path in @("AGENTS.md", "docs/ai/runbook.md")) {

@@ -59,6 +59,10 @@ core|.agents/skills/feature-slice-dotnet/SKILL.md
 grok-core|.agents/skills/feature-slice-dotnet/SKILL.md|.grok/skills/feature-slice-dotnet/SKILL.md
 core|.agents/skills/harness-cycle/SKILL.md
 grok-core|.agents/skills/harness-cycle/SKILL.md|.grok/skills/harness-cycle/SKILL.md
+core|.agents/skills/harness-cycle/scripts/ef-secrets.ps1
+grok-core|.agents/skills/harness-cycle/scripts/ef-secrets.ps1|.grok/skills/harness-cycle/scripts/ef-secrets.ps1
+core|.agents/skills/harness-cycle/scripts/ef-secrets.sh
+grok-core|.agents/skills/harness-cycle/scripts/ef-secrets.sh|.grok/skills/harness-cycle/scripts/ef-secrets.sh
 core|.agents/skills/harness-cycle/scripts/run-implementor.ps1
 grok-core|.agents/skills/harness-cycle/scripts/run-implementor.ps1|.grok/skills/harness-cycle/scripts/run-implementor.ps1
 core|.agents/skills/harness-cycle/scripts/run-implementor.sh
