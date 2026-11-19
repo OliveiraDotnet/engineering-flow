@@ -14,6 +14,7 @@ $ArtifactMetadataPath = Join-Path $PackRoot "pack-artifacts.txt"
 $CompatibilityRoot = Join-Path $PackRoot "compat\releases"
 $ValidComponents = @(
     "core", "web", "sqlserver", "quality", "mobile",
+    "claude-core", "claude-web", "claude-sqlserver", "claude-quality", "claude-mobile",
     "grok-core", "grok-web", "grok-sqlserver", "grok-quality", "grok-mobile"
 )
 $errors = New-Object System.Collections.Generic.List[string]
@@ -299,6 +300,17 @@ $baseComponents = @("core", "web", "sqlserver", "quality", "mobile")
 $canonicalSkillEntries = @($manifestEntries | Where-Object { $_.Component -in $baseComponents -and $_.Destination -like ".agents/skills/*" })
 foreach ($entry in $canonicalSkillEntries) {
     if (-not $entry.Destination.EndsWith("/agents/openai.yaml")) {
+        $claudeComponent = "claude-$($entry.Component)"
+        $claudeDestination = $entry.Destination -replace '^\.agents/skills/', '.claude/skills/'
+        $claudeMirror = @($manifestEntries | Where-Object {
+            $_.Component -eq $claudeComponent -and
+            $_.Source -eq $entry.Source -and
+            $_.Destination -eq $claudeDestination
+        })
+        if ($claudeMirror.Count -ne 1) {
+            Add-Error "Skill '$($entry.Source)' must map once to '$claudeDestination' in '$claudeComponent'."
+        }
+
         $grokComponent = "grok-$($entry.Component)"
         $grokDestination = $entry.Destination -replace '^\.agents/skills/', '.grok/skills/'
         $grokMirror = @($manifestEntries | Where-Object {

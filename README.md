@@ -15,8 +15,9 @@ A linha **5.0** torna o fluxo **100% agnóstico de ferramenta e de persona**:
 - **Sem acoplamento a CLI, IDE ou orquestrador proprietário:** você pode usar qualquer harness de código/IA no terminal ou no editor.
 - **Dois modos de operação com o mesmo contrato:**
   1. **Modo Harness Único (Standalone):** uma única pessoa e um único harness acumulam todos os papéis da hierarquia do início ao fim.
-  2. **Modo Multi-Agente (Hierarquia Bottom-Up):** os papéis são distribuídos entre bots/agentes especializados construídos da base para o topo (`Tester` + `Implementor` → `Revisor/Entrega` → `Planejador`), comunicando-se via contratos em arquivo.
+  2. **Modo Multi-Agente / Sessão por Papel (`sessao-por-papel`):** os papéis são distribuídos entre sessões dedicadas ou bots especializados (`Engenheiro-Chefe` → `Tech Lead` → `Tester` ↔ `Implementor` → `UI / Ajuste Visual` opcional), comunicando-se via contratos em arquivo e prompt de passagem ([roles-and-handoffs.md](repo-template/docs/engineering-flow/roles-and-handoffs.md)).
 - **Instalação limpa em repositórios compartilhados:** **somente o `AGENTS.md` fica versionado** no Git; nenhum arquivo de versão/estado (`.agent-pack/state.txt`) ou pasta de método é subido para o repositório da equipe.
+- **Compatibilidade nativa entre harnesses:** cada skill é instalada de forma idêntica em `.agents/skills/` (Codex/Antigravity/genérico), `.claude/skills/` (Claude Code via `/skill`) e `.grok/skills/` (Grok Build), todas ignoradas no `.gitignore`.
 
 Inclui especialização para **.NET moderno e .NET Framework**, **Web Forms**, **ASP clássico**, **HTML/CSS/JavaScript**, **SQL Server** e **Mobile** (nativo/híbrido/multiplataforma), além de investigação contextual para qualquer outra stack.
 
@@ -76,7 +77,7 @@ Modos de execução: **Trivial** (1 critério observável, sem risco a dados/mig
 Na versão **`5.1.0`**, instalar o Engineering Flow em um repositório de equipe é limpo por padrão:
 
 - **Não gera arquivos de versão/estado (`.agent-pack/state.txt`)** no repositório destino.
-- **Atualiza o `.gitignore` automaticamente** para ignorar todas as pastas operacionais do pack (`.agents/`, `.grok/`, `.agent-pack/`, `docs/engineering-flow/`, `docs/ai/`, `prompts/`, `Planejamento/`, `planejamento/`, `.engineering-flow-evidence/`, `*.agent-pack.new`, `*.agent-pack.backup-*`).
+- **Atualiza o `.gitignore` automaticamente** para ignorar todas as pastas operacionais do pack (`.agents/`, `.claude/`, `.grok/`, `.agent-pack/`, `docs/engineering-flow/`, `docs/ai/`, `prompts/`, `Planejamento/`, `planejamento/`, `.engineering-flow-evidence/`, `*.agent-pack.new`, `*.agent-pack.backup-*`).
 - **Somente `AGENTS.md` permanece versionável no Git**, evitando subir arquivos do seu fluxo pessoal para outros desenvolvedores do time.
 
 ### Baixar ou Clonar
@@ -129,7 +130,7 @@ bash ./scripts/update-agent-pack.sh /caminho/do/repositorio --apply
 
 | Perfil | Quando Ativar | Conteúdo |
 | :--- | :--- | :--- |
-| `core` | Sempre | Descoberta (`$bootstrap-repo`), projeto novo, `$bugfix`, `$feature-slice`, `$refactor`, `$review-change`, `$complete-task`, `$harness-cycle` e contrato comum. |
+| `core` | Sempre | Descoberta (`$bootstrap-repo`), projeto novo, `$bugfix`, `$feature-slice`, `$refactor`, `$review-change`, `$complete-task`, `$harness-cycle`, skills de papel (`role-*`) para `sessao-por-papel` e contrato comum. |
 | `web` | Explícito ou evidência de UI | Navegação, ASP clássico/SPA, Playwright E2E e especialização .NET Web. |
 | `sqlserver` | Explícito ou SQL Server | Análise read-only, mudanças idempotentes por card (`PendentesProducao/`) e pacote de release por Tag. |
 | `mobile` | Explícito ou app mobile | Planejamento e validação nativa/híbrida/multiplataforma (não instala SDK/emulador). |
@@ -137,11 +138,12 @@ bash ./scripts/update-agent-pack.sh /caminho/do/repositorio --apply
 
 ### Uso Rápido das Skills
 
-1. Consulte o [índice de skills](SKILLS-INDEX.md) e carregue apenas a skill necessária para a demanda.
-2. Em repositórios sem contexto mapeado, comece com `$bootstrap-repo` (`prompts/00-bootstrap-repo.md`).
-3. Use `$bugfix`, `$feature-slice`, `$refactor`, `$review-change` ou `$new-project` conforme o card.
-4. Para o loop fechado automatizado entre implementação e testes no harness, use **`$harness-cycle`** (`run-implementor`, `run-tester`, `supervise-harness`).
-5. Encerre a entrega com `$complete-task`.
+1. Consulte o [índice de skills](SKILLS-INDEX.md) e carregue apenas a skill necessária para a demanda (no Codex/Grok via `$nome-da-skill`; no Claude Code via `/nome-da-skill`).
+2. Em modo **`sessao-por-papel`** (padrão no `AGENTS.md`), inicie cada conversa com a skill exclusiva do papel: `role-engenheiro-chefe`, `role-tech-lead`, `role-implementor`, `role-tester` ou `role-ui-visual` (ex.: `/role-tech-lead` no Claude Code).
+3. Em repositórios sem contexto mapeado, comece com `$bootstrap-repo` / `/bootstrap-repo` (`prompts/00-bootstrap-repo.md`).
+4. Use `bugfix`, `feature-slice`, `refactor`, `review-change` ou `new-project` conforme o card.
+5. Para o loop fechado automatizado entre implementação e testes no harness, use **`harness-cycle`** (`run-implementor`, `run-tester`, `supervise-harness`).
+6. Encerre a entrega com `complete-task`.
 
 ---
 
@@ -156,6 +158,7 @@ bash ./scripts/update-agent-pack.sh /caminho/do/repositorio --apply
 ### Documentação Relacionada
 
 - [Contrato Canônico de Workflow](repo-template/docs/engineering-flow/workflow.md)
+- [Papéis, Fronteiras e Passagem de Bastão (`sessao-por-papel`)](repo-template/docs/engineering-flow/roles-and-handoffs.md)
 - [Anti-Padrões (leitura prévia obrigatória)](repo-template/docs/engineering-flow/anti-patterns.md)
 - [Capacidades e Limites de Validação](repo-template/docs/engineering-flow/capabilities.md)
 - [Workspace de Planejamento (`Planejamento/DEMANDAS.md`)](repo-template/docs/engineering-flow/planning-workspace.md)

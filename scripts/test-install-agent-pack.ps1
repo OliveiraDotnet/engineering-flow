@@ -35,7 +35,9 @@ try {
     Assert-True (Test-Path -LiteralPath (Join-Path $grokOnly '.grok/agents/repo-explorer.md')) 'Grok agent origin missing.'
     Assert-True (Test-Path -LiteralPath (Join-Path $grokOnly '.grok/agents/frontend-web.md')) 'Grok web agent missing.'
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $grokOnly '.codex'))) 'Grok-only installed Codex agents.'
-    Assert-True (-not (Test-Path -LiteralPath (Join-Path $grokOnly '.claude'))) 'Grok-only installed Claude agents.'
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $grokOnly '.claude/agents'))) 'Default install installed Claude agents.'
+    Assert-True (Test-Path -LiteralPath (Join-Path $grokOnly '.claude/skills/harness-cycle/SKILL.md')) 'Claude skills mirror missing in default install.'
+    Assert-True (Test-Path -LiteralPath (Join-Path $grokOnly '.claude/skills/role-tech-lead/SKILL.md')) 'Claude role-tech-lead skill missing in default install.'
     Assert-True (@(Get-ChildItem -LiteralPath (Join-Path $grokOnly '.agents') -Recurse -Filter openai.yaml).Count -eq 0) 'Grok-only installed Codex metadata.'
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $grokOnly '.agent-pack/state.txt'))) 'Clean install created state.txt in grok-only.'
     Assert-True (Test-Path -LiteralPath (Join-Path $grokOnly '.agents/skills/harness-cycle/SKILL.md')) 'Harness-cycle skill missing in grok-only.'
@@ -79,7 +81,9 @@ try {
     Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".grok\agents\implementer.md")) "Grok implementer was not installed."
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".codex"))) "Default install created .codex."
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo "CLAUDE.md"))) "Default install wrote CLAUDE.md."
-    Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".claude"))) "Default install created .claude."
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".claude\agents"))) "Default install created .claude\agents."
+    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".claude\skills\bootstrap-dotnet-repo\SKILL.md")) "Claude skills mirror was not installed by default."
+    Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".claude\skills\role-tech-lead\SKILL.md")) "Claude role-tech-lead skill was not installed by default."
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".grok\skills\execute-codex-work-order"))) "Removed execute-codex-work-order was installed."
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo "prompts\09-migrate-claude-to-codex-grok.md"))) "Removed migration prompt was installed."
 
@@ -96,7 +100,9 @@ try {
     Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".grok\agents\security-reviewer.md")) "Quality Grok agent was not installed."
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".codex"))) "Profiles installed Codex."
     $canonicalBootstrapSkill = Join-Path $Repo ".agents\skills\bootstrap-dotnet-repo\SKILL.md"
+    $claudeBootstrapSkill = Join-Path $Repo ".claude\skills\bootstrap-dotnet-repo\SKILL.md"
     $grokBootstrapSkill = Join-Path $Repo ".grok\skills\bootstrap-dotnet-repo\SKILL.md"
+    Assert-True ((Get-FileHash -LiteralPath $canonicalBootstrapSkill -Algorithm SHA256).Hash -eq (Get-FileHash -LiteralPath $claudeBootstrapSkill -Algorithm SHA256).Hash) "Claude bootstrap skill diverged from its canonical source."
     Assert-True ((Get-FileHash -LiteralPath $canonicalBootstrapSkill -Algorithm SHA256).Hash -eq (Get-FileHash -LiteralPath $grokBootstrapSkill -Algorithm SHA256).Hash) "Grok bootstrap skill diverged from its canonical source."
 
     Add-Content -LiteralPath (Join-Path $Repo "AGENTS.md") -Value "# local change"

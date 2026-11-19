@@ -10,7 +10,7 @@ Declarado em `AGENTS.md` (`Convenções do projeto` → `Modo de operação dos 
 - **`standalone`:** uma única conversa acumula os papéis na ordem exata do `workflow.md` (sem pular Gate 1, `R0` nem Gate 2).
 
 Ao iniciar uma conversa em modo `sessao-por-papel` (ou quando `Modo de operação dos papéis` não estiver preenchido em `AGENTS.md`):
-1. Identifique qual papel foi atribuído à sessão (se não estiver explícito, pergunte antes de agir).
+1. Identifique qual papel foi atribuído à sessão (ex.: invocando a skill nativa `/role-tech-lead`, `/role-engenheiro-chefe`, `/role-implementor`, `/role-tester`, `/role-ui-visual` em hosts como Claude Code / Grok / Antigravity, ou declarando o papel na primeira mensagem; se não estiver explícito, pergunte antes de agir).
 2. Leia **apenas** este documento, `AGENTS.md` e os artefatos de entrada do seu papel (evitando carregar o repositório inteiro).
 3. Nunca invada o quadrado de outro papel na mesma conversa; quando precisar do próximo papel, atualize seus artefatos em disco e emita o **Prompt de Passagem**.
 

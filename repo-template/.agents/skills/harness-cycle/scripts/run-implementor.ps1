@@ -1,4 +1,4 @@
-#Requires -Version 7
+﻿#Requires -Version 7
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)]
@@ -112,7 +112,7 @@ function Resolve-Gate2Paths([string]$RepoPath, [string[]]$ExplicitPaths, [bool]$
             [Console]::Error.WriteLine('Error: Empty path in Gate 2 staging.')
             return $null
         }
-        if ($p -match '^(?:\.agent-pack|\.agents|\.grok|prompts|docs/engineering-flow)(?:/|$)') {
+        if ($p -match '^(?:\.agent-pack|\.agents|\.claude|\.grok|prompts|docs/engineering-flow)(?:/|$)') {
             [Console]::Error.WriteLine("Error: Forbidden protected path in Gate 2 staging: $p")
             return $null
         }

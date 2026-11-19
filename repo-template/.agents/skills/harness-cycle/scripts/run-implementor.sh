@@ -163,7 +163,7 @@ resolve_gate2_paths() {
         print STDERR "Error: Empty path in Gate 2 staging.\n";
         exit 5;
       }
-      if ($p =~ /^(?:\.agent-pack|\.agents|\.grok|prompts|docs\/engineering-flow)(?:\/|$)/) {
+      if ($p =~ /^(?:\.agent-pack|\.agents|\.claude|\.grok|prompts|docs\/engineering-flow)(?:\/|$)/) {
         print STDERR "Error: Forbidden protected path in Gate 2 staging: $p\n";
         exit 5;
       }

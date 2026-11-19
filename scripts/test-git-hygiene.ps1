@@ -11,7 +11,7 @@ function Put([string]$Repo,[string]$Path,[string]$Text) {
  [IO.File]::WriteAllText($full,$Text,[Text.UTF8Encoding]::new($false))
 }
 function Assert-Hygiene([string]$Repo) {
- $ignored=@('AGENTS.md.agent-pack.new','AGENTS.md.agent-pack.backup-20261011','.agents/skills/bugfix/SKILL.md.agent-pack.new','.agents/skills/new-project/SKILL.md','.agent-pack/.runtime/.gitignore','.agent-pack/.runtime/backups/2.0.0/backup.txt','.agent-pack/.runtime/retired/old.txt','.agent-pack/.runtime/update.lock','.agent-pack/.runtime/task.lock','.agent-pack/state.txt','.agent-pack/state.txt.tmp','.agent-pack/cache/cache.txt','.agent-pack/logs/run.log','.ai-memory.toml','.grok/config.toml','.grok/skills/new-project/SKILL.md','.grok/agents/repo-explorer.md','.grok/sessions/session.log','docs/ai/runbook.md','docs/engineering-flow/workflow.md','prompts/01-bugfix.md','Planejamento/AB-1.md','.engineering-flow-evidence/report.txt')
+ $ignored=@('AGENTS.md.agent-pack.new','AGENTS.md.agent-pack.backup-20261011','.agents/skills/bugfix/SKILL.md.agent-pack.new','.agents/skills/new-project/SKILL.md','.claude/skills/new-project/SKILL.md','.agent-pack/.runtime/.gitignore','.agent-pack/.runtime/backups/2.0.0/backup.txt','.agent-pack/.runtime/retired/old.txt','.agent-pack/.runtime/update.lock','.agent-pack/.runtime/task.lock','.agent-pack/state.txt','.agent-pack/state.txt.tmp','.agent-pack/cache/cache.txt','.agent-pack/logs/run.log','.ai-memory.toml','.grok/config.toml','.grok/skills/new-project/SKILL.md','.grok/agents/repo-explorer.md','.grok/sessions/session.log','docs/ai/runbook.md','docs/engineering-flow/workflow.md','prompts/01-bugfix.md','Planejamento/AB-1.md','.engineering-flow-evidence/report.txt')
  $visible=@('AGENTS.md')
  foreach ($p in $ignored+$visible) {
   if (-not (Test-Path (Join-Path $Repo $p))) {
@@ -23,7 +23,7 @@ function Assert-Hygiene([string]$Repo) {
  foreach ($p in $visible) { & git -C $Repo check-ignore -q -- $p; Assert ($LASTEXITCODE -eq 1) "Necessary project file hidden from Git: $p" }
  $status=@(& git -C $Repo status --short --untracked-files=all)
  Assert ($LASTEXITCODE -eq 0) 'Unable to inspect fixture Git status.'
- Assert (-not (($status -join "`n") -match 'agent-pack\.new|agent-pack\.backup|\.agent-pack/|\.agents/|\.ai-memory\.toml|\.grok/|docs/ai/|docs/engineering-flow/|prompts/|Planejamento/|\.runtime/|sessions/|worktrees/|state\.txt|run\.log')) 'Operational Git noise remains.'
+ Assert (-not (($status -join "`n") -match 'agent-pack\.new|agent-pack\.backup|\.agent-pack/|\.agents/|\.claude/|\.ai-memory\.toml|\.grok/|docs/ai/|docs/engineering-flow/|prompts/|Planejamento/|\.runtime/|sessions/|worktrees/|state\.txt|run\.log')) 'Operational Git noise remains.'
  Assert (($status -join "`n").Contains('AGENTS.md')) 'AGENTS.md is not versionable.'
 }
 try {

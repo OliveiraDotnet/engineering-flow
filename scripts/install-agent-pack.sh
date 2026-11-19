@@ -306,6 +306,7 @@ install_one() {
 
   components=("${resolved_profiles[@]}")
   for profile in "${resolved_profiles[@]}"; do
+    components+=("claude-$profile")
     components+=("grok-$profile")
   done
 

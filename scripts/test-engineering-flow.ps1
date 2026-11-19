@@ -30,6 +30,7 @@ try {
  Assert ($result.discoveryMode -eq 'empty') 'Empty repo not identified.'
  Assert ($result.optionalProfilesSuggested.Count -eq 0) 'Empty repo selected optional profiles.'
  & $Installer -RepoPath $empty -Profile core -Confirm:$false
+ Assert (Test-Path (Join-Path $empty '.claude/skills/new-project/SKILL.md')) 'Empty repo lacks Claude new-project skill.'
  Assert (Test-Path (Join-Path $empty '.grok/skills/new-project/SKILL.md')) 'Empty repo lacks Grok new-project skill.'
  Assert (Test-Path (Join-Path $empty '.grok/agents/repo-explorer.md')) 'Empty repo lacks Grok agent.'
  Assert (-not (Test-Path (Join-Path $empty '.codex'))) 'Grok-only installed Codex.'

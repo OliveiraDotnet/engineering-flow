@@ -10,7 +10,7 @@ $ErrorActionPreference='Stop'
 $root=(Resolve-Path -LiteralPath $RepoPath).Path
 $path=Join-Path $root '.gitignore'
 $utf8=[Text.UTF8Encoding]::new($false,$true)
-$patterns=@('*.agent-pack.new','*.agent-pack.backup-*','.agent-pack/','.agent-pack/.runtime/','.agent-pack/.runtime/task.lock','.agent-pack/*.tmp','.agent-pack/*.lock','.agent-pack/logs/','.agent-pack/cache/','.agent-pack/tmp/','.agent-pack/sessions/','.agent-pack/worktrees/','.agent-pack/evidencias/','.agents/','.grok/','.grok/sessions/','.grok/worktrees/','.ai-memory.toml','docs/engineering-flow/','docs/ai/','prompts/','.engineering-flow-evidence/','Planejamento/','planejamento/')
+$patterns=@('*.agent-pack.new','*.agent-pack.backup-*','.agent-pack/','.agent-pack/.runtime/','.agent-pack/.runtime/task.lock','.agent-pack/*.tmp','.agent-pack/*.lock','.agent-pack/logs/','.agent-pack/cache/','.agent-pack/tmp/','.agent-pack/sessions/','.agent-pack/worktrees/','.agent-pack/evidencias/','.agents/','.claude/','.grok/','.grok/sessions/','.grok/worktrees/','.ai-memory.toml','docs/engineering-flow/','docs/ai/','prompts/','.engineering-flow-evidence/','Planejamento/','planejamento/')
 $bytes=[byte[]]@()
 $text=''
 if (Test-Path -LiteralPath $path) {

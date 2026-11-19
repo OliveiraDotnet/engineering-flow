@@ -27,7 +27,7 @@ while IFS='|' read -r component source_relative destination_relative extra; do
   [[ "$component" = \#* ]] && continue
   [ -z "$extra" ] || { fail "Invalid manifest line with too many fields: $component"; continue; }
   case "$component" in
-    core|web|sqlserver|quality|mobile|grok-core|grok-web|grok-sqlserver|grok-quality|grok-mobile) ;;
+    core|web|sqlserver|quality|mobile|claude-core|claude-web|claude-sqlserver|claude-quality|claude-mobile|grok-core|grok-web|grok-sqlserver|grok-quality|grok-mobile) ;;
     *) fail "Unknown component in manifest: $component"; continue ;;
   esac
   [ -n "$source_relative" ] || { fail "Empty manifest source."; continue; }
@@ -227,6 +227,18 @@ for index in "${!manifest_destinations[@]}"; do
     *) continue ;;
   esac
   if [[ "$canonical_destination" != */agents/openai.yaml ]]; then
+    claude_component="claude-${manifest_components[$index]}"
+    claude_destination=".claude/skills/${canonical_destination#.agents/skills/}"
+    claude_match_count=0
+    for mirror_index in "${!manifest_destinations[@]}"; do
+      if [ "${manifest_components[$mirror_index]}" = "$claude_component" ] &&
+         [ "${manifest_sources[$mirror_index]}" = "${manifest_sources[$index]}" ] &&
+         [ "${manifest_destinations[$mirror_index]}" = "$claude_destination" ]; then
+        claude_match_count=$((claude_match_count + 1))
+      fi
+    done
+    [ "$claude_match_count" -eq 1 ] || fail "Skill ${manifest_sources[$index]} must map once to $claude_destination in $claude_component"
+
     grok_component="grok-${manifest_components[$index]}"
     grok_destination=".grok/skills/${canonical_destination#.agents/skills/}"
     match_count=0

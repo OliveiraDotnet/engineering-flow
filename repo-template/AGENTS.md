@@ -25,7 +25,7 @@ Em bug, o teste de regressão `R0` (falha antes do fix `R0-RED`, passa depois `R
 
 ## Instalação Limpa e Versionamento
 
-A instalação do Engineering Flow 5.1 no repositório é limpa: **não gera arquivos de versão/estado (`.agent-pack/state.txt`)** e protege todas as pastas operacionais no `.gitignore` (`.agents/`, `.grok/`, `.agent-pack/`, `docs/engineering-flow/`, `docs/ai/`, `prompts/`, `Planejamento/`). **Apenas este arquivo `AGENTS.md` é versionado** no repositório, evitando ruído para outros desenvolvedores da equipe.
+A instalação do Engineering Flow 5.1 no repositório é limpa: **não gera arquivos de versão/estado (`.agent-pack/state.txt`)** e protege todas as pastas operacionais no `.gitignore` (`.agents/`, `.claude/`, `.grok/`, `.agent-pack/`, `docs/engineering-flow/`, `docs/ai/`, `prompts/`, `Planejamento/`). **Apenas este arquivo `AGENTS.md` é versionado** no repositório, evitando ruído para outros desenvolvedores da equipe.
 
 ## LOCK
 
@@ -39,7 +39,7 @@ Modos Trivial e Completo, orçamento por fase e Gate de 100% estão em workflow.
 
 O fluxo é agnóstico de ferramenta: qualquer harness de codificação pode executar o papel de Implementor e Tester, tanto de forma standalone quanto orquestrado pela skill `harness-cycle` (`run-implementor`, `run-tester`, `supervise-harness`). Colaboração é opcional; não lance subagentes automaticamente nem presuma API entre provedores. Handoff real usa agent-work-order ou `TASK_SPEC.md`, contexto local preservado, ferramentas verificadas e isolamento para escritores concorrentes.
 
-Leia só o índice de skills do pack e carregue apenas a skill escolhida. Sem uma skill que caiba, ou sem diretriz, pare e pergunte. Skills gerais: bootstrap-repo, new-project, bugfix, feature-slice, refactor, review-change, complete-task, harness-cycle. Crie skill específica só para procedimento recorrente confirmado via create-repo-skill. Nomes `$skill` são invocação nativa, não shell. Leia só skills/referências pertinentes.
+Leia só o índice de skills do pack e carregue apenas a skill escolhida. Sem uma skill que caiba, ou sem diretriz, pare e pergunte. Skills gerais: bootstrap-repo, new-project, bugfix, feature-slice, refactor, review-change, complete-task, harness-cycle. Skills de papel (`sessao-por-papel`): role-engenheiro-chefe, role-tech-lead, role-implementor, role-tester, role-ui-visual. Crie skill específica só para procedimento recorrente confirmado via create-repo-skill. As skills ficam instaladas em `.agents/skills/`, `.claude/skills/` e `.grok/skills/`; nomes `$skill` ou `/skill` (ex.: `/role-tech-lead` no Claude Code) são invocação nativa do host, não comando de shell. Leia só skills/referências pertinentes.
 
 Módulos mantêm expertise: .NET moderno/Framework e xUnit quando aplicável; web-app, web-dotnet e web-e2e-playwright; SQL Server read-only com sqlserver-structure-review e mudanças aprovadas por card com db-change-sqlserver; mobile-app para nativo/híbrido/multiplataforma. Desktop e DevOps seguem capabilities.md. Nomes antigos *-dotnet e scripts *-agent-pack permanecem. Detecção não autoriza migrar legado ou instalar dependências.
 
@@ -60,7 +60,7 @@ Template (AGENTS.md é artefato `merge` e o único arquivo do fluxo versionado n
 
 - Branch principal (produção): [`main`|`master`]
 - Branch de homologação/integração: [`hom`|`develop`|`hml`]
-- Modo de operação dos papéis: `sessao-por-papel` *(padrão se não especificado; ou `standalone`)*
+- Modo de operação dos papéis: `sessao-por-papel`
 - Exceção sem homologação: [não | sim — aprovado por <aprovador humano> em <data>, motivo: <...>]
 - Branches protegidas (harness): [...]
 - Nomes sensíveis (mascaramento): [...]

@@ -2,7 +2,7 @@
 
 Triagem por card (`AB-<ID>`) → entender a demanda → plano técnico (Gate 1) → aprovação humana → implementar na branch do card (`Implementor` + `Tester` em loop fechado) → reunir evidências → Gate 2 (commit) → homologação → produção isolada, Tag, SQL e OS de Infra.
 
-O fluxo é definido por papéis e hierarquia de trabalho, não por ferramentas específicas (veja Papéis). Qualquer desenvolvedor pode operar **com um único harness acumulando papéis** (modo standalone) ou **distribuir a hierarquia entre agentes especializados**. Leia somente o índice de skills e carregue a skill escolhida; o nome `$skill` indica invocação nativa, não comando de shell. Instruções locais e autorização humana definem o envelope de execução (`execution envelope`).
+O fluxo é definido por papéis e hierarquia de trabalho, não por ferramentas específicas (veja Papéis). Qualquer desenvolvedor pode operar **com um único harness acumulando papéis** (modo standalone) ou **distribuir a hierarquia entre agentes especializados**. Leia somente o índice de skills e carregue a skill escolhida; o nome `$skill` ou `/skill` (ex.: `/role-tech-lead` no Claude Code) indica invocação nativa, não comando de shell. Instruções locais e autorização humana definem o envelope de execução (`execution envelope`).
 
 ## Papéis (Roles) e Hierarquia
 
@@ -21,7 +21,7 @@ Um mesmo agente pode acumular papéis: trabalhando sozinho com apenas um harness
 
 Para não poluir repositórios compartilhados com outros desenvolvedores da equipe:
 - O instalador (`install-agent-pack.{sh,ps1}`) faz uma instalação limpa e **não gera arquivos de versão/estado (`.agent-pack/state.txt`)** no repositório alvo.
-- O script `protect-engineering-flow-files.{sh,ps1}` adiciona todas as pastas operacionais do Engineering Flow (`.agents/`, `.grok/`, `.agent-pack/`, `.ai-memory.toml`, `docs/engineering-flow/`, `docs/ai/`, `prompts/`, `Planejamento/`, `planejamento/`, `.engineering-flow-evidence/`, `*.agent-pack.new`, `*.agent-pack.backup-*`) ao `.gitignore` do repositório alvo.
+- O script `protect-engineering-flow-files.{sh,ps1}` adiciona todas as pastas operacionais do Engineering Flow (`.agents/`, `.claude/`, `.grok/`, `.agent-pack/`, `.ai-memory.toml`, `docs/engineering-flow/`, `docs/ai/`, `prompts/`, `Planejamento/`, `planejamento/`, `.engineering-flow-evidence/`, `*.agent-pack.new`, `*.agent-pack.backup-*`) ao `.gitignore` do repositório alvo.
 - Se um `.gitignore` herdado (ex.: EF 3.0) estiver ignorando `AGENTS.md`, o instalador aciona `protect-engineering-flow-files.{sh,ps1}` no modo `unignore-agents-md` (`-UnignoreAgentsMd`) durante o preflight para acrescentar `!AGENTS.md` ao fim do `.gitignore` (preservando regras existentes, UTF-8, BOM e CRLF; sai com código `5` se continuar ignorado).
 - **Somente o arquivo `AGENTS.md` na raiz permanece versionável** no Git do projeto.
 

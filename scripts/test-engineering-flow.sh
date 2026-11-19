@@ -18,10 +18,11 @@ output="$(bash "$INSPECTOR" "$empty")"
 [[ "$output" = *'Discovery mode: empty'* ]] || fail 'Empty mode lost'
 [[ "$output" = *'Suggested profiles: [none]'* ]] || fail 'Empty selected unrelated modules'
 bash "$INSTALLER" "$empty" --profile core
+[ -f "$empty/.claude/skills/new-project/SKILL.md" ] || fail 'Empty Claude new-project missing'
 [ -f "$empty/.grok/skills/new-project/SKILL.md" ] || fail 'Empty new-project missing'
 [ -f "$empty/.grok/agents/repo-explorer.md" ] || fail 'Empty Grok agent missing'
 [ ! -e "$empty/.codex" ] || fail 'Grok-only installed Codex'
-[ ! -e "$empty/.claude" ] || fail 'Grok-only installed Claude'
+[ ! -e "$empty/.claude/agents" ] || fail 'Default install installed Claude agents'
 [ ! -e "$empty/.agents/skills/mobile-app" ] || fail 'Core installed mobile'
 mixed="$TEMP_ROOT/mixed"
 new_repo "$mixed"

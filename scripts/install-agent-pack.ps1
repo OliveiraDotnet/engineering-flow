@@ -518,6 +518,7 @@ function Install-ToRepository {
     $requestedComponents = New-Object System.Collections.Generic.List[string]
     foreach ($requestedProfile in $profiles) {
         $requestedComponents.Add($requestedProfile)
+        $requestedComponents.Add("claude-$requestedProfile")
         $requestedComponents.Add("grok-$requestedProfile")
     }
 
