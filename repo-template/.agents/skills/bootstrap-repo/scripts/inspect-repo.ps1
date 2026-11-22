@@ -1,8 +1,10 @@
-#Requires -Version 7
+﻿#Requires -Version 7
 param(
     [string]$RepoPath = (Get-Location).Path,
     [ValidateSet("json", "markdown")]
-    [string]$Format = "json"
+    [string]$Format = "json",
+    [switch]$GenerateRepoMap,
+    [switch]$ForceRepoMap
 )
 
 $ErrorActionPreference = "Stop"
@@ -192,6 +194,89 @@ $result = [ordered]@{
         sql = Get-ExtensionCount ".sql"
         xaml = Get-ExtensionCount ".xaml"
     }
+}
+
+if ($GenerateRepoMap) {
+    $utf8NoBom = [Text.UTF8Encoding]::new($false)
+    $runtimeDir = Join-Path $repo '.agent-pack/.runtime'
+    $repoMapPath = Join-Path $runtimeDir 'repo-map.txt'
+    $headHash = 'no-git'
+    $isDirty = $true
+    if ($gitRoot) {
+        $h = (& git -C $repo rev-parse --short HEAD 2>$null)
+        if ($LASTEXITCODE -eq 0 -and $h) { $headHash = ($h -join '').Trim() } else { $headHash = 'empty-head' }
+        $st = (& git -C $repo status --porcelain 2>$null)
+        $isDirty = ($LASTEXITCODE -ne 0) -or (@($st | Where-Object { $_ -and $_.Trim() }).Count -gt 0)
+    }
+    $cacheKey = if ($isDirty) { "$headHash-dirty" } else { $headHash }
+    $cacheHit = $false
+    if (-not $ForceRepoMap -and -not $isDirty -and (Test-Path -LiteralPath $repoMapPath -PathType Leaf)) {
+        $firstLines = @(Get-Content -LiteralPath $repoMapPath -TotalCount 3 -ErrorAction SilentlyContinue)
+        if (@($firstLines | Where-Object { $_ -eq "cache_key: $cacheKey" }).Count -gt 0) {
+            $cacheHit = $true
+        }
+    }
+    if (-not $cacheHit) {
+        New-Item -ItemType Directory -Path $runtimeDir -Force | Out-Null
+        $symbolExts = @('.cs', '.ts', '.tsx', '.js', '.jsx', '.py', '.go', '.java', '.kt', '.sql')
+        $maxFiles = 120
+        $maxSymbolsPerFile = 12
+        $entries = New-Object System.Collections.Generic.List[string]
+        $indexedCount = 0
+        foreach ($srcFile in @($files | Where-Object { $symbolExts -contains $_.Extension.ToLowerInvariant() } | Sort-Object FullName)) {
+            if ($indexedCount -ge $maxFiles) { break }
+            $ext = $srcFile.Extension.ToLowerInvariant()
+            $rel = Get-RelativePath $repo $srcFile.FullName
+            $symbols = New-Object System.Collections.Generic.List[string]
+            try {
+                foreach ($line in [IO.File]::ReadLines($srcFile.FullName)) {
+                    if ($symbols.Count -ge $maxSymbolsPerFile) { break }
+                    $m = $null
+                    switch ($ext) {
+                        '.cs' {
+                            $m = [regex]::Match($line, '^\s*(?:public|internal)\s+(?:sealed\s+|abstract\s+|static\s+|partial\s+)*(class|interface|record|struct|enum)\s+([A-Za-z_][A-Za-z0-9_]*)')
+                            if ($m.Success) { $symbols.Add("$($m.Groups[1].Value) $($m.Groups[2].Value)") }
+                        }
+                        { $_ -in '.ts', '.tsx', '.js', '.jsx' } {
+                            $m = [regex]::Match($line, '^\s*export\s+(?:default\s+)?(?:async\s+)?(class|interface|type|function|const)\s+([A-Za-z_$][A-Za-z0-9_$]*)')
+                            if ($m.Success) { $symbols.Add("$($m.Groups[1].Value) $($m.Groups[2].Value)") }
+                        }
+                        '.py' {
+                            $m = [regex]::Match($line, '^(?:async\s+)?(class|def)\s+([A-Za-z_][A-Za-z0-9_]*)')
+                            if ($m.Success) { $symbols.Add("$($m.Groups[1].Value) $($m.Groups[2].Value)") }
+                        }
+                        '.go' {
+                            $m = [regex]::Match($line, '^(type|func)\s+(?:\([^)]+\)\s+)?([A-Z][A-Za-z0-9_]*)')
+                            if ($m.Success) { $symbols.Add("$($m.Groups[1].Value) $($m.Groups[2].Value)") }
+                        }
+                        { $_ -in '.java', '.kt' } {
+                            $m = [regex]::Match($line, '^\s*(?:public\s+|internal\s+)?(?:abstract\s+|final\s+|data\s+|sealed\s+)?(class|interface|record|enum|object)\s+([A-Za-z_][A-Za-z0-9_]*)')
+                            if ($m.Success) { $symbols.Add("$($m.Groups[1].Value) $($m.Groups[2].Value)") }
+                        }
+                        '.sql' {
+                            $m = [regex]::Match($line, '(?i)^\s*CREATE\s+(?:OR\s+ALTER\s+)?(TABLE|VIEW|PROC(?:EDURE)?|FUNCTION)\s+([A-Za-z0-9_\[\]\.]+)')
+                            if ($m.Success) { $symbols.Add("$($m.Groups[1].Value.ToUpperInvariant()) $($m.Groups[2].Value)") }
+                        }
+                    }
+                }
+            }
+            catch { continue }
+            if ($symbols.Count -gt 0) {
+                $entries.Add(("{0}: {1}" -f $rel, ($symbols -join ', ')))
+                $indexedCount++
+            }
+        }
+        $nowUtc = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
+        $mapLines = @(
+            '# SpecGuard 6 Repo Map (auto-generated structural cache — gitignored)'
+            "cache_key: $cacheKey"
+            "generated_at: $nowUtc | files_indexed: $indexedCount"
+            ''
+        ) + @($entries.ToArray())
+        [IO.File]::WriteAllText($repoMapPath, (($mapLines -join "`n") + "`n"), $utf8NoBom)
+    }
+    $result['repoMapPath'] = '.agent-pack/.runtime/repo-map.txt'
+    $result['repoMapStatus'] = if ($cacheHit) { 'cache-hit' } else { 'generated' }
 }
 
 if ($Format -eq "markdown") {
