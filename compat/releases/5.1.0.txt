@@ -1,6 +1,6 @@
 # Engineering Flow release compatibility catalog v5.1.0
 # Format: artifact_id|destination_relative_path|normalized_lf_sha256
-guidance.agents|AGENTS.md|e8bb57b6e19d6ef9dc931c5298171dbbe7d2c12d37ba19f623fac957e8804f0f
+guidance.agents|AGENTS.md|0eaf8868a7c6034e79c525e00d1a5464ea5487fddf1c0356650ccc8fb9cbbe7e
 memory.project-map|docs/ai/project-map.md|c0a6225ec8f2f88703fc4941351472ab6352b9f8f2f1fbff82daa49ba9018952
 memory.architecture|docs/ai/architecture.md|46492a93bf803d82a92bb22e4df5bc0e57f60b797c7c8bf8484bbcc522746994
 memory.database|docs/ai/database.md|2202dda7a13102e466f2583d749741473622a77df116716c195ee3404af7eb6e
@@ -153,6 +153,6 @@ prompt.13-tester-harness|prompts/13-tester-harness.md|d55e1fba4fc418ec46d79cd967
 flow.anti-patterns|docs/engineering-flow/anti-patterns.md|d722aee68b975b68c29cf193389f2ab848a56e27f1cc2068ba6ef17c7d82c1c9
 flow.capabilities|docs/engineering-flow/capabilities.md|3f197985cc09b633461a26e4fdd53f635436e9d28a220749255e6a1b98f6ce3a
 flow.planning-workspace|docs/engineering-flow/planning-workspace.md|7e5cce21bdb021cdb9e631a2f1fa7285486d1788a57c5954bcbeefdff1200bb9
-flow.roles-and-handoffs|docs/engineering-flow/roles-and-handoffs.md|2e6f4f7be22561f107d84f076829aea670096ef6fa5409badbda6de535a1e956
+flow.roles-and-handoffs|docs/engineering-flow/roles-and-handoffs.md|1aa1e2b543b2452668642e09d1435d057c2b27a53641ef17edc691374b9bb870
 flow.sql-release-package|docs/engineering-flow/sql-release-package.md|2c330067089ca1b5eb481bf4c7c78fd525a656de6adcc79035db52e553840443
 flow.workflow|docs/engineering-flow/workflow.md|c06186463ae555e79e109096dc96af1d1ab8a2c7b356063b5884e1f7823adcd1

@@ -22,23 +22,28 @@ Inclui especialização para **.NET moderno e .NET Framework**, **Web Forms**, *
 
 ---
 
-## Hierarquia de Papéis e Loop Fechado
+## Hierarquia de Papéis, Porta de Entrada Única e Delegação Híbrida
+
+> **Primeiro Prompt (Porta de Entrada Única):** após instalar o Engineering Flow 5.1 (em repositório existente ou projeto do zero), qualquer conversa iniciada **sem papel explícito** assume automaticamente o papel de **`Engenheiro-Chefe`**. Ele inspeciona o repositório em modo somente leitura, conduz até 6 perguntas objetivas (cobrindo demanda com Card `AB-<ID>`, pedido informal via Teams/e-mail ou iniciativa própria sem Card) e delega ao **`Tech Lead`** via `.agent-pack/.runtime/NEXT_PROMPT.md` — perguntando ao usuário se prefere delegar para um **subagente nativo** (com retorno obrigatório ao topo da cadeia) ou enviar o bloco `PROMPT PARA:` manualmente. Veja [roles-and-handoffs.md](repo-template/docs/engineering-flow/roles-and-handoffs.md).
 
 ```mermaid
 flowchart TD
     H["Aprovador Humano (Autoridade Única — Gate 1, Gate 2 e Produção)"]
-    P["Planejador / Engenheiro-Chefe (Triagem por Card e Plano Técnico)"]
+    P["Planejador / Engenheiro-Chefe (Porta de Entrada Única — Triagem com/sem Card)"]
     R["Revisor / Entrega (Tech Lead de Repositório)"]
     I["Implementor (Harness de Código — Edição e Commit Pós-Gate 2)"]
     T["Tester (Harness de QA — R0-RED, R0-GREEN e Evidências)"]
 
-    H -->|"Aprova escopo/envelope (Gate 1)"| P
-    P -->|"Delega TASK_SPEC.md"| R
-    R -->|"Cria branch do card e task.lock"| I
+    H -->|"1º Prompt (sem papel explícito)"| P
+    P -->|"NEXT_PROMPT.md (Prompt Relay ou Subagente com retorno)"| R
+    R -->|"Plano Técnico (Gate 1)"| H
+    H -->|"Aprova escopo/envelope (Gate 1)"| R
+    R -->|"Branch do card + task.lock + TASK_SPEC.md"| I
     I <-->|"Loop fechado harness-cycle (máx. 3 tentativas)"| T
-    T -->|"EVIDENCIA.md + test-status.json"| R
-    R -->|"Apresenta evidências"| H
-    H -->|"OK explícito (Gate 2)"| I
+    T -->|"EVIDENCIA.md + test-status.json (retorna ao topo)"| R
+    R -->|"Apresenta diff + evidências"| H
+    H -->|"OK explícito (Gate 2)"| R
+    R -->|"Delega --commit-gate2"| I
 ```
 
 | Papel | Responsabilidade Principal | Pode Commitar? | Pode Dar Push? |
