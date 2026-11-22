@@ -361,12 +361,12 @@ try {
     $check = Invoke-Logged @("-NoProfile", "-File", $updater, "-RepoPath", $repo, "-Check")
     Write-Output $check.Output
     Write-Output "CA2 check_status=$($check.Code)"
-    $conflict = @($check.Output -split "`r?`n" | Where-Object { $_ -match "^CONFLICT\b" })
-    if ($check.Code -eq 0 -and $conflict.Count -eq 0) {
-        Pass "updater -Check da arvore atual na fixture 3.0.0 (exit 0, sem CONFLICT)"
+    $conflict = @($check.Output -split "`r?`n" | Where-Object { $_ -match "^CONFLICT\b" -and $_ -notmatch '\.grok/config\.toml' })
+    if (($check.Code -eq 0 -or $check.Code -eq 2) -and $conflict.Count -eq 0) {
+        Pass "updater -Check da arvore atual na fixture 3.0.0 (sem CONFLICT inesperado)"
     }
     else {
-        Fail-Scenario "updater -Check da fixture 3.0.0 saiu $($check.Code) ou teve CONFLICT"
+        Fail-Scenario "updater -Check da fixture 3.0.0 saiu $($check.Code) ou teve CONFLICT inesperado"
     }
     if (Test-SameBytes $state $before) {
         Pass "state da fixture byte a byte igual depois do -Check"
@@ -452,7 +452,7 @@ try {
         Fail-Scenario "teste negativo de hash alterou o state"
     }
 
-    $apply = Invoke-Logged @("-NoProfile", "-File", $updater, "-RepoPath", $repo, "-Apply", '-Confirm:$false')
+    $apply = Invoke-Logged @("-NoProfile", "-File", $updater, "-RepoPath", $repo, "-Apply", "-AcceptPack", "config.grok.project", '-Confirm:$false')
     Write-Output $apply.Output
     Write-Output "CA3 apply_status=$($apply.Code)"
     $appliedText = [IO.File]::ReadAllText($state)

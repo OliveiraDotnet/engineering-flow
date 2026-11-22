@@ -9,12 +9,12 @@ Follow docs/engineering-flow/workflow.md in the target repository. Understand de
 
 # Update Agent Pack
 
-1. Confirm the repository root, read its applicable `AGENTS.md`, `.grok/config.toml`, and `.agent-pack/state.txt` when present, then inspect `git status`. Do not modify production code.
-2. Locate the latest trusted Agent Pack checkout from the user-provided path or `AGENT_PACK_HOME`. Do not download or guess a source.
-3. Run the updater in check mode:
+1. Confirm the repository root, read its applicable `AGENTS.md` and `.agent-pack/state.txt` when present, then inspect `git status`. Do not modify production code.
+2. Locate the latest trusted SpecGuard checkout from the user-provided path or `AGENT_PACK_HOME`. Do not download or guess a source.
+3. For clean SpecGuard 6 repositories (without `.agent-pack/state.txt`), reinstall without `--force` and consolidate `AGENTS.md` via `ef:managed` blocks (never wiping project rules); for legacy repositories with `.agent-pack/state.txt`, run the updater in check mode:
    - Windows: `pwsh -File "$env:AGENT_PACK_HOME\scripts\update-agent-pack.ps1" -RepoPath . -Check`
    - Linux/macOS: `bash "$AGENT_PACK_HOME/scripts/update-agent-pack.sh" . --check`
-   - The installer integration is Grok-only. Pass `-Integration grok` or `--integration grok` when stating the harness explicitly.
+   - SpecGuard 6 is 100% tool-agnostic (`.agents/` only, zero vendor mirrors).
 4. Review every planned action and its evidence. The deterministic updater owns file selection; do not invent extra files or profiles.
 5. Resolve conflicts by artifact:
    - Preserve confirmed project facts, commands and rules.

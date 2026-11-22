@@ -9,7 +9,7 @@ Follow docs/engineering-flow/workflow.md in the target repository. Understand de
 
 # Check text encoding
 
-1. Resolve scripts relative to this SKILL.md, whether loaded from .agents or .grok. Run scripts/check-mojibake.ps1 with RepoPath on Windows, or scripts/check-mojibake.sh with --repo on Linux/macOS, using the actual repository path.
+1. Resolve scripts relative to this SKILL.md (`.agents/skills/check-text-encoding/scripts/`). Run scripts/check-mojibake.ps1 with RepoPath on Windows, or scripts/check-mojibake.sh with --repo on Linux/macOS, using the actual repository path.
 2. Scan changed text by default; use All/--all only for a full audit.
 3. Inspect findings against bytes, surrounding text, and Git history before editing. Do not transcode or rewrite an entire file based only on a heuristic.
 4. Preserve the repository's confirmed encoding and line endings. A legitimate legacy encoding needs an explicit reported limitation, not forced UTF-8 conversion. Never strip accents to hide corruption.

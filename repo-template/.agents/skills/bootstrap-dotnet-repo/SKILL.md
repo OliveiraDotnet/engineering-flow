@@ -11,7 +11,7 @@ Follow docs/engineering-flow/workflow.md in the target repository. Understand de
 
 1. Classify the workspace from Git evidence: one repository, one Git root with multiple apps (monorepo), a parent folder of independent Git repositories, or a non-Git folder.
 2. If independent repositories are found, list each Git root and inspect it separately. Do not write a parent-level `AGENTS.md` unless the user explicitly wants workspace-level notes.
-3. Resolve the inspection script relative to this skill directory (whether loaded from `.agents/skills` or `.grok/skills`) and pass the selected repository explicitly. Run it without build, restore, test, database, network, or code changes:
+3. Resolve the inspection script relative to this skill directory (`.agents/skills/bootstrap-dotnet-repo/scripts/`) and pass the selected repository explicitly. Run it without build, restore, test, database, network, or code changes:
    - Windows: `pwsh -File <skill-directory>/scripts/inspect-dotnet-repo.ps1 -RepoPath <repository>`
    - Linux/macOS: `bash <skill-directory>/scripts/inspect-dotnet-repo.sh <repository>`
 4. Verify reported facts against project files, CI, scripts, README and tests. Treat detection as evidence, not proof.

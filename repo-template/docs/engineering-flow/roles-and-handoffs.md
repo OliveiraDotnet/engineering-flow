@@ -182,7 +182,7 @@ Ao concluir: atualize `.agent-pack/.runtime/session-state.json` (incluindo `dead
 O contrato em disco (`AGENTS.md`, `DEMANDAS.md`, `TASK_SPEC.md`, `EVIDENCIA.md`, `NEXT_PROMPT.md`) é sempre a fonte de verdade; o **canal de entrega** adapta-se ao harness em uso:
 
 - **Harness sem suporte a subagentes (ou preferência manual):** o agente entrega o bloco `PROMPT PARA: <Papel>` na tela e salvo em `.agent-pack/.runtime/NEXT_PROMPT.md` para o usuário colar na próxima sessão.
-- **Harness com suporte a subagentes nativos (ex.: Claude Code, Antigravity, Grok/DeepSeek Harness):** antes de disparar o subagente (salvo quando o humano já tiver autorizado a delegação no Gate), o `Engenheiro-Chefe` ou o `Tech Lead` pergunta explicitamente:
+- **Harness com suporte a subagentes nativos:** antes de disparar o subagente (salvo quando o humano já tiver autorizado a delegação no Gate), o `Engenheiro-Chefe` ou o `Tech Lead` pergunta explicitamente:
   > *"O prompt para **`<Papel Destino>`** está pronto e salvo em `.agent-pack/.runtime/NEXT_PROMPT.md`. Deseja que eu delegue agora para o subagente **`<Papel Destino>`** (com retorno obrigatório para mim) ou prefere enviar manualmente?"*
 - **Retorno obrigatório ao topo da cadeia:** todo subagente invocado executa estritamente a sua skill/papel (`Tech Lead`, `Implementor`, `Tester`, `UI`) dentro do escopo informado e **sempre devolve o resultado ao papel que o delegou** (`Tech Lead` ou `Engenheiro-Chefe`). Subagentes nunca pulam **Gate 1** nem **Gate 2** e nunca fecham entrega diretamente com produção.
 

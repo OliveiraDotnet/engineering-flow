@@ -2,7 +2,7 @@
 
 > **Governança determinística de engenharia assistida por IA: agnóstico de ferramenta, 99,9% desacoplado do projeto, com cache estruturado de contexto, arquitetura verificável e entrega por card.**
 
-Versão atual: **`6.0.0`** · [Releases no GitHub](https://github.com/OliveiraDotnet/engineering-flow/releases) · [Índice de Skills](SKILLS-INDEX.md) · [Manual de Uso](MANUAL_DE_USO.md) · [Guia Detalhado](INSTRUCOES_DETALHADAS.md) · [Changelog](CHANGELOG.md)
+Versão atual: **`6.1.0`** · [Releases no GitHub](https://github.com/OliveiraDotnet/engineering-flow/releases) · [Índice de Skills](SKILLS-INDEX.md) · [Manual de Uso](MANUAL_DE_USO.md) · [Guia Detalhado](INSTRUCOES_DETALHADAS.md) · [Changelog](CHANGELOG.md)
 
 ---
 
@@ -12,7 +12,7 @@ O **SpecGuard 6** (evolução do **Engineering Flow**) é um framework operacion
 
 ### Principais pilares da geração 6.0
 
-- **Desacoplamento 99,9% & Instalação Limpa:** **somente `AGENTS.md` permanece versionado** no Git do projeto alvo; todos os arquivos operacionais e de runtime (`.agent-pack/.runtime/session-state.json`, `repo-map.txt`, `NEXT_PROMPT.md`, `metrics.jsonl`, `docs/engineering-flow/`, `docs/ai/`, `.agents/`, `.grok/`) ficam 100% no `.gitignore`. Quando `AGENTS.md` já existe no repositório, ele **é sempre consolidado via blocos gerenciados (`ef:managed`), nunca apagado ou recriado do zero**.
+- **Desacoplamento 99,9% & Instalação Limpa (100% Agnóstico):** **somente `AGENTS.md` permanece versionado** no Git do projeto alvo; todas as skills e agentes ficam exclusivamente em `.agents/` (sem espelhos de fornecedores como `.grok/` ou `openai.yaml`), e todos os arquivos operacionais/runtime (`.agent-pack/.runtime/session-state.json`, `repo-map.txt`, `NEXT_PROMPT.md`, `metrics.jsonl`, `docs/engineering-flow/`, `docs/ai/`, `.agents/`) ficam 100% no `.gitignore`. Quando `AGENTS.md` já existe no repositório, ele **é sempre consolidado via blocos gerenciados (`ef:managed`), nunca apagado ou recriado do zero**.
 - **Porta de Entrada Única & Delegação Híbrida:** no primeiro prompt sem papel explícito, a IA assume automaticamente como **`Engenheiro-Chefe`**, lê o repositório em modo somente leitura, conduz até 6 perguntas objetivas (cobrindo Card `AB-<ID>`, pedido informal via Teams/e-mail ou iniciativa própria sem Card) e delega ao `Tech Lead` via `.agent-pack/.runtime/NEXT_PROMPT.md` (perguntando se deseja usar subagente nativo com retorno ao topo ou envio manual).
 - **Cache de Contexto & Continuidade entre Conversas:**
   - **`.agent-pack/.runtime/session-state.json`** (`tools/session-state.{ps1,sh}`): checkpoint JSON estrito com critérios, fase e **`deadEnds`** (abordagens já falhadas para nunca repetir erros entre sessões).
@@ -92,10 +92,10 @@ No **SpecGuard 6 (`6.0.0`)**, instalar o fluxo em um repositório de equipe é l
 
 ### Baixar ou Clonar
 
-Baixe o pacote da [Release `v6.0.0`](https://github.com/OliveiraDotnet/engineering-flow/releases/tag/v6.0.0) ou clone o repositório:
+Baixe o pacote da [Release `v6.1.0`](https://github.com/OliveiraDotnet/engineering-flow/releases/tag/v6.1.0) ou clone o repositório:
 
 ```bash
-git clone --branch v6.0.0 https://github.com/OliveiraDotnet/engineering-flow.git
+git clone --branch v6.1.0 https://github.com/OliveiraDotnet/engineering-flow.git
 ```
 
 ### Instalar em um Repositório Alvo
@@ -132,7 +132,7 @@ bash ./scripts/update-agent-pack.sh /caminho/do/repositorio --apply
 .\scripts\update-agent-pack.ps1 -RepoPath 'C:\src\Sistema' -Apply -Confirm:$false
 ```
 
-`pack-manifest.txt`, `pack-artifacts.txt` e `pack-version.txt` definem artefatos e propriedade (`managed`, `merge`, `seed`). Catálogos de compatibilidade permanecem em `compat/releases/` (`1.1.0` a `6.0.0`).
+`pack-manifest.txt`, `pack-artifacts.txt` e `pack-version.txt` definem artefatos e propriedade (`managed`, `merge`, `seed`). Catálogos de compatibilidade permanecem em `compat/releases/` (`1.1.0` a `6.1.0`).
 
 ---
 

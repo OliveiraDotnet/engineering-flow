@@ -491,22 +491,18 @@ function Install-ToRepository {
     foreach ($value in $Integration) {
         foreach ($item in ($value -split ',')) {
             $selected = $item.Trim().ToLowerInvariant()
-            if ($selected -ne 'grok') { throw "Unknown integration: $item." }
-            $integrations.Add($selected) | Out-Null
+            if ($selected -notin @('agents', 'agnostic')) { throw "Unknown integration: $item. SpecGuard 6 is tool-agnostic (default: agents)." }
+            $integrations.Add('agents') | Out-Null
         }
     }
-    foreach ($integration in (Get-StateRecords -TargetRoot $TargetRoot -Kind "integration")) {
-        if ($integration -ne 'grok') { throw "Unknown integration in state: $integration." }
-        $integrations.Add($integration) | Out-Null
-    }
-    if ($integrations.Count -eq 0) { $integrations.Add("grok") | Out-Null }
+    if ($integrations.Count -eq 0) { $integrations.Add("agents") | Out-Null }
     $integrations = @($integrations | Select-Object -Unique)
 
     Write-Host ""
     Write-Host "Target: $TargetRoot"
     Write-Host "Workspace: $Kind"
     Write-Host "Profiles: $($profiles -join ', ')"
-    Write-Host "Integrations: $($integrations -join ', ')"
+    Write-Host "Mode: tool-agnostic (.agents/)"
     if ($DryRun) {
         Write-Host "Dry-run enabled: no files will be written."
     }
@@ -518,7 +514,6 @@ function Install-ToRepository {
     $requestedComponents = New-Object System.Collections.Generic.List[string]
     foreach ($requestedProfile in $profiles) {
         $requestedComponents.Add($requestedProfile)
-        $requestedComponents.Add("grok-$requestedProfile")
     }
 
     $actions = New-Object System.Collections.Generic.List[object]
@@ -651,7 +646,7 @@ else {
     }
 }
 
-Write-Host "Installing Engineering Flow $packVersion"
+Write-Host "Installing SpecGuard $packVersion"
 Write-Host "Workspace path: $repoRoot"
 Write-Host ("Repositories: {0}" -f (($targets | ForEach-Object { $_.Path }) -join ', '))
 Write-Host "Clean installation mode enabled (only AGENTS.md stays versionable)."
@@ -661,10 +656,10 @@ foreach ($target in $targets) {
 }
 
 if ($InstallGlobal -and -not $DiscoverOnly) {
-    $grokHome = if ($env:GROK_HOME) { $env:GROK_HOME } else { Join-Path $HOME ".grok" }
-    $grokHome = [IO.Path]::GetFullPath($grokHome)
+    $globalHome = if ($env:SPECGUARD_HOME) { $env:SPECGUARD_HOME } else { Join-Path $HOME ".agents" }
+    $globalHome = [IO.Path]::GetFullPath($globalHome)
     $globalActions = New-Object System.Collections.Generic.List[object]
-    Add-CopyAction -Actions $globalActions -Source $GlobalGuidance -Destination (Join-Path $grokHome "AGENTS.md")
+    Add-CopyAction -Actions $globalActions -Source $GlobalGuidance -Destination (Join-Path $globalHome "AGENTS.md")
     foreach ($action in $globalActions) {
         Invoke-CopyAction -Action $action
     }

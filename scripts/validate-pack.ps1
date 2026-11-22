@@ -13,8 +13,7 @@ $PackVersionPath = Join-Path $PackRoot "pack-version.txt"
 $ArtifactMetadataPath = Join-Path $PackRoot "pack-artifacts.txt"
 $CompatibilityRoot = Join-Path $PackRoot "compat\releases"
 $ValidComponents = @(
-    "core", "web", "sqlserver", "quality", "mobile",
-    "grok-core", "grok-web", "grok-sqlserver", "grok-quality", "grok-mobile"
+    "core", "web", "sqlserver", "quality", "mobile"
 )
 $errors = New-Object System.Collections.Generic.List[string]
 $manifestEntries = @()
@@ -131,7 +130,7 @@ else {
         }
     }
 
-    foreach ($path in @("AGENTS.md", ".grok/config.toml")) {
+    foreach ($path in @("AGENTS.md")) {
         $artifact = @($artifactEntries | Where-Object { $_.Destination -eq $path })
         if ($artifact.Count -eq 1 -and $artifact[0].Ownership -ne "merge") {
             Add-Error "$path must use merge ownership."
@@ -170,73 +169,64 @@ else {
     }
 }
 
-$grokAgentRoot = Join-Path $TemplateRoot ".grok\agents"
-if (-not (Test-Path -LiteralPath $grokAgentRoot -PathType Container)) {
-    Add-Error "Missing Grok agents directory: .grok/agents"
+$agentRoot = Join-Path $TemplateRoot ".agents\agents"
+if (-not (Test-Path -LiteralPath $agentRoot -PathType Container)) {
+    Add-Error "Missing shared agents directory: .agents/agents"
 }
 else {
-    $grokAgentFiles = @(Get-ChildItem -LiteralPath $grokAgentRoot -File -Filter "*.md" -ErrorAction SilentlyContinue)
-    if ($grokAgentFiles.Count -ne 10) {
-        Add-Error "Expected 10 Grok agents, found $($grokAgentFiles.Count)."
+    $agentFiles = @(Get-ChildItem -LiteralPath $agentRoot -File -Filter "*.md" -ErrorAction SilentlyContinue)
+    if ($agentFiles.Count -ne 10) {
+        Add-Error "Expected 10 specialist agents in .agents/agents, found $($agentFiles.Count)."
     }
-    foreach ($agent in $grokAgentFiles) {
+    foreach ($agent in $agentFiles) {
         $content = Get-Content -LiteralPath $agent.FullName -Raw
         $frontmatter = [regex]::Match($content, '(?ms)\A---\s*\r?\n(.*?)\r?\n---')
         if (-not $frontmatter.Success) {
-            Add-Error "Grok agent '$($agent.Name)' has invalid frontmatter."
+            Add-Error "Agent '$($agent.Name)' has invalid frontmatter."
             continue
         }
 
         $nameMatch = [regex]::Match($frontmatter.Groups[1].Value, '(?m)^name:\s*([^\r\n]+?)\r?$')
         $descriptionMatch = [regex]::Match($frontmatter.Groups[1].Value, '(?m)^description:\s*([^\r\n]+?)\r?$')
-        if (-not $nameMatch.Success) { Add-Error "Grok agent '$($agent.Name)' is missing name."; continue }
-        if (-not $descriptionMatch.Success) { Add-Error "Grok agent '$($agent.Name)' is missing description." }
+        if (-not $nameMatch.Success) { Add-Error "Agent '$($agent.Name)' is missing name."; continue }
+        if (-not $descriptionMatch.Success) { Add-Error "Agent '$($agent.Name)' is missing description." }
 
         $name = $nameMatch.Groups[1].Value.Trim().Trim('"', "'")
-        if ($name -notmatch '^[a-z0-9-]+$') { Add-Error "Grok agent '$($agent.Name)' has invalid name '$name'." }
+        if ($name -notmatch '^[a-z0-9-]+$') { Add-Error "Agent '$($agent.Name)' has invalid name '$name'." }
         if ($name -ne [IO.Path]::GetFileNameWithoutExtension($agent.Name)) {
-            Add-Error "Grok agent name '$name' does not match file '$($agent.Name)'."
+            Add-Error "Agent name '$name' does not match file '$($agent.Name)'."
         }
 
-        $grokSource = ".grok/agents/$name.md"
-        $grokDestination = ".grok/agents/$name.md"
-        $grokOrigin = @($manifestEntries | Where-Object {
-            $_.Source -eq $grokSource -and
-            $_.Destination -eq $grokDestination -and
-            $_.Component -like "grok-*"
+        $agentRel = ".agents/agents/$name.md"
+        $agentOrigin = @($manifestEntries | Where-Object {
+            $_.Source -eq $agentRel -and
+            $_.Destination -eq $agentRel -and
+            $_.Component -in $ValidComponents
         })
-        if ($grokOrigin.Count -ne 1) {
-            Add-Error "Grok agent '$($agent.Name)' must be listed once as origin in a grok-* component."
+        if ($agentOrigin.Count -ne 1) {
+            Add-Error "Agent '$($agent.Name)' must be listed once in pack-manifest.txt."
         }
     }
 }
 
-$grokConfigPath = Join-Path $TemplateRoot ".grok\config.toml"
-if (-not (Test-Path -LiteralPath $grokConfigPath -PathType Leaf)) {
-    Add-Error "Missing Grok Build project configuration: .grok/config.toml"
-}
-else {
-    $grokConfig = Get-Content -LiteralPath $grokConfigPath -Raw
-    foreach ($command in @("git reset --hard", "git clean", "rm -rf")) {
-        $requiredRule = '{ action = "deny", tool = "bash", pattern = "' + $command + ' *" }'
-        if (-not $grokConfig.Contains($requiredRule)) { Add-Error ".grok/config.toml must deny destructive command '$command'." }
-    }
+if (Test-Path -LiteralPath (Join-Path $TemplateRoot ".grok")) {
+    Add-Error "Vendor-specific .grok directory must not exist in repo-template."
 }
 
 $governanceFiles = @{
     "AGENTS.md" = Join-Path $TemplateRoot "AGENTS.md"
     "agent-work-order" = Join-Path $TemplateRoot ".agents\skills\agent-work-order\SKILL.md"
-    "delegate-to-grok-build" = Join-Path $TemplateRoot ".agents\skills\delegate-to-grok-build\SKILL.md"
+    "delegate-to-harness" = Join-Path $TemplateRoot ".agents\skills\delegate-to-harness\SKILL.md"
 }
 foreach ($name in $governanceFiles.Keys) {
     if (-not (Test-Path -LiteralPath $governanceFiles[$name] -PathType Leaf)) {
-        Add-Error "Missing Grok governance artifact: $name."
+        Add-Error "Missing governance artifact: $name."
     }
 }
 if (@($governanceFiles.Values | Where-Object { -not (Test-Path -LiteralPath $_ -PathType Leaf) }).Count -eq 0) {
     $agentsGovernance = Get-Content -LiteralPath $governanceFiles["AGENTS.md"] -Raw
     $workOrderContract = Get-Content -LiteralPath $governanceFiles["agent-work-order"] -Raw
-    $delegationContract = Get-Content -LiteralPath $governanceFiles["delegate-to-grok-build"] -Raw
+    $delegationContract = Get-Content -LiteralPath $governanceFiles["delegate-to-harness"] -Raw
 
     foreach ($required in @("sole decision authority", "Gate 1", "execution envelope", "Gate 2", "ok explícito do aprovador humano", "nunca force push", "BLOCKED_BY_DECISION")) {
         if (-not $agentsGovernance.Contains($required)) { Add-Error "AGENTS.md is missing governance marker '$required'." }
@@ -247,7 +237,7 @@ if (@($governanceFiles.Values | Where-Object { -not (Test-Path -LiteralPath $_ -
     foreach ($required in @("COMPLETED", "COMPLETED_WITH_CONCERNS", "BLOCKED_BY_DECISION", "UNABLE_TO_VALIDATE", "material change was not performed")) {
         if (-not $workOrderContract.Contains($required)) { Add-Error "Shared agent work-order contract is missing '$required'." }
     }
-    if (-not $delegationContract.Contains("agent work order")) { Add-Error "Grok delegation entrypoint must reference the shared agent work-order contract." }
+    if (-not $delegationContract.Contains("agent work order")) { Add-Error "Harness delegation entrypoint must reference the shared agent work-order contract." }
 }
 
 $harnessSkillPath = Join-Path $TemplateRoot ".agents\skills\harness-cycle\SKILL.md"
@@ -295,26 +285,9 @@ foreach ($skill in $skillFiles) {
     if ($name -notmatch '^[a-z0-9-]+$') { Add-Error "Skill '$name' violates naming rules." }
 }
 
-$baseComponents = @("core", "web", "sqlserver", "quality", "mobile")
-$canonicalSkillEntries = @($manifestEntries | Where-Object { $_.Component -in $baseComponents -and $_.Destination -like ".agents/skills/*" })
-foreach ($entry in $canonicalSkillEntries) {
-    if (-not $entry.Destination.EndsWith("/agents/openai.yaml")) {
-        $grokComponent = "grok-$($entry.Component)"
-        $grokDestination = $entry.Destination -replace '^\.agents/skills/', '.grok/skills/'
-        $grokMirror = @($manifestEntries | Where-Object {
-            $_.Component -eq $grokComponent -and
-            $_.Source -eq $entry.Source -and
-            $_.Destination -eq $grokDestination
-        })
-        if ($grokMirror.Count -ne 1) {
-            Add-Error "Skill '$($entry.Source)' must map once to '$grokDestination' in '$grokComponent'."
-        }
-    }
-}
-
 $genericFiles = @(
     Get-ChildItem -LiteralPath $TemplateRoot -File -Recurse -Force
-    Get-Item -LiteralPath (Join-Path $PackRoot "README.md"), (Join-Path $PackRoot "MANUAL_DE_USO.md"), (Join-Path $PackRoot "INSTRUCOES_DETALHADAS.md"), (Join-Path $PackRoot "FONTES_OFICIAIS_GROK_BUILD.md"), (Join-Path $PackRoot "global\AGENTS.md")
+    Get-Item -LiteralPath (Join-Path $PackRoot "README.md"), (Join-Path $PackRoot "MANUAL_DE_USO.md"), (Join-Path $PackRoot "INSTRUCOES_DETALHADAS.md"), (Join-Path $PackRoot "global\AGENTS.md")
 )
 $allText = ($genericFiles | ForEach-Object { Get-Content -LiteralPath $_.FullName -Raw }) -join "`n"
 foreach ($term in @("Aptos", "M & Y TECH", "Portal de Vendas", "projetos/")) {
@@ -358,4 +331,4 @@ if ($errors.Count -gt 0) {
     throw "Pack validation failed with $($errors.Count) error(s)."
 }
 
-Write-Host "Pack validation passed: manifest, shared skills, Grok agents and generic-content checks are valid."
+Write-Host "Pack validation passed: manifest, shared skills, specialist agents and generic-content checks are valid."
