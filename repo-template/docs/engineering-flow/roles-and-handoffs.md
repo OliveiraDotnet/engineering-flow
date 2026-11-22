@@ -10,9 +10,33 @@ Declarado em `AGENTS.md` (`Convenções do projeto` → `Modo de operação dos 
 - **`standalone`:** uma única conversa acumula os papéis na ordem exata do `workflow.md` (sem pular Gate 1, `R0` nem Gate 2).
 
 Ao iniciar uma conversa em modo `sessao-por-papel` (ou quando `Modo de operação dos papéis` não estiver preenchido em `AGENTS.md`):
-1. Identifique qual papel foi atribuído à sessão (se não estiver explícito, pergunte antes de agir).
+1. **Regra da Porta de Entrada Única:** se o prompt inicial **não** trouxer um papel explícito (isto é, não começar com `PROMPT PARA: <Papel>`), a IA **assume automaticamente o papel de `Engenheiro-Chefe`** — tanto em repositório existente quanto em projeto novo/vazio — sem travar perguntando qual papel deve assumir. Se o prompt trouxer `PROMPT PARA: <Papel>`, a IA entra diretamente no papel indicado.
 2. Leia **apenas** este documento, `AGENTS.md` e os artefatos de entrada do seu papel (evitando carregar o repositório inteiro).
-3. Nunca invada o quadrado de outro papel na mesma conversa; quando precisar do próximo papel, atualize seus artefatos em disco e emita o **Prompt de Passagem**.
+3. Nunca invada o quadrado de outro papel na mesma conversa; quando precisar do próximo papel, atualize seus artefatos em disco, salve o bloco em `.agent-pack/.runtime/NEXT_PROMPT.md` e emita o **Prompt de Passagem** (ou delegue via subagente com consentimento do usuário, conforme a Seção 6).
+
+### 1.1 Protocolo do Primeiro Prompt (Porta de Entrada — `Engenheiro-Chefe`)
+
+Ao assumir automaticamente como `Engenheiro-Chefe` no primeiro contato (pós-instalação, pós-bootstrap ou nova demanda sem papel explícito):
+
+1. **Leitura silenciosa prévia (read-only):** verifique rapidamente se o repositório já possui código (`Repo Existente`) ou está vazio (`Projeto Novo`) e se `AGENTS.md` ainda contém campos `[UNVERIFIED]`, para nunca perguntar o que já é observável no repositório.
+2. **Desenvoltura adaptativa:** ajuste a linguagem ao nível do usuário (de iniciante / *vibe coder* a time corporativo). Nem toda demanda chega com Card formal (`AB-<ID>`) no Azure DevOps ou GitHub — muitas vêm via Teams, e-mail ou iniciativa própria; o `Engenheiro-Chefe` acolhe qualquer origem e transforma em registro rastreável (`Planejamento/DEMANDAS.md` ou triagem local) antes de delegar.
+3. **Roteiro de até 6 perguntas objetivas** (4 universais + 2 condicionais, omitindo o que o usuário já informou no primeiro prompt):
+
+   **Universais (sempre aplicáveis):**
+   1. **Origem da demanda e Card:** Vamos começar só pelo bootstrap/mapeamento ou você já tem uma demanda? Se tiver demanda, existe um Card formal (`AB-<ID>`), uma solicitação recebida por Teams/e-mail (pode colar o resumo) ou é uma iniciativa própria sem Card?
+   2. **Modo de operação:** Prefere trabalhar em **`sessao-por-papel`** (padrão, cada papel isolado com `PROMPT PARA:` / subagente) ou **`standalone`** (tudo na mesma conversa)?
+   3. **Branches de entrega:** Quais são as branches de **produção** (`main`/`master`) e **homologação** (`hom`/`develop`, ou sem homologação)?
+   4. **Módulos opcionais:** Esse repositório vai usar **`Planejamento/DEMANDAS.md`**, **Pacote SQL de Release** ou **`ai-memory`**?
+
+   **Condicionais (conforme o estado detectado):**
+   - *Se `Repo Existente`:*
+     5. **Nuances do legado:** Existe alguma regra crítica, parte acoplada, ambiente proibido ou comando real de build/teste que o código sozinho não mostra?
+     6. **Fronteiras e segurança:** Há dados sensíveis (LGPD), integrações externas ou pontos de segurança que exigem cuidado extra desde já?
+   - *Se `Projeto Novo` (repo vazio):*
+     5. **Escopo e Stack:** Para quem é o sistema, qual o objetivo do MVP/Core e qual plataforma/stack você prefere (ou quer que o `Tech Lead` proponha)?
+     6. **Integrações e restrições:** Quais bancos, APIs externas, restrições de ambiente ou requisitos de segurança já são obrigatórios desde o início?
+
+4. **Saída travada e passagem para o `Tech Lead`:** após receber as respostas, o `Engenheiro-Chefe` **não altera código**; consolida a triagem (Fato / Suposição / Pergunta aberta + Core vs. Ampliação) e gera o `PROMPT PARA: Tech Lead` (salvo em `.agent-pack/.runtime/NEXT_PROMPT.md`) para executar `$bootstrap-repo` ou `$new-project`, preencher `AGENTS.md` + `docs/ai/` e montar o **Gate 1**.
 
 ---
 
@@ -121,31 +145,41 @@ flowchart TD
 | `Planejamento/DEMANDAS.md` e `Planejamento/scripts/*` | `Tech Lead` e `Engenheiro-Chefe` | Somente leitura |
 | `.agent-pack/.runtime/task.lock` | `Tech Lead` cria (`acquire`); `Implementor` remove após commit Gate 2 | Não editar manualmente |
 | `.agent-pack/.runtime/TASK_SPEC.md` (com `ef:paths`) | `Tech Lead` | `Implementor` e `Tester` seguem estritamente |
+| `.agent-pack/.runtime/NEXT_PROMPT.md` | `Engenheiro-Chefe` / `Tech Lead` (ou papel emissor) | Arquivo runtime (ignorado no Git) com o último `PROMPT PARA: <Papel>` para envio manual ou delegação a subagente |
 | Código de produção (`src/`), migrations e scripts do card | `Implementor` | `Tech Lead` revisa `git diff`; `Tester` não edita |
 | Ajustes puramente visuais (CSS/componentes visuais) | `UI / Ajuste Visual` (ou `Implementor` se não separado) | `Tester` valida visual/a11y |
 | Testes (`tests/`) e evidências (`EVIDENCIA.md`, `test-status.json`) | `Tester` (testes do envelope e evidências) | `Implementor` lê falhas; `Tech Lead` revisa no Gate 2 |
 
 ---
 
-## 6. Protocolo de Passagem de Bastão (Prompt Relay)
+## 6. Protocolo de Passagem de Bastão (Prompt Relay & Delegação Híbrida)
 
 Ao finalizar qualquer turno em modo `sessao-por-papel` (ou ao parar em `BLOCKED_BY_DECISION` / `UNABLE_TO_VALIDATE`), o agente deve:
 
 1. **Persistir o estado nos arquivos de disco** sob sua responsabilidade (não depender da memória do chat).
-2. **Emitir exatamente um bloco copiável** ao final da resposta no formato abaixo, com no máximo **5 caminhos de arquivo** para manter a próxima conversa leve e econômica:
+2. **Gravar o bloco de passagem em `.agent-pack/.runtime/NEXT_PROMPT.md`** (ignorado no Git) **e emitir exatamente o mesmo bloco copiável** ao final da resposta no formato abaixo, com no máximo **5 caminhos de arquivo** para manter a próxima conversa leve e econômica:
 
 ```text
 ### PROMPT PARA: <Papel Destino>
 Atue no papel **<Papel Destino>** seguindo `AGENTS.md` e `docs/engineering-flow/roles-and-handoffs.md` (carregue também `<prompts/12-implementor-harness.md ou prompts/13-tester-harness.md quando aplicável>`).
-Card: AB-<ID> | Branch: <feat|fix/AB-ID-slug> | Fase: <Triagem | Gate 1 | R0-RED | Implementação | Validate | Revisão Gate 2 | Commit Gate 2 | Entrega>
+Card: AB-<ID> (ou `SEM-CARD/<slug>` quando demanda informal/iniciativa própria) | Branch: <feat|fix/AB-ID-slug> | Fase: <Triagem | Bootstrap | Gate 1 | R0-RED | Implementação | Validate | Revisão Gate 2 | Commit Gate 2 | Entrega>
 Leia apenas:
 - <caminho-1>
 - <caminho-2>
 - <caminho-3>
 Ação exata neste turno: <objetivo único e verificável>.
 Restrições: <o que NÃO fazer neste turno — ex.: não altere código de produção / não faça commit nem push>.
-Ao concluir: atualize seus artefatos em disco e gere o `PROMPT PARA: <Próximo Papel>` (ou pare com `BLOCKED_BY_DECISION` se faltar decisão humana).
+Ao concluir: atualize seus artefatos em disco e retorne o resultado ao papel delegador (`Tech Lead` / `Engenheiro-Chefe`) ou gere o `PROMPT PARA: <Próximo Papel>` (pare com `BLOCKED_BY_DECISION` se faltar decisão humana).
 ```
+
+### 6.1 Delegação Híbrida (Subagente Nativo vs. Envio Manual)
+
+O contrato em disco (`AGENTS.md`, `DEMANDAS.md`, `TASK_SPEC.md`, `EVIDENCIA.md`, `NEXT_PROMPT.md`) é sempre a fonte de verdade; o **canal de entrega** adapta-se ao harness em uso:
+
+- **Harness sem suporte a subagentes (ou preferência manual):** o agente entrega o bloco `PROMPT PARA: <Papel>` na tela e salvo em `.agent-pack/.runtime/NEXT_PROMPT.md` para o usuário colar na próxima sessão.
+- **Harness com suporte a subagentes nativos (ex.: Claude Code, Antigravity, Grok/DeepSeek Harness):** antes de disparar o subagente (salvo quando o humano já tiver autorizado a delegação no Gate), o `Engenheiro-Chefe` ou o `Tech Lead` pergunta explicitamente:
+  > *"O prompt para **`<Papel Destino>`** está pronto e salvo em `.agent-pack/.runtime/NEXT_PROMPT.md`. Deseja que eu delegue agora para o subagente **`<Papel Destino>`** (com retorno obrigatório para mim) ou prefere enviar manualmente?"*
+- **Retorno obrigatório ao topo da cadeia:** todo subagente invocado executa estritamente a sua skill/papel (`Tech Lead`, `Implementor`, `Tester`, `UI`) dentro do escopo informado e **sempre devolve o resultado ao papel que o delegou** (`Tech Lead` ou `Engenheiro-Chefe`). Subagentes nunca pulam **Gate 1** nem **Gate 2** e nunca fecham entrega diretamente com produção.
 
 ### Mapa rápido das transições padrão
 
