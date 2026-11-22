@@ -1,5 +1,13 @@
 # SpecGuard 6 (Engineering Flow) changelog
 
+## 6.1.0 — 2026-11-22 (Faxina 100% Agnóstica)
+
+- **Remoção total de acoplamento ao Grok Build e OpenAI/Codex:**
+  - Substituída a skill `delegate-to-grok-build` pela skill agnóstica **`delegate-to-harness`** (alinhada à Delegação Híbrida via `.agent-pack/.runtime/NEXT_PROMPT.md` + subagente nativo com consentimento e retorno obrigatório ao topo da cadeia).
+  - Removido o espelho duplicado `.grok/skills/*`, `.grok/config.toml`, os componentes `grok-*` do manifesto/instalador, `FONTES_OFICIAIS_GROK_BUILD.md` e os 5 arquivos `agents/openai.yaml` órfãos (reduzindo o pacote instalado de 157 para 95 arquivos sem duplicação).
+  - Movidos os 10 perfis de agentes especialistas de `.grok/agents/*.md` para **`.agents/agents/*.md`**.
+  - Atualizados `install-agent-pack.{ps1,sh}`, `validate-pack.{ps1,sh}`, `update-agent-pack/SKILL.md`, `bootstrap-dotnet-repo/SKILL.md`, `harness-cycle/SKILL.md`, `roles-and-handoffs.md`, `workflow.md`, `global/AGENTS.md`, `INSTRUCOES_DETALHADAS.md`, `README.md` e suítes de teste (`test-install-agent-pack.ps1`, `test-engineering-flow.ps1`, `test-git-hygiene.ps1`) para modo 100% agnóstico (`.agents/` + `SPECGUARD_HOME` no `-InstallGlobal`), mantendo `.grok/` protegido no `.gitignore` para higiene em repositórios legados e compatibilidade retroativa em `compat/releases/1.1.0..6.0.0`.
+
 ## 6.0.0 — 2026-11-22 (SpecGuard 6)
 
 - **Identidade SpecGuard 6 & Desacoplamento 99,9%:** Evolução major para **SpecGuard 6 (`6.0.0`)** mantendo compatibilidade retroativa com `compat/releases/1.1.0..5.1.0`, marcadores `ef:managed`/`ef:paths` e estrutura `docs/engineering-flow/`. Apenas `AGENTS.md` permanece versionável no repositório destino — sempre consolidado via blocos gerenciados (`ef:managed`) e nunca apagado/recriado do zero quando já existir; todos os novos arquivos de runtime ficam 100% ignorados em `.agent-pack/.runtime/`.

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: bash ./scripts/install-agent-pack.sh REPO_PATH [--profile core,web,sqlserver,quality,mobile] [--integration grok] [--install-global] [--allow-non-git] [--force] [--dry-run] [--discover-only]"
+  echo "Usage: bash ./scripts/install-agent-pack.sh REPO_PATH [--profile core,web,sqlserver,quality,mobile] [--install-global] [--allow-non-git] [--force] [--dry-run] [--discover-only]"
 }
 
 if [ "$#" -lt 1 ]; then
@@ -27,7 +27,7 @@ while [ "$#" -gt 0 ]; do
       IFS=',' read -r -a requested <<< "$2"
       [ "${#requested[@]}" -gt 0 ] || { echo "Empty integration selection" >&2; exit 1; }
       for integration in "${requested[@]}"; do
-        case "$integration" in grok) requested_integrations+=("$integration") ;; *) echo "Unknown integration: $integration." >&2; exit 1 ;; esac
+        case "$integration" in agents|agnostic) requested_integrations+=("agents") ;; *) echo "Unknown integration: $integration. SpecGuard 6 is tool-agnostic." >&2; exit 1 ;; esac
       done
       shift 2
       ;;
@@ -295,19 +295,7 @@ install_one() {
     return
   fi
 
-  include_grok_effective=true
-  read_state_values "$REPO_ROOT" integration
-  for integration in "${state_values[@]+"${state_values[@]}"}" "${requested_integrations[@]+"${requested_integrations[@]}"}"; do
-    case "$integration" in
-      grok) ;;
-      *) echo "Unknown integration in state: $integration." >&2; exit 1 ;;
-    esac
-  done
-
   components=("${resolved_profiles[@]}")
-  for profile in "${resolved_profiles[@]}"; do
-    components+=("grok-$profile")
-  done
 
   action_state=()
   action_source=()
@@ -499,7 +487,7 @@ elif [ "${#discovered_roots[@]}" -eq 1 ] && [ "${discovered_roots[0]}" = "$WORKS
   fi
 fi
 
-echo "Installing Engineering Flow $PACK_VERSION"
+echo "Installing SpecGuard $PACK_VERSION"
 echo "Workspace path: $WORKSPACE_ROOT"
 echo "Repositories: ${discovered_roots[*]}"
 echo "Clean installation mode enabled (only AGENTS.md stays versionable)."
@@ -510,7 +498,7 @@ for target in "${discovered_roots[@]}"; do
 done
 
 if [ "$install_global" = true ] && [ "$discover_only" != true ]; then
-  GROK_HOME_RESOLVED="${GROK_HOME:-$HOME/.grok}"
+  SPECGUARD_HOME_RESOLVED="${SPECGUARD_HOME:-$HOME/.agents}"
   action_state=()
   action_source=()
   action_destination=()
@@ -553,7 +541,7 @@ if [ "$install_global" = true ] && [ "$discover_only" != true ]; then
     fi
     cp "$source" "$effective"
   }
-  add_global "$GLOBAL_GUIDANCE" "$GROK_HOME_RESOLVED/AGENTS.md"
+  add_global "$GLOBAL_GUIDANCE" "$SPECGUARD_HOME_RESOLVED/AGENTS.md"
 fi
 
 if [ "$agents_merge_skipped" = true ]; then

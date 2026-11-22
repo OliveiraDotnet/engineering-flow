@@ -1,4 +1,4 @@
-# Índice de skills — Engineering Flow 6.0
+# Índice de skills — Engineering Flow 6.1
 
 Gerado por `tools/generate-skills-index.sh` a partir do frontmatter `name`/`description` de `repo-template/.agents/skills/*/SKILL.md`. O implementador lê este índice e carrega apenas a skill escolhida.
 
@@ -14,7 +14,7 @@ Gerado por `tools/generate-skills-index.sh` a partir do frontmatter `name`/`desc
 | complete-task | Review task completion and report implemented, verified, failed and pending acceptance criteria with actual artifacts. | ver SKILL.md |
 | create-repo-skill | Create or refine a repository-specific skill for a confirmed recurring procedure; avoid skills for one-off tasks. | ver SKILL.md |
 | db-change-sqlserver | Plan a SQL Server schema or data change with compatibility, rollback, and .NET consumer impact, then write scripts only after the user approves that plan. Use for requested database changes. Do not use for read-only understanding; use sqlserver-structure-review instead. | ver SKILL.md |
-| delegate-to-grok-build | Hand a bounded task to an available harness session or native subagent with explicit scope and independent diff review. Use when harness delegation is requested or useful, not as a prerequisite for standalone work. | ver SKILL.md |
+| delegate-to-harness | Hand a bounded task to an available native subagent or headless harness session with explicit scope, state persistence on disk, and mandatory return to the delegator. | ver SKILL.md |
 | dotnet-xunit-tests | Create, improve, or repair xUnit tests for .NET projects, including focused regressions, fixtures, and integration or API test architecture. | ver SKILL.md |
 | feature-slice | Plan and implement a bounded feature through the existing layers and contracts after human approval. | ver SKILL.md |
 | feature-slice-dotnet | Implement a bounded .NET feature by following the repository's existing flow, validation pattern, data boundaries, and acceptance criteria. Use for modern or legacy .NET feature work. | ver SKILL.md |

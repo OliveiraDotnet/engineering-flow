@@ -3,13 +3,13 @@ name: harness-cycle
 description: Orchestrate or execute the local pre-Gate 2 closed loop between Implementor (coder) and Tester (QA validator) using any configured CLI harness or standalone agent.
 ---
 
-## Engineering Flow 5.1 execution gate
+## SpecGuard 6 execution gate
 
 Follow docs/engineering-flow/workflow.md in the target repository. Understand demand, present a technical plan, receive human approval, implement, execute only approved tests, gather criterion-linked evidence, deliver. Existing explicit authorization persists. Investigation/plan do not authorize implementation. Absence of a test request does not automatically authorize tests: highlight missing validation and ask whether to include it. If only implementation is approved, deliver it as unvalidated with pending checks. Material changes in scope, behavior, architecture/contracts, dependencies, security/data or validation return to the human. This gate governs execution steps below; no automatic delegation or second provider is required.
 
 # Harness Cycle (Implementor + Tester)
 
-Engineering Flow 5.1 is role-based and tool-agnostic. A single standalone harness can accumulate roles and execute both sequentially, whereas in multi-role operation the reviewer/delivery role writes `TASK_SPEC.md` (with `ef:paths`), reviews the diff and evidence, and handles push, PR, and merge — **only the harness (Implementor/Tester) runs the runners** (`supervise-harness`, `run-implementor`, `run-tester`, and `--commit-gate2`) to execute the closed loop (maximum 3 attempts) before requesting **Gate 2** approval from the human approver.
+SpecGuard 6 (Engineering Flow) is role-based and 100% tool-agnostic. A single standalone harness can accumulate roles and execute both sequentially, whereas in multi-role operation the reviewer/delivery role writes `TASK_SPEC.md` (with `ef:paths`), reviews the diff and evidence, and handles push, PR, and merge — **only the harness (Implementor/Tester) runs the runners** (`supervise-harness`, `run-implementor`, `run-tester`, and `--commit-gate2`) to execute the closed loop (maximum 3 attempts) before requesting **Gate 2** approval from the human approver.
 
 ## Roles in the Local Harness
 

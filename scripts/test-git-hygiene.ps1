@@ -57,10 +57,10 @@ try {
  Put $installed '.gitignore' "# custom destination`n.env`n"
  & (Join-Path $PSScriptRoot 'install-agent-pack.ps1') -RepoPath $installed -Profile core -Confirm:$false
  Assert-Hygiene $installed
- # The visibility fixture creates a synthetic lock; release it before exercising the updater.
+ # The visibility fixture creates synthetic runtime/legacy paths; clean them before exercising the updater.
  $fixtureLock=Join-Path $installed '.agent-pack/.runtime/update.lock'
  Assert ([IO.File]::ReadAllText($fixtureLock) -eq 'fixture-only') 'Unexpected lock content in hygiene fixture.'
- Remove-Item -LiteralPath $fixtureLock -Force; Remove-Item -LiteralPath (Join-Path $installed '.agent-pack/state.txt') -Force -ErrorAction SilentlyContinue
+ Remove-Item -LiteralPath $fixtureLock -Force; Remove-Item -LiteralPath (Join-Path $installed '.agent-pack/state.txt') -Force -ErrorAction SilentlyContinue; Remove-Item -LiteralPath (Join-Path $installed '.grok') -Recurse -Force -ErrorAction SilentlyContinue
  Put $installed '.gitignore' "# custom destination`n.env`n"
  & (Join-Path $PSScriptRoot 'update-agent-pack.ps1') -RepoPath $installed -Apply -Confirm:$false
  Assert-Hygiene $installed

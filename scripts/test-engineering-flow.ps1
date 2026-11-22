@@ -30,9 +30,10 @@ try {
  Assert ($result.discoveryMode -eq 'empty') 'Empty repo not identified.'
  Assert ($result.optionalProfilesSuggested.Count -eq 0) 'Empty repo selected optional profiles.'
  & $Installer -RepoPath $empty -Profile core -Confirm:$false
- Assert (Test-Path (Join-Path $empty '.grok/skills/new-project/SKILL.md')) 'Empty repo lacks Grok new-project skill.'
- Assert (Test-Path (Join-Path $empty '.grok/agents/repo-explorer.md')) 'Empty repo lacks Grok agent.'
- Assert (-not (Test-Path (Join-Path $empty '.codex'))) 'Grok-only installed Codex.'
+ Assert (Test-Path (Join-Path $empty '.agents/skills/new-project/SKILL.md')) 'Empty repo lacks new-project skill.'
+ Assert (Test-Path (Join-Path $empty '.agents/agents/repo-explorer.md')) 'Empty repo lacks repo-explorer specialist agent.'
+ Assert (-not (Test-Path (Join-Path $empty '.grok'))) 'Tool-agnostic install created .grok.'
+ Assert (-not (Test-Path (Join-Path $empty '.codex'))) 'Tool-agnostic install created .codex.'
  Assert (-not (Test-Path (Join-Path $empty '.agents/skills/mobile-app'))) 'Core installed unrelated mobile.'
 
  $mixed = New-Repo 'mixed'
@@ -51,7 +52,7 @@ try {
  Assert ($result.optionalProfilesSuggested -notcontains 'mobile' -and $result.optionalProfilesSuggested -notcontains 'quality') 'Mixed web selected unrelated profiles.'
  & $Installer -RepoPath $mixed -Confirm:$false
  Assert (Test-Path (Join-Path $mixed '.agents/skills/web-app/SKILL.md')) 'Classic ASP auto web module missing.'
- Assert (Test-Path (Join-Path $mixed '.grok/agents/frontend-web.md')) 'Classic ASP Grok web agent missing.'
+ Assert (Test-Path (Join-Path $mixed '.agents/agents/frontend-web.md')) 'Classic ASP web specialist agent missing.'
 
  $unknown = New-Repo 'unknown'
  Put $unknown 'engine.customlang' 'opaque fixture'
@@ -68,7 +69,7 @@ try {
  $result = Inspect $mobile
  Assert ($result.optionalProfilesSuggested -contains 'mobile') 'Native mobile not suggested.'
  & $Installer -RepoPath $mobile -Confirm:$false
- Assert (Test-Path (Join-Path $mobile '.grok/skills/mobile-app/SKILL.md')) 'Mobile not installed independently in Grok.'
+ Assert (Test-Path (Join-Path $mobile '.agents/skills/mobile-app/SKILL.md')) 'Mobile skill not installed.'
  Assert (-not (Test-Path (Join-Path $mobile '.agents/skills/web-app'))) 'Native mobile installed unrelated web.'
  $hybrid = New-Repo 'hybrid'
  Put $hybrid 'app/pubspec.yaml' 'name: fixture_only'
@@ -97,17 +98,15 @@ try {
  $state = Get-Content (Join-Path $fresh '.agent-pack/state.txt') -Raw
  $expectedVersion = (Get-Content (Join-Path $PackRoot 'pack-version.txt') -Raw).Trim()
  Assert ($state -match ('(?m)^version\|' + [regex]::Escape($expectedVersion) + '\r?$')) 'Version not recorded.'
- Assert ($state -match '(?m)^integration\|grok$' -and $state -notmatch '(?m)^integration\|codex$') 'Integration selection lost.'
- Assert ($state -match '(?m)^profile\|web$' -and $state -notmatch '(?m)^profile\|(mobile|quality)$') 'Profile selection changed.'
- Assert (Test-Path (Join-Path $fresh '.grok/skills/complete-task/SKILL.md')) 'Selected workflow missing.'
- Assert (-not (Test-Path (Join-Path $fresh '.grok/skills/mobile-app'))) 'Update auto-installed mobile.'
+ Assert (Test-Path (Join-Path $fresh '.agents/skills/complete-task/SKILL.md')) 'Selected workflow missing.'
+ Assert (-not (Test-Path (Join-Path $fresh '.agents/skills/mobile-app'))) 'Update auto-installed mobile.'
 
  $flow = Get-Content (Join-Path $PackRoot 'repo-template/docs/engineering-flow/workflow.md') -Raw
  foreach ($term in @('Ausência de pedido de testes não é autorização automática','não validado','verificado / falhou / pendente / não verificado','observado','Artefato','Mudança material')) { Assert ($flow.Contains($term)) "Missing static contract constraint: $term" }
  foreach ($file in Get-ChildItem (Join-Path $PackRoot 'repo-template/.agents/skills') -Recurse -Filter SKILL.md -File) {
   Assert ((Get-Content -LiteralPath $file.FullName -Raw).Contains('docs/engineering-flow/workflow.md')) "Skill bypasses common contract: $($file.FullName)"
  }
- Write-Host 'Engineering Flow script regressions passed: empty/unknown/classic ASP/mixed/native/hybrid, tool/metadata limits, Grok-only profiles, 3.0 update customization/conflict atomicity and static approval/evidence contract. No agent/browser/device behavior claimed.'
+ Write-Host 'SpecGuard 6 script regressions passed: empty/unknown/classic ASP/mixed/native/hybrid, tool/metadata limits, tool-agnostic profiles, update customization/conflict atomicity and static approval/evidence contract. No agent/browser/device behavior claimed.'
 } finally {
  $resolved = [IO.Path]::GetFullPath($TempRoot)
  $prefix = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\','/') + [IO.Path]::DirectorySeparatorChar
