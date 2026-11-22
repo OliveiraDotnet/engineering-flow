@@ -77,7 +77,9 @@ pwsh -File ./.agents/skills/harness-cycle/scripts/run-implementor.ps1 `
   - Read `docs/ai/decisions-and-pendencies.md` before changing anything linked to a `Pxx` pendency or a partial Gate 1 release, and do not touch blocked items.
   - Read `docs/ai/external-boundaries.md` before creating any external output (HTTP, CDN, telemetry, upload).
   - Stop with `BLOCKED_BY_DECISION` whenever a decision is missing or an external output is not listed in the inventory.
-- **Gate 2 staging and branch protection:**
+- **Gate 2 staging, deterministic envelope verification and architectural fitness functions:**
+  - Before presenting Gate 2 (or running `--commit-gate2`), run `tools/verify-envelope.{ps1,sh}` to deterministically block: protected branches (`exit 10`), any modified/untracked file outside `TASK_SPEC.md` `ef:paths` (`exit 11`), any operational SpecGuard file staged in Git (`exit 12`), dirty `secretScan`/`SECRET_IN_LOG` (`exit 13`), or unpassed `test-status.json` (`exit 14`).
+  - **Architectural Fitness Functions (optional — Tier 2):** when configured in `docs/ai/architecture.md` (e.g., `NetArchTest` in .NET, `dependency-cruiser` in JS/TS, or `ArchUnit` in Java), include the architecture test command inside `--test-cmd` so boundary/layer violations break the closed loop deterministically and return exact feedback to `Implementor` before Gate 2.
   - `--commit-gate2` stages only `--paths` or the `<!-- ef:paths:begin -->`...`<!-- ef:paths:end -->` block of `--task-spec` (default `.agent-pack/.runtime/TASK_SPEC.md`); missing/empty/forbidden paths exit `5`.
   - `--paths` / `-Paths` (and `ef:paths`) entries must be individual file paths; a directory entry is refused with exit `5`.
   - Protected branches (`main`, `master`, `HEAD`, `AGENTS.md` `- Branches protegidas (harness): ...`, and `EF_PROTECTED_BRANCHES`) exit `3`.

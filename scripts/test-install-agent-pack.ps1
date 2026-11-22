@@ -338,13 +338,19 @@ try {
     $shimDir = Join-Path $TempRoot 'shim-i6'
     New-Item -ItemType Directory -Force -Path $shimDir | Out-Null
     $realGit = (Get-Command git).Source
-    $shimScript = "#!/usr/bin/env bash`nfor arg in `"`$@`"; do`n  if [ `"`$arg`" = `"check-ignore`" ]; then`n    for a in `"`$@`"; do`n      if [ `"`$a`" = `"-v`" ]; then`n        printf '.git/info/exclude:1:AGENTS.md\tAGENTS.md\n'`n        exit 0`n      fi`n    done`n    exit 0`n  fi`ndone`nexec `"$realGit`" `"`$@`"`n"
-    $shimGitPath = Join-Path $shimDir 'git'
-    [IO.File]::WriteAllText($shimGitPath, $shimScript, $Utf8NoBom)
-    & chmod +x $shimGitPath
+    if ($IsWindows) {
+        $shimCmd = "@echo off`r`nsetlocal enabledelayedexpansion`r`nset `"HAS_CI=0`"`r`nset `"HAS_V=0`"`r`nfor %%A in (%*) do (`r`n  if `"%%~A`"==`"check-ignore`" set `"HAS_CI=1`"`r`n  if `"%%~A`"==`"-v`" set `"HAS_V=1`"`r`n)`r`nif `"!HAS_CI!`"==`"1`" (`r`n  if `"!HAS_V!`"==`"1`" echo .git/info/exclude:1:AGENTS.md	AGENTS.md`r`n  exit /b 0`r`n)`r`n`"$realGit`" %*`r`n"
+        [IO.File]::WriteAllText((Join-Path $shimDir 'git.cmd'), $shimCmd, $Utf8NoBom)
+    }
+    else {
+        $shimScript = "#!/usr/bin/env bash`nfor arg in `"`$@`"; do`n  if [ `"`$arg`" = `"check-ignore`" ]; then`n    for a in `"`$@`"; do`n      if [ `"`$a`" = `"-v`" ]; then`n        printf '.git/info/exclude:1:AGENTS.md\tAGENTS.md\n'`n        exit 0`n      fi`n    done`n    exit 0`n  fi`ndone`nexec `"$realGit`" `"`$@`"`n"
+        $shimGitPath = Join-Path $shimDir 'git'
+        [IO.File]::WriteAllText($shimGitPath, $shimScript, $Utf8NoBom)
+        & chmod +x $shimGitPath
+    }
     $prevPath = $env:PATH
     try {
-        $env:PATH = "$shimDir`:$prevPath"
+        $env:PATH = "$shimDir$([IO.Path]::PathSeparator)$prevPath"
         $resI6Fail = Invoke-InstallerProcess -ScriptPath $Installer -Arguments @('-RepoPath', $repoI6Fail, '-Confirm:$false')
     }
     finally {

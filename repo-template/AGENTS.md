@@ -1,7 +1,7 @@
 <!-- ef:managed:begin:header -->
-# Engineering Flow 5.1 — orientação do projeto
+# SpecGuard 6 (Engineering Flow) — orientação do projeto
 
-Template ativo: [UNVERIFIED] não é evidência do repo. Use bootstrap-repo quando faltar contexto; reuse mapa confirmado e a memória do projeto (`docs/ai` e `ai-memory` quando configurado). Recarregue instruções quando o host exigir.
+Template ativo: [UNVERIFIED] não é evidência do repo. Use bootstrap-repo quando faltar contexto; reuse mapa confirmado, `.agent-pack/.runtime/session-state.json` e a memória do projeto (`docs/ai` e `ai-memory` quando configurado). Recarregue instruções quando o host exigir.
 <!-- ef:managed:end:header -->
 
 ## Fatos a confirmar
@@ -25,19 +25,21 @@ Triagem por card (`AB-<ID>`) → entender → plano técnico (Gate 1) → aprova
 
 Em bug, o teste de regressão `R0` (falha antes do fix `R0-RED`, passa depois `R0-GREEN` — na camada unitária/integração se saudável ou via Playwright E2E completo se legado acoplado) faz parte do plano padrão dos dois modos e é coberto pela aprovação do Gate 1 (só o aprovador humano dispensa explicitamente com motivo registrado). Fora do `R0`, ausência de pedido de testes não autoriza execução automática: destaque a validação faltante e pergunte se deve incluí-la. Se só implementação foi aprovada, entregue como não validado com checks pendentes. Mudança material de escopo, comportamento, arquitetura/contratos, dependências, segurança/dados ou validação retorna ao humano (BLOCKED_BY_DECISION).
 
-**Gate 2:** commit e push exigem o ok explícito do aprovador humano, dado depois de ele ver as evidências. O commit é feito só pelo Implementor (`--commit-gate2`). O push é feito só pelo revisor/entrega (ou publicador) ou, quando indisponível, pelo aprovador humano manualmente. Nenhum outro agente comita ou dá push. Nunca na main ou na master, nunca force push. Preserve mudanças existentes, encoding e contratos fora do escopo; não exponha segredos/dados pessoais.
+**Gate 2:** commit e push exigem o ok explícito do aprovador humano, dado depois de ele ver as evidências e passar pela guarda determinística `tools/verify-envelope.{ps1,sh}` (branch não protegida, diff 100% dentro de `ef:paths`, zero arquivo operacional no staging, `test-status.json` aprovado e `secretScan == clean`). Em Tier 2, Fitness Functions arquiteturais (`NetArchTest` / `dependency-cruiser` / `ArchUnit`) rodam junto à suíte do `Tester` dentro do loop fechado. O commit é feito só pelo Implementor (`--commit-gate2`). O push é feito só pelo revisor/entrega (ou publicador) ou, quando indisponível, pelo aprovador humano manualmente. Nenhum outro agente comita ou dá push. Nunca na main ou na master, nunca force push. Preserve mudanças existentes, encoding e contratos fora do escopo; não exponha segredos/dados pessoais.
 
-## Instalação Limpa e Versionamento
+## Instalação Limpa e Desacoplamento 99,9%
 
-A instalação do Engineering Flow 5.1 no repositório é limpa: **não gera arquivos de versão/estado (`.agent-pack/state.txt`)** e protege todas as pastas operacionais no `.gitignore` (`.agents/`, `.grok/`, `.agent-pack/`, `docs/engineering-flow/`, `docs/ai/`, `prompts/`, `Planejamento/`). **Apenas este arquivo `AGENTS.md` é versionado** no repositório, evitando ruído para outros desenvolvedores da equipe.
+A instalação do **SpecGuard 6** no repositório é limpa e **99,9% desacoplada do projeto**: **não gera `.agent-pack/state.txt`**, consolida arquivos equivalentes sem resquícios de instalações anteriores e protege todas as pastas/arquivos operacionais no `.gitignore` (`.agents/`, `.grok/`, `.agent-pack/`, `docs/engineering-flow/`, `docs/ai/`, `prompts/`, `Planejamento/`, incluindo `session-state.json`, `metrics.jsonl`, `NEXT_PROMPT.md` e `repo-map.txt`). **Apenas este arquivo `AGENTS.md` é versionado** no Git — e quando já existir, **é sempre consolidado via blocos gerenciados (`ef:managed`), nunca recriado do zero**.
 
 ## LOCK
 
 Quem abre a tarefa (ex.: o revisor/entrega do repositório ou o operador standalone) confere se já existe `.agent-pack/.runtime/task.lock` e adquire o lock via `tools/task-lock.{sh,ps1} acquire`. O runner `run-implementor` não cria nem valida o lock; apenas o remove depois de um commit do Gate 2 bem-sucedido. O arquivo não é versionado. Conteúdo: o harness, a tarefa (card), a branch, o responsável (campo `bot`), `acquired_at` e `head`. O LOCK expira no commit da tarefa (Gate 2) ou quando `HEAD` avança. Trava esquecida: quem libera é o revisor/entrega da demanda.
 
-## Modos, anti-padrões e limites
+## Modos, Risk Tiering, Cache de Contexto e Anti-Padrões
 
-Modos Trivial e Completo, orçamento por fase e Gate de 100% estão em workflow.md; na dúvida, Completo. Leia docs/engineering-flow/anti-patterns.md antes de qualquer tarefa. Teto de fase excedido: pare e devolva com status pendente / UNABLE_TO_VALIDATE.
+Risk Tiering (**Tier 0 `Trivial`**, **Tier 1 `Padrão`** e **Tier 2 `Crítico`** — compatíveis com Trivial e Completo), orçamento por fase e Gate de 100% estão em `workflow.md`; na dúvida entre Tier 1 e Tier 2, use Tier 2. Leia `docs/engineering-flow/anti-patterns.md` antes de qualquer tarefa. Teto de fase excedido: pare e devolva com status pendente / UNABLE_TO_VALIDATE.
+
+Para continuidade entre conversas e *Prompt Caching*, mantenha sempre o prefixo de contrato estável no topo e os dados dinâmicos no final; consulte e atualize `.agent-pack/.runtime/session-state.json` (incluindo `deadEnds` para nunca repetir abordagens falhas), compacte logs de falha nos handoffs (20–40 linhas do erro raiz + caminho do log) e registre a métrica de fechamento em `.agent-pack/.runtime/metrics.jsonl` ao concluir o card.
 
 ## Operação e seleção
 
@@ -51,7 +53,7 @@ Especialistas são opcionais: repo-explorer, implementer, dotnet-implementer, te
 
 ## Contexto e conclusão
 
-Pesquise antes de abrir arquivos (consultando primeiro `docs/ai/project-map.md`, `docs/ai/decisions-and-pendencies.md` / `docs/ai/external-boundaries.md` quando pertinentes, e o `ai-memory` quando disponível); reuse fatos confirmados. Consulte docs oficiais da versão apenas por incerteza/decisão concreta. Detectores são pistas e tecnologias desconhecidas exigem investigação, sem inventar capacidades.
+Pesquise antes de abrir arquivos (consultando primeiro `.agent-pack/.runtime/repo-map.txt` quando gerado, `docs/ai/project-map.md`, `docs/ai/architecture.md`, `docs/ai/decisions-and-pendencies.md` — filtrando `Dxx` cujo `applies_to` cruza com `ef:paths` — `docs/ai/external-boundaries.md` quando pertinentes, e o `ai-memory` quando disponível); reuse fatos confirmados. Em bootstrap, projeto novo ou Tier 2 arquitetural, siga `docs/engineering-flow/architecture-playbooks.md`. Consulte docs oficiais da versão apenas por incerteza/decisão concreta. Detectores são pistas e tecnologias desconhecidas exigem investigação, sem inventar capacidades.
 
 Detecte ferramentas/runners antes de executar somente testes aprovados. Confira `.gitignore` (`git check-ignore`) antes de criar arquivos locais de configuração ou relatórios (`TestResults/`, `*.trx`) e valide lock files / dependências transitivas quando aplicável. Checks de encoding também entram no envelope; preserve encoding legado confirmado e reporte limitações. Vincule critério → cenário → esperado → observado → artefato → status. Separe implementado, verificado, falhou e pendente/não verificado. Revise diff/novos arquivos; não declare teste aprovado por leitura de código ou resumo.
 

@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-repo_path="${1:-.}"
+repo_path="."
+generate_repo_map=0
+force_repo_map=0
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --generate-repo-map) generate_repo_map=1; shift ;;
+    --force-repo-map) force_repo_map=1; generate_repo_map=1; shift ;;
+    *) repo_path="$1"; shift ;;
+  esac
+done
 repo_path="$(cd "$repo_path" && pwd -P)"
 
 # Enumerate once, pruning generated/tool directories before descending. Do not follow links.
@@ -84,3 +93,48 @@ done
 printf '\n- Limits: detection is evidence, not runtime validation; unknown stacks require further investigation.\n'
 printf -- '- File extension inventory:\n'
 find_files | awk 'NF { name=$0; sub(/^.*\//,"",name); ext="(no-extension)"; if (name ~ /\./) { sub(/^.*\./,"",name); ext="." tolower(name) }; count[ext]++ } END { for (ext in count) print ext, count[ext] }' | sort
+
+if [ "$generate_repo_map" -eq 1 ]; then
+  runtime_dir="$repo_path/.agent-pack/.runtime"
+  repo_map_path="$runtime_dir/repo-map.txt"
+  head_hash="no-git"
+  is_dirty=1
+  if [ -n "$git_root" ]; then
+    head_hash="$(git -C "$repo_path" rev-parse --short HEAD 2>/dev/null || echo empty-head)"
+    if [ -z "$(git -C "$repo_path" status --porcelain 2>/dev/null || true)" ]; then is_dirty=0; fi
+  fi
+  cache_key="$head_hash"
+  [ "$is_dirty" -eq 1 ] && cache_key="${head_hash}-dirty"
+  repo_map_status="generated"
+  if [ "$force_repo_map" -eq 0 ] && [ "$is_dirty" -eq 0 ] && [ -f "$repo_map_path" ] && grep -Fxq "cache_key: $cache_key" "$repo_map_path"; then
+    repo_map_status="cache-hit"
+  else
+    mkdir -p "$runtime_dir"
+    now_utc="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    tmp_entries="$(mktemp)"
+    indexed=0
+    while IFS= read -r src_file; do
+      [ -n "$src_file" ] || continue
+      [ "$indexed" -lt 120 ] || break
+      lower="$(printf '%s' "$src_file" | tr '[:upper:]' '[:lower:]')"
+      case "$lower" in
+        *.cs|*.ts|*.tsx|*.js|*.jsx|*.py|*.go|*.java|*.kt|*.sql) ;;
+        *) continue ;;
+      esac
+      rel="$(relative "$src_file")"
+      syms="$(grep -E '^[[:space:]]*(public|internal)[[:space:]]+((sealed|abstract|static|partial)[[:space:]]+)*(class|interface|record|struct|enum)[[:space:]]+[A-Za-z_][A-Za-z0-9_]*|^[[:space:]]*export[[:space:]]+(default[[:space:]]+)?(async[[:space:]]+)?(class|interface|type|function|const)[[:space:]]+[A-Za-z_$][A-Za-z0-9_$]*|^(async[[:space:]]+)?(class|def)[[:space:]]+[A-Za-z_][A-Za-z0-9_]*|^(type|func)[[:space:]]+(\([^)]+\)[[:space:]]+)?[A-Z][A-Za-z0-9_]*|^[[:space:]]*[Cc][Rr][Ee][Aa][Tt][Ee][[:space:]]+([Oo][Rr][[:space:]]+[Aa][Ll][Tt][Ee][Rr][[:space:]]+)?([Tt][Aa][Bb][Ll][Ee]|[Vv][Ii][Ee][Ww]|[Pp][Rr][Oo][Cc]([Ee][Dd][Uu][Rr][Ee])?|[Ff][Uu][Nn][Cc][Tt][Ii][Oo][Nn])[[:space:]]+[A-Za-z0-9_\[\]\.]+' "$src_file" 2>/dev/null | head -n 12 | sed -E 's/^[[:space:]]+//; s/[[:space:]]*\{.*$//; s/[[:space:]]*\(.*$//' | paste -sd ', ' - || true)"
+      if [ -n "$syms" ]; then
+        printf '%s: %s\n' "$rel" "$syms" >> "$tmp_entries"
+        indexed=$((indexed + 1))
+      fi
+    done <<< "$(printf '%s\n' "$scoped_files" | sort)"
+    {
+      printf '# SpecGuard 6 Repo Map (auto-generated structural cache — gitignored)\n'
+      printf 'cache_key: %s\n' "$cache_key"
+      printf 'generated_at: %s | files_indexed: %s\n\n' "$now_utc" "$indexed"
+      cat "$tmp_entries"
+    } > "$repo_map_path"
+    rm -f "$tmp_entries"
+  fi
+  printf -- '- Repo map: .agent-pack/.runtime/repo-map.txt (%s)\n' "$repo_map_status"
+fi

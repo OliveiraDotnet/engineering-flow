@@ -1,4 +1,4 @@
-# Engineering Flow 5.1 — contrato de execução
+# SpecGuard 6 (Engineering Flow) — contrato de execução
 
 Triagem por card (`AB-<ID>`) → entender a demanda → plano técnico (Gate 1) → aprovação humana → implementar na branch do card (`Implementor` + `Tester` em loop fechado) → reunir evidências → Gate 2 (commit) → homologação → produção isolada, Tag, SQL e OS de Infra.
 
@@ -17,13 +17,13 @@ O fluxo é definido por papéis e hierarquia de trabalho, não por ferramentas e
 
 Um mesmo agente pode acumular papéis: trabalhando sozinho com apenas um harness, o agente planeja, implementa, testa e revisa dentro do envelope aprovado, sem depender de bots externos.
 
-## Instalação Limpa no Repositório Alvo (Apenas `AGENTS.md` Versionado)
+## Instalação Limpa e Desacoplamento 99,9% (Apenas `AGENTS.md` Versionado)
 
-Para não poluir repositórios compartilhados com outros desenvolvedores da equipe:
-- O instalador (`install-agent-pack.{sh,ps1}`) faz uma instalação limpa e **não gera arquivos de versão/estado (`.agent-pack/state.txt`)** no repositório alvo.
-- O script `protect-engineering-flow-files.{sh,ps1}` adiciona todas as pastas operacionais do Engineering Flow (`.agents/`, `.grok/`, `.agent-pack/`, `.ai-memory.toml`, `docs/engineering-flow/`, `docs/ai/`, `prompts/`, `Planejamento/`, `planejamento/`, `.engineering-flow-evidence/`, `*.agent-pack.new`, `*.agent-pack.backup-*`) ao `.gitignore` do repositório alvo.
+Para manter o SpecGuard 6 99,9% desacoplado do repositório alvo e não poluir o Git de equipes compartilhadas:
+- O instalador (`install-agent-pack.{sh,ps1}`) faz uma instalação limpa, **não gera arquivos de versão/estado (`.agent-pack/state.txt`)** e consolida arquivos equivalentes existentes sem deixar resquícios de instalações anteriores.
+- O script `protect-engineering-flow-files.{sh,ps1}` adiciona todas as pastas e artefatos operacionais (`.agents/`, `.grok/`, `.agent-pack/`, `.ai-memory.toml`, `docs/engineering-flow/`, `docs/ai/`, `prompts/`, `Planejamento/`, `planejamento/`, `.engineering-flow-evidence/`, `*.agent-pack.new`, `*.agent-pack.backup-*`) ao `.gitignore` do repositório alvo — incluindo todos os arquivos runtime da v6 (`session-state.json`, `metrics.jsonl`, `NEXT_PROMPT.md`, `repo-map.txt`).
 - Se um `.gitignore` herdado (ex.: EF 3.0) estiver ignorando `AGENTS.md`, o instalador aciona `protect-engineering-flow-files.{sh,ps1}` no modo `unignore-agents-md` (`-UnignoreAgentsMd`) durante o preflight para acrescentar `!AGENTS.md` ao fim do `.gitignore` (preservando regras existentes, UTF-8, BOM e CRLF; sai com código `5` se continuar ignorado).
-- **Somente o arquivo `AGENTS.md` na raiz permanece versionável** no Git do projeto.
+- **Somente o arquivo `AGENTS.md` na raiz permanece versionável** no Git do projeto — e quando já existir, **é sempre consolidado via blocos gerenciados (`ef:managed`), nunca apagado ou recriado do zero**.
 
 ## Triagem (Intake) e Ciclo de Branches por Card
 
@@ -35,12 +35,15 @@ Para não poluir repositórios compartilhados com outros desenvolvedores da equi
 - **Exceção "repositório sem branch de homologação":** A regra da branch de homologação vale por padrão. A exceção só vale quando registrada explicitamente no `AGENTS.md` do repositório (`- Exceção sem homologação: sim — aprovado por <aprovador humano> em <data>, motivo: <...>`) com ok explícito do aprovador humano; nesse caso, o merge vai da branch do card diretamente para `main`/`master`, com o mesmo ok explícito de produção. Sem esse registro em `AGENTS.md`, a regra de homologação continua valendo.
 - **Fechamento de Versão e Limpeza:** Após o merge na `main`/`master`, o revisor/entrega cria a Tag semântica (`vX.Y.Z`), consolida apenas os scripts SQL dos cards daquela Tag em `Planejamento/scripts/Releases/vX.Y.Z_consolidado.sql`, gera o resumo da OS para a Infra (`OS-INFRA-vX.Y.Z.md`) e **só então exclui a branch do card**.
 
-## Modos de operação
+## Modos de operação e Risk Tiering (Anti-Spec-Sprawl)
 
-- **Trivial**: exatamente 1 critério observável, sem risco a dados e sem migração. O agente escreve o critério em uma frase, o implementador executa e entrega o diff para ok humano. Sem plano formal e sem tabela de evidência. A evidência do Trivial é um resumo curto do implementador com o arquivo alterado. Uma linha de conferência não substitui esse resumo.
-- **Completo**: fluxo completo com Gate 1 (plano aprovado) e Gate 2 (commit e push). A evidência é a tabela e a bateria completa.
-- Regra de corte: qualquer coisa além do Trivial, ou qualquer dúvida, é Completo.
-- Commit e push seguem o Gate 2 nos dois modos.
+Para evitar burocracia excessiva em tarefas simples e concentrar rigor onde há risco real, toda demanda é classificada em 3 tiers (compatíveis com **Trivial** e **Completo**):
+
+- **Tier 0 (`Trivial`):** exatamente 1 critério observável, sem risco a dados, contratos, auth ou migração. O agente escreve o critério em uma frase, o implementador executa e entrega o diff para ok humano. Sem plano formal e sem tabela de evidência. A evidência do Trivial é um resumo curto do implementador com o arquivo alterado. Uma linha de conferência não substitui esse resumo.
+- **Tier 1 (`Padrão` — Completo enxuto):** bug ou fatia de feature **dentro da arquitetura existente**, sem mudança de schema/migration de produção, sem alteração de autenticação/autorização/LGPD, sem quebra de contrato público e sem dependência nova. Usa **Gate 1 enxuto** (máx. 10 linhas: objetivo, `ef:paths`, `R0`/testes, riscos), loop fechado `Implementor ↔ Tester`, evidência objetiva e Gate 2.
+- **Tier 2 (`Crítico` — Completo rigoroso):** envolve migration/SQL de produção, segurança/auth/LGPD, contrato público de API, dependência nova (com auditoria de lock file) ou mudança arquitetural. Exige **Gate 1 completo**, decisão `Dxx`/ADR com escopo em `docs/ai/decisions-and-pendencies.md`, auditoria de `docs/ai/external-boundaries.md`, bateria completa e Gate 2 rigoroso.
+- Regra de corte: qualquer coisa além do Tier 0 (`Trivial`) é `Completo` (Tier 1 ou Tier 2); na dúvida entre Tier 1 e Tier 2, escolha **Tier 2**.
+- Commit e push seguem o Gate 2 em todos os tiers.
 
 ## Anti-padrões
 
@@ -112,6 +115,8 @@ Dependências padrão no texto: Playwright, bUnit e Testcontainers. O pack não 
 
 Execute somente o envelope aprovado. Detecte runners, ferramentas e ambiente existentes antes de usá-los; proponha preparação faltante para aprovação. Use [capabilities.md](capabilities.md) para escolher a validação aplicável. Corrija falhas e repita os cenários afetados dentro do envelope, mantendo os critérios; ampliação material precisa de decisão. Zero testes, screenshots isoladas e leitura de código não equivalem a comportamento verificado.
 
+- **Guarda Determinística Pré-Gate 2 (`tools/verify-envelope.{ps1,sh}`):** antes de subir evidências ao Gate 2 ou executar `--commit-gate2`, valide deterministicamente que a branch não é protegida (`main`/`master`), que nenhum arquivo operacional do SpecGuard foi parar no staging do Git, que 100% dos arquivos modificados pertencem ao bloco `ef:paths` de `TASK_SPEC.md` e que `test-status.json` está aprovado e com `secretScan == clean`.
+- **Fitness Functions Arquiteturais (Tier 2 / Opcional):** quando declaradas em `docs/ai/architecture.md` (`NetArchTest`, `dependency-cruiser`, `ArchUnit`), executam dentro do `--test-cmd` do `Tester`, devolvendo violações de fronteira/camada ao `Implementor` no loop fechado antes do Gate 2 humano.
 - **Fronteira Funcional vs. Visual (UI):** quem define e programa a estrutura da tela (composição, campos, rotas, menus, binding e permissões) é o `Implementor`. Ajustes visuais (CSS, espaçamento, componentes reutilizáveis, acessibilidade) preservam rotas, contratos e o que o sistema faz ou mostra; se alterarem regra ou conteúdo, retornam ao plano/envelope.
 - **Fechamento independente de Segurança e Revisão:** ao corrigir um achado de segurança ou revisão, o `Implementor` registra o ajuste como `Em verificação`, mas o fechamento definitivo exige reteste e confirmação pelo `Tester` / revisor responsável na evidência.
 - **Higiene preventiva de ambiente e segredos:** confira `.gitignore` (`git check-ignore`) **antes** de criar arquivos locais de configuração (`appsettings*.json`, `.env`) ou diretórios de saída de teste (`TestResults/`, `*.trx`). Mantenha `*.example.*` sem valores reais. Exceções temporárias de desenvolvimento (ex.: relaxar validação de certificado TLS local) exigem guarda explícita de ambiente (`IsDevelopment()`), valor seguro (`false`) por padrão, registro em `docs/ai/decisions-and-pendencies.md` e teste cobrindo o comportamento fora de desenvolvimento.
@@ -143,6 +148,15 @@ O relatório de evidência tem a seção "Lições e regras". O implementador pr
 | # | Tipo | Escopo/contexto | Afirmação (1 frase) | Fonte | Ação proposta |
 |---|---|---|---|---|---|
 | 1 | regra | projeto/contexto | frase verificável | codigo ou teste, sem conteúdo sensível | registrar no `ai-memory` / `docs/ai` |
+
+## Cache de Contexto, Checkpoint de Sessão e Telemetria Local (100% Gitignored)
+
+Para eliminar perda de contexto entre conversas/subagentes, maximizar *Prompt Caching* e combater degradação de atenção (*context rot*), todo estado operacional vive estritamente em `.agent-pack/.runtime/` (ignorado no Git):
+
+- **Checkpoint Estruturado em JSON (`.agent-pack/.runtime/session-state.json`):** gerenciado via `tools/session-state.{ps1,sh}` (`init`, `update`, `show`, `close`). Registra `card`, `tier` (`0|1|2`), `branch`, `phase`, `activeRole`, `headCommit`, `attempt`, `criteria[]`, `decisionsInScope[]`, `filesTouched[]`, `nextAction` e **`deadEnds[]`** (lista de abordagens já testadas que falharam e o motivo — obrigatória antes de retentativas para impedir que uma nova sessão repita o mesmo erro).
+- **Ordem Estático-Primeiro (Prompt Caching):** toda montagem de contexto/prompt segue 3 camadas fixas — **(1) Prefixo Imutável** (contrato/papel fixos, sem data, card ou status dinâmico no topo), **(2) Contexto Semi-Estável do Projeto** (`AGENTS.md` + `docs/ai/*` relevantes em ordem determinística) e **(3) Sufixo Dinâmico** (`session-state.json`, `TASK_SPEC.md`, diff e resumo do erro atual).
+- **Compaction de Logs nos Handoffs:** nunca cole saídas brutas extensas de build ou testes em `NEXT_PROMPT.md` ou respostas de subagentes. Passe apenas as **20–40 linhas do erro raiz** + o caminho do log mascarado em `.agent-pack/evidencias/` ou `.agent-pack/logs/`.
+- **Telemetria Local Enxuta (`.agent-pack/.runtime/metrics.jsonl`):** ao encerrar um card (`complete-task` / `session-state close`), grava 1 linha JSON append-only com `date`, `card`, `tier`, `harness_attempts`, `envelope_violations`, `blocked_decisions`, `dead_ends_count` e `rework_post_gate2`, alimentando melhoria contínua e `anti-patterns.md` com dados reais (sem servidor externo).
 
 ## Memória Persistente (`ai-memory` + `docs/ai` local) e Isolamento entre Papéis
 

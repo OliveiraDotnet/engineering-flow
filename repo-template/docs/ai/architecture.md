@@ -52,6 +52,17 @@ Record architectural decisions already made, including source and verification d
 
 - ...
 
+## Padrões Ativos vs. Quarentena de Legado
+
+- **Padrões Ativos (seguir em código novo):**
+- **Padrões Legados em Quarentena (NÃO replicar em código novo; não migrar sem card próprio):**
+
+## Fitness Functions Arquiteturais (Opcional — Tier 2)
+
+- Ferramenta/teste executável: `[nenhuma | NetArchTest | dependency-cruiser | ArchUnit]`
+- Caminho do teste: `[ex.: tests/ArchitectureTests/BoundaryTests.cs]`
+- Regras travadas no `harness-cycle`: `[ex.: Domain não referencia Infrastructure; sem ciclos entre módulos]`
+
 ## Do not
 
 - Do not move layers without a plan.

@@ -1,6 +1,6 @@
-# Adoção — Engineering Flow 5.1
+# Adoção — SpecGuard 6 (Engineering Flow 6.0)
 
-Instalação e exemplos: [README](README.md) e [manual](MANUAL_DE_USO.md). Versão atual `5.1.0`. A linha 5.0 evolui a 4.x tornando o fluxo 100% agnóstico de ferramenta e de persona, introduzindo a camada de harness (`Implementor` + `Tester` + `harness-cycle`) e garantindo instalação limpa nos repositórios destino (**apenas `AGENTS.md` versionado**, sem geração de `.agent-pack/state.txt` na instalação). Este pack não instala runtimes nem configura contas externas.
+Instalação e exemplos: [README](README.md) e [manual](MANUAL_DE_USO.md). Versão atual `6.0.0`. O **SpecGuard 6** evolui a linha `5.x` mantendo o fluxo 100% agnóstico de ferramenta e 99,9% desacoplado do projeto (**apenas `AGENTS.md` versionado, sempre consolidado via `ef:managed` e nunca recriado do zero**), adicionando checkpoint estruturado de sessão (`tools/session-state.{ps1,sh}`), cache de símbolos por commit (`inspect-repo -GenerateRepoMap`), Playbooks de Arquitetura Greenfield/Brownfield, decisões `Dxx` escopadas (`applies_to`), Risk Tiering (`Tier 0/1/2`), telemetria local (`metrics.jsonl`), Fitness Functions no `harness-cycle` e guarda determinística pré-Gate 2 (`tools/verify-envelope.{ps1,sh}`). Este pack não instala runtimes nem configura contas externas.
 
 ## Instalação Limpa 5.1 (Apenas `AGENTS.md` Versionado no Repositório Alvo)
 

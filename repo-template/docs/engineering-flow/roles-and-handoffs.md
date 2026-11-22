@@ -146,30 +146,35 @@ flowchart TD
 | `.agent-pack/.runtime/task.lock` | `Tech Lead` cria (`acquire`); `Implementor` remove após commit Gate 2 | Não editar manualmente |
 | `.agent-pack/.runtime/TASK_SPEC.md` (com `ef:paths`) | `Tech Lead` | `Implementor` e `Tester` seguem estritamente |
 | `.agent-pack/.runtime/NEXT_PROMPT.md` | `Engenheiro-Chefe` / `Tech Lead` (ou papel emissor) | Arquivo runtime (ignorado no Git) com o último `PROMPT PARA: <Papel>` para envio manual ou delegação a subagente |
+| `.agent-pack/.runtime/session-state.json` | Todos os papéis via `tools/session-state.{ps1,sh}` | Checkpoint estruturado da sessão (`phase`, `criteria`, `deadEnds`, `nextAction`), 100% ignorado no Git |
+| `.agent-pack/.runtime/repo-map.txt` | `Tech Lead` via `inspect-repo.{ps1,sh} -GenerateRepoMap` | Cache estrutural de símbolos por commit, 100% ignorado no Git; todos consultam antes de varrer arquivos |
+| `.agent-pack/.runtime/metrics.jsonl` | `Tech Lead` / `complete-task` via `session-state close` | Telemetria local append-only (1 linha JSON/card), 100% ignorada no Git |
 | Código de produção (`src/`), migrations e scripts do card | `Implementor` | `Tech Lead` revisa `git diff`; `Tester` não edita |
 | Ajustes puramente visuais (CSS/componentes visuais) | `UI / Ajuste Visual` (ou `Implementor` se não separado) | `Tester` valida visual/a11y |
 | Testes (`tests/`) e evidências (`EVIDENCIA.md`, `test-status.json`) | `Tester` (testes do envelope e evidências) | `Implementor` lê falhas; `Tech Lead` revisa no Gate 2 |
 
 ---
 
-## 6. Protocolo de Passagem de Bastão (Prompt Relay & Delegação Híbrida)
+## 6. Protocolo de Passagem de Bastão (Prompt Relay, Cache Estático-Primeiro & Delegação Híbrida)
 
 Ao finalizar qualquer turno em modo `sessao-por-papel` (ou ao parar em `BLOCKED_BY_DECISION` / `UNABLE_TO_VALIDATE`), o agente deve:
 
-1. **Persistir o estado nos arquivos de disco** sob sua responsabilidade (não depender da memória do chat).
-2. **Gravar o bloco de passagem em `.agent-pack/.runtime/NEXT_PROMPT.md`** (ignorado no Git) **e emitir exatamente o mesmo bloco copiável** ao final da resposta no formato abaixo, com no máximo **5 caminhos de arquivo** para manter a próxima conversa leve e econômica:
+1. **Persistir o estado nos arquivos de disco** sob sua responsabilidade e atualizar `.agent-pack/.runtime/session-state.json` (via `tools/session-state.{ps1,sh} update`), registrando obrigatoriamente em `deadEnds` qualquer abordagem tentada que falhou (para que a próxima sessão nunca repita o mesmo erro).
+2. **Seguir a ordem Estático-Primeiro (Prompt Caching) + Compaction de Logs:** mantenha o prefixo de papel/contrato fixo no topo, referencie `docs/ai/*` no meio e deixe dados dinâmicos (`session-state.json`, `TASK_SPEC.md`, diff) no final. Nunca cole logs brutos extensos no prompt — inclua no máximo **20–40 linhas do erro raiz** + o caminho do log mascarado.
+3. **Gravar o bloco de passagem em `.agent-pack/.runtime/NEXT_PROMPT.md`** (ignorado no Git) **e emitir exatamente o mesmo bloco copiável** ao final da resposta no formato abaixo, com no máximo **5 caminhos de arquivo** para manter a próxima conversa leve e econômica:
 
 ```text
 ### PROMPT PARA: <Papel Destino>
 Atue no papel **<Papel Destino>** seguindo `AGENTS.md` e `docs/engineering-flow/roles-and-handoffs.md` (carregue também `<prompts/12-implementor-harness.md ou prompts/13-tester-harness.md quando aplicável>`).
-Card: AB-<ID> (ou `SEM-CARD/<slug>` quando demanda informal/iniciativa própria) | Branch: <feat|fix/AB-ID-slug> | Fase: <Triagem | Bootstrap | Gate 1 | R0-RED | Implementação | Validate | Revisão Gate 2 | Commit Gate 2 | Entrega>
-Leia apenas:
-- <caminho-1>
-- <caminho-2>
-- <caminho-3>
+Leia apenas (ordem estático -> dinâmico):
+- <caminho-semi-estavel-ex: docs/ai/decisions-and-pendencies.md>
+- .agent-pack/.runtime/session-state.json
+- <caminho-dinamico-ex: .agent-pack/.runtime/TASK_SPEC.md>
+Card: AB-<ID> (ou `SEM-CARD/<slug>`) | Tier: <0|1|2> | Branch: <feat|fix/AB-ID-slug> | Fase: <Triagem | Bootstrap | Gate 1 | R0-RED | Implementação | Validate | Revisão Gate 2 | Commit Gate 2 | Entrega>
 Ação exata neste turno: <objetivo único e verificável>.
 Restrições: <o que NÃO fazer neste turno — ex.: não altere código de produção / não faça commit nem push>.
-Ao concluir: atualize seus artefatos em disco e retorne o resultado ao papel delegador (`Tech Lead` / `Engenheiro-Chefe`) ou gere o `PROMPT PARA: <Próximo Papel>` (pare com `BLOCKED_BY_DECISION` se faltar decisão humana).
+Resumo de erro (se retentativa): <20–40 linhas do erro raiz + caminho do log; nunca log bruto inteiro>.
+Ao concluir: atualize `.agent-pack/.runtime/session-state.json` (incluindo `deadEnds` em falha) e retorne o resultado ao papel delegador (`Tech Lead` / `Engenheiro-Chefe`) ou gere o `PROMPT PARA: <Próximo Papel>` (pare com `BLOCKED_BY_DECISION` se faltar decisão humana).
 ```
 
 ### 6.1 Delegação Híbrida (Subagente Nativo vs. Envio Manual)
