@@ -55,10 +55,22 @@ try {
     $summaryOut = (& $Tool show -Repo $TempRoot) -join "`n"
     Assert-True ($summaryOut.Contains('Dead ends (DO NOT REPEAT):')) 'Compact show output missing dead ends section.'
 
-    # 3. close -> records metrics.jsonl and removes session-state.json
+    # 3. close -> records metrics.jsonl, removes session-state.json and cleans transient runtime files (keeping repo-map.txt & metrics.jsonl)
+    $runtimeDir = Join-Path $TempRoot '.agent-pack/.runtime'
+    $utf8NoBom = [Text.UTF8Encoding]::new($false)
+    foreach ($transient in @('TASK_SPEC.md', 'test-status.json', 'NEXT_PROMPT.md', 'implementor-prompt-AB-600.md')) {
+        [IO.File]::WriteAllText((Join-Path $runtimeDir $transient), "transient`n", $utf8NoBom)
+    }
+    $repoMapPath = Join-Path $runtimeDir 'repo-map.txt'
+    [IO.File]::WriteAllText($repoMapPath, "# repo-map cache`n", $utf8NoBom)
+
     & $Tool close -Repo $TempRoot | Out-Null
     Assert-True ($LASTEXITCODE -eq 0) 'session-state close failed.'
     Assert-True (-not (Test-Path -LiteralPath $statePath)) 'session-state.json should be removed on close.'
+    foreach ($transient in @('TASK_SPEC.md', 'test-status.json', 'NEXT_PROMPT.md', 'implementor-prompt-AB-600.md')) {
+        Assert-True (-not (Test-Path -LiteralPath (Join-Path $runtimeDir $transient))) "Transient runtime file should be removed on close: $transient"
+    }
+    Assert-True (Test-Path -LiteralPath $repoMapPath -PathType Leaf) 'repo-map.txt must be preserved on close.'
 
     $metricsPath = Join-Path $TempRoot '.agent-pack/.runtime/metrics.jsonl'
     Assert-True (Test-Path -LiteralPath $metricsPath -PathType Leaf) 'metrics.jsonl not created.'

@@ -74,6 +74,12 @@ agent.shared.release-reviewer|.agents/agents/release-reviewer.md|managed
 agent.shared.repo-explorer|.agents/agents/repo-explorer.md|managed
 agent.shared.security-reviewer|.agents/agents/security-reviewer.md|managed
 agent.shared.test-guardian|.agents/agents/test-guardian.md|managed
+tool.session-state-ps1|.agents/tools/session-state.ps1|managed
+tool.session-state-sh|.agents/tools/session-state.sh|managed
+tool.task-lock-ps1|.agents/tools/task-lock.ps1|managed
+tool.task-lock-sh|.agents/tools/task-lock.sh|managed
+tool.verify-envelope-ps1|.agents/tools/verify-envelope.ps1|managed
+tool.verify-envelope-sh|.agents/tools/verify-envelope.sh|managed
 prompt.bootstrap-repo|prompts/00-bootstrap-repo.md|managed
 prompt.bugfix|prompts/01-bugfix.md|managed
 prompt.feature-slice|prompts/02-feature-slice.md|managed

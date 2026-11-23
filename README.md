@@ -2,7 +2,7 @@
 
 > **Governança determinística de engenharia assistida por IA: agnóstico de ferramenta, 99,9% desacoplado do projeto, com cache estruturado de contexto, arquitetura verificável e entrega por card.**
 
-Versão atual: **`6.1.0`** · [Releases no GitHub](https://github.com/OliveiraDotnet/engineering-flow/releases) · [Índice de Skills](SKILLS-INDEX.md) · [Manual de Uso](MANUAL_DE_USO.md) · [Guia Detalhado](INSTRUCOES_DETALHADAS.md) · [Changelog](CHANGELOG.md)
+Versão atual: **`6.1.1`** · [Releases no GitHub](https://github.com/OliveiraDotnet/engineering-flow/releases) · [Índice de Skills](SKILLS-INDEX.md) · [Manual de Uso](MANUAL_DE_USO.md) · [Guia Detalhado](INSTRUCOES_DETALHADAS.md) · [Changelog](CHANGELOG.md)
 
 ---
 
@@ -15,13 +15,13 @@ O **SpecGuard 6** (evolução do **Engineering Flow**) é um framework operacion
 - **Desacoplamento 99,9% & Instalação Limpa (100% Agnóstico):** **somente `AGENTS.md` permanece versionado** no Git do projeto alvo; todas as skills e agentes ficam exclusivamente em `.agents/` (sem espelhos de fornecedores como `.grok/` ou `openai.yaml`), e todos os arquivos operacionais/runtime (`.agent-pack/.runtime/session-state.json`, `repo-map.txt`, `NEXT_PROMPT.md`, `metrics.jsonl`, `docs/engineering-flow/`, `docs/ai/`, `.agents/`) ficam 100% no `.gitignore`. Quando `AGENTS.md` já existe no repositório, ele **é sempre consolidado via blocos gerenciados (`ef:managed`), nunca apagado ou recriado do zero**.
 - **Porta de Entrada Única & Delegação Híbrida:** no primeiro prompt sem papel explícito, a IA assume automaticamente como **`Engenheiro-Chefe`**, lê o repositório em modo somente leitura, conduz até 6 perguntas objetivas (cobrindo Card `AB-<ID>`, pedido informal via Teams/e-mail ou iniciativa própria sem Card) e delega ao `Tech Lead` via `.agent-pack/.runtime/NEXT_PROMPT.md` (perguntando se deseja usar subagente nativo com retorno ao topo ou envio manual).
 - **Cache de Contexto & Continuidade entre Conversas:**
-  - **`.agent-pack/.runtime/session-state.json`** (`tools/session-state.{ps1,sh}`): checkpoint JSON estrito com critérios, fase e **`deadEnds`** (abordagens já falhadas para nunca repetir erros entre sessões).
+  - **`.agent-pack/.runtime/session-state.json`** (`.agents/tools/session-state.{ps1,sh}`): checkpoint JSON estrito com critérios, fase, **`deadEnds`** (abordagens já falhadas para nunca repetir erros entre sessões) e limpeza automática dos arquivos transitórios no `close`.
   - **`.agent-pack/.runtime/repo-map.txt`** (`inspect-repo.{ps1,sh} -GenerateRepoMap`): cache estrutural compacto de símbolos indexado por commit (`cache-hit` instantâneo em `HEAD` limpo, sem vazar segredos/corpos).
   - **Contexto Estático-Primeiro & Compaction de Logs:** prefixo imutável para maximizar *Prompt Caching* e resumos de erro de 20–40 linhas nos handoffs.
 - **Arquitetura Greenfield vs. Brownfield & Decisões Escopadas:** [architecture-playbooks.md](repo-template/docs/engineering-flow/architecture-playbooks.md) (**Monólito Modular + Vertical Slices / Schema-First** em projetos novos; **Quarentena de Legado + Characterization Tests + Strangler Fig** em projetos existentes) + decisões `Dxx` com `applies_to` (`docs/ai/decisions-and-pendencies.md`).
 - **Governança Determinística, Risk Tiering e Telemetria Enxuta:**
   - **Risk Tiering (`Tier 0 Trivial`, `Tier 1 Padrão`, `Tier 2 Crítico`):** elimina *Spec Sprawl* em tarefas rotineiras e concentra rigor onde há risco real.
-  - **`tools/verify-envelope.{ps1,sh}`:** trava determinística pré-Gate 2 que valida branch não protegida, blast radius 100% dentro de `ef:paths`, zero arquivo operacional no staging, `test-status.json` aprovado e `secretScan == clean`.
+  - **`.agents/tools/verify-envelope.{ps1,sh}`:** trava determinística pré-Gate 2 instalada no repositório destino que valida branches protegidas (`main`/`master`, `EF_PROTECTED_BRANCHES` e `AGENTS.md`), blast radius 100% dentro de `ef:paths`, zero arquivo operacional no staging, `test-status.json` aprovado para o card ativo e `secretScan == clean`.
   - **Fitness Functions Arquiteturais:** receita integrada ao `harness-cycle` (`NetArchTest`, `dependency-cruiser`, `ArchUnit`) para barrar erosão arquitetural automaticamente antes do Gate 2.
   - **`.agent-pack/.runtime/metrics.jsonl`:** telemetria local append-only (1 linha JSON/card) para medir gargalos reais sem servidor externo.
 - **100% Agnóstico de Ferramenta:** funciona em modo **Standalone** (1 harness) ou **Multi-Agente** (`sessao-por-papel` / subagentes), com especialização para **.NET moderno e .NET Framework**, **Web Forms**, **ASP clássico**, **HTML/CSS/JavaScript/TypeScript**, **SQL Server** e **Mobile**.
@@ -92,10 +92,10 @@ No **SpecGuard 6 (`6.0.0`)**, instalar o fluxo em um repositório de equipe é l
 
 ### Baixar ou Clonar
 
-Baixe o pacote da [Release `v6.1.0`](https://github.com/OliveiraDotnet/engineering-flow/releases/tag/v6.1.0) ou clone o repositório:
+Baixe o pacote da [Release `v6.1.1`](https://github.com/OliveiraDotnet/engineering-flow/releases/tag/v6.1.1) ou clone o repositório:
 
 ```bash
-git clone --branch v6.1.0 https://github.com/OliveiraDotnet/engineering-flow.git
+git clone --branch v6.1.1 https://github.com/OliveiraDotnet/engineering-flow.git
 ```
 
 ### Instalar em um Repositório Alvo
@@ -132,7 +132,7 @@ bash ./scripts/update-agent-pack.sh /caminho/do/repositorio --apply
 .\scripts\update-agent-pack.ps1 -RepoPath 'C:\src\Sistema' -Apply -Confirm:$false
 ```
 
-`pack-manifest.txt`, `pack-artifacts.txt` e `pack-version.txt` definem artefatos e propriedade (`managed`, `merge`, `seed`). Catálogos de compatibilidade permanecem em `compat/releases/` (`1.1.0` a `6.1.0`).
+`pack-manifest.txt`, `pack-artifacts.txt` e `pack-version.txt` definem artefatos e propriedade (`managed`, `merge`, `seed`). Catálogos de compatibilidade permanecem em `compat/releases/` (`1.1.0` a `6.1.1`).
 
 ---
 

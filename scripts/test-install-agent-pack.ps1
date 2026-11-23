@@ -78,6 +78,17 @@ try {
     Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agents\skills\update-agent-pack\SKILL.md")) "Agent Pack update skill was not installed."
     Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agents\agents\repo-explorer.md")) "Specialist agent repo-explorer was not installed."
     Assert-True (Test-Path -LiteralPath (Join-Path $Repo ".agents\agents\implementer.md")) "Specialist agent implementer was not installed."
+    foreach ($toolRel in @(
+        '.agents\tools\verify-envelope.ps1',
+        '.agents\tools\verify-envelope.sh',
+        '.agents\tools\session-state.ps1',
+        '.agents\tools\session-state.sh',
+        '.agents\tools\task-lock.ps1',
+        '.agents\tools\task-lock.sh'
+    )) {
+        Assert-True (Test-Path -LiteralPath (Join-Path $Repo $toolRel) -PathType Leaf) "Operational tool was not installed: $toolRel"
+    }
+    Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo "tools"))) "Installer should not pollute project root tools/ directory."
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".grok"))) "Default install created .grok."
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".codex"))) "Default install created .codex."
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo "CLAUDE.md"))) "Default install wrote CLAUDE.md."

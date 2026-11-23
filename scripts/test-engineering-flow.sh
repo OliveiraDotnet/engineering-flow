@@ -18,10 +18,14 @@ output="$(bash "$INSPECTOR" "$empty")"
 [[ "$output" = *'Discovery mode: empty'* ]] || fail 'Empty mode lost'
 [[ "$output" = *'Suggested profiles: [none]'* ]] || fail 'Empty selected unrelated modules'
 bash "$INSTALLER" "$empty" --profile core
-[ -f "$empty/.grok/skills/new-project/SKILL.md" ] || fail 'Empty new-project missing'
-[ -f "$empty/.grok/agents/repo-explorer.md" ] || fail 'Empty Grok agent missing'
-[ ! -e "$empty/.codex" ] || fail 'Grok-only installed Codex'
-[ ! -e "$empty/.claude" ] || fail 'Grok-only installed Claude'
+[ -f "$empty/.agents/skills/new-project/SKILL.md" ] || fail 'Empty new-project missing'
+[ -f "$empty/.agents/agents/repo-explorer.md" ] || fail 'Empty specialist agent missing'
+[ -f "$empty/.agents/tools/verify-envelope.sh" ] || fail 'Empty verify-envelope tool missing'
+[ -f "$empty/.agents/tools/session-state.sh" ] || fail 'Empty session-state tool missing'
+[ -f "$empty/.agents/tools/task-lock.sh" ] || fail 'Empty task-lock tool missing'
+[ ! -e "$empty/.grok" ] || fail 'Tool-agnostic install created .grok'
+[ ! -e "$empty/.codex" ] || fail 'Tool-agnostic install created .codex'
+[ ! -e "$empty/.claude" ] || fail 'Tool-agnostic install created .claude'
 [ ! -e "$empty/.agents/skills/mobile-app" ] || fail 'Core installed mobile'
 mixed="$TEMP_ROOT/mixed"
 new_repo "$mixed"
@@ -35,7 +39,7 @@ output="$(bash "$INSPECTOR" "$mixed")"
 [[ "$output" != *'synthetic-secret-script-body'* ]] || fail 'Source payload leaked'
 bash "$INSTALLER" "$mixed"
 [ -f "$mixed/.agents/skills/web-app/SKILL.md" ] || fail 'ASP web profile missing'
-[ -f "$mixed/.grok/agents/frontend-web.md" ] || fail 'ASP web Grok agent missing'
+[ -f "$mixed/.agents/agents/frontend-web.md" ] || fail 'ASP web specialist agent missing'
 unknown="$TEMP_ROOT/unknown"
 new_repo "$unknown"
 printf opaque > "$unknown/engine.customlang"
@@ -52,7 +56,7 @@ printf 'class Main\n' > "$mobile/Main.kt"
 output="$(bash "$INSPECTOR" "$mobile")"
 [[ "$output" = *'Suggested profiles: mobile'* ]] || fail 'Native mobile not detected'
 bash "$INSTALLER" "$mobile"
-[ -f "$mobile/.grok/skills/mobile-app/SKILL.md" ] || fail 'Mobile independent install missing'
+[ -f "$mobile/.agents/skills/mobile-app/SKILL.md" ] || fail 'Mobile independent install missing'
 [ ! -e "$mobile/.agents/skills/web-app" ] || fail 'Native mobile installed web'
 hybrid="$TEMP_ROOT/hybrid"
 new_repo "$hybrid"
@@ -78,10 +82,9 @@ if bash "$UPDATER" "$fresh" --apply; then fail 'Custom update bypassed conflict'
 bash "$UPDATER" "$fresh" --apply --keep-local guidance.agents --keep-local skill.shared.bugfix-dotnet
 [ "$before" = "$(sha256sum "$fresh/AGENTS.md" "$fresh/.agents/skills/bugfix-dotnet/SKILL.md" "$fresh/docs/ai/runbook.md")" ] || fail 'Update lost managed/merge/seed customizations'
 grep -Fxq "version|$(tr -d '\r\n' < "$PACK_ROOT/pack-version.txt")" "$fresh/.agent-pack/state.txt" || fail 'Version not recorded'
-grep -q '^integration|grok$' "$fresh/.agent-pack/state.txt" || fail 'Integration selection lost'
 grep -q '^profile|web$' "$fresh/.agent-pack/state.txt" || fail 'Web selection lost'
 if grep -Eq '^profile\|(mobile|quality)$|^integration\|codex$' "$fresh/.agent-pack/state.txt"; then fail 'Update expanded selection'; fi
-[ -f "$fresh/.grok/skills/complete-task/SKILL.md" ] || fail 'Selected workflow missing'
-[ ! -e "$fresh/.grok/skills/mobile-app" ] || fail 'Update installed unrelated mobile'
+[ -f "$fresh/.agents/skills/complete-task/SKILL.md" ] || fail 'Selected workflow missing'
+[ ! -e "$fresh/.agents/skills/mobile-app" ] || fail 'Update installed unrelated mobile'
 [ -f "$fresh/.agent-pack/.runtime/.gitignore" ] || true
-echo 'Engineering Flow Bash script regressions passed: empty, unknown, classic ASP/mixed, native/hybrid, Grok-only selection, 3.0 update customization. No agent/browser/device behavior claimed.'
+echo 'SpecGuard 6 Bash script regressions passed: empty, unknown, classic ASP/mixed, native/hybrid, tool-agnostic selection, update customization. No agent/browser/device behavior claimed.'

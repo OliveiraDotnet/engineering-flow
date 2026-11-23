@@ -55,8 +55,10 @@ else
   (cd "$REPO_ROOT" && find . -type f -print | sed 's#^\./##') > "$candidate_file"
 fi
 
-prefix_c3="$(printf '\303\203')"
-prefix_c2="$(printf '\303\202')"
+prefix_c3="$(printf '\303\203\302')"
+prefix_c2="$(printf '\303\202\302')"
+double_c3_f="$(printf '\303\203\306\222')"
+double_c3_q="$(printf '\303\203\342\200\232')"
 punctuation_euro="$(printf '\303\242\342\202\254')"
 punctuation_dagger="$(printf '\303\242\342\200\240')"
 punctuation_oe="$(printf '\303\242\305\223')"
@@ -97,6 +99,7 @@ sort -u "$candidate_file" | while IFS= read -r relative || [ -n "$relative" ]; d
       *"$punctuation_euro"*|*"$punctuation_dagger"*|*"$punctuation_oe"*|*"$punctuation_c2_98"*|*"$punctuation_c2_80"*|*"$punctuation_c2_86"*) kind="misdecoded-punctuation" ;;
       *"$prefix_c3"*) kind="misdecoded-utf8-c3" ;;
       *"$prefix_c2"*) kind="misdecoded-utf8-c2" ;;
+      *"$double_c3_f"*|*"$double_c3_q"*) kind="double-encoded-utf8" ;;
     esac
     if [ -n "$kind" ]; then
       printf '%s:%s:1: %s\n' "$relative" "$line_number" "$kind"

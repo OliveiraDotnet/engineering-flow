@@ -1,4 +1,4 @@
-# Engineering Flow manifest v6.1.0
+# Engineering Flow manifest v6.1.1
 core|AGENTS.md
 core|docs/ai/project-map.md
 core|docs/ai/architecture.md
@@ -74,6 +74,12 @@ quality|.agents/agents/release-reviewer.md
 core|.agents/agents/repo-explorer.md
 quality|.agents/agents/security-reviewer.md
 core|.agents/agents/test-guardian.md
+core|.agents/tools/session-state.ps1
+core|.agents/tools/session-state.sh
+core|.agents/tools/task-lock.ps1
+core|.agents/tools/task-lock.sh
+core|.agents/tools/verify-envelope.ps1
+core|.agents/tools/verify-envelope.sh
 core|prompts/00-bootstrap-repo.md
 core|prompts/01-bugfix.md
 core|prompts/02-feature-slice.md

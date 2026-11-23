@@ -1,4 +1,4 @@
-#Requires -Version 7
+﻿#Requires -Version 7
 [CmdletBinding()]
 param()
 
@@ -65,6 +65,28 @@ try {
     & git -C $TempRoot add -f '.agent-pack/.runtime/TASK_SPEC.md'
     $null = & $Verifier -Repo $TempRoot 2>&1
     Assert-True ($LASTEXITCODE -eq 12) "Expected exit 12 for staged operational file, got $LASTEXITCODE"
+    & git -C $TempRoot reset -q -- '.agent-pack/.runtime/TASK_SPEC.md'
+
+    # Case 6: Stale test-status.json from a different card than active session-state.json must fail with exit 14
+    [IO.File]::WriteAllText((Join-Path $rt 'session-state.json'), '{"card":"AB-601","tier":1}', $Utf8)
+    [IO.File]::WriteAllText((Join-Path $rt 'test-status.json'), '{"cardId":"AB-500","passed":true,"reason":null,"secretScan":{"status":"clean"}}', $Utf8)
+    $null = & $Verifier -Repo $TempRoot 2>&1
+    Assert-True ($LASTEXITCODE -eq 14) "Expected exit 14 for stale cardId mismatch, got $LASTEXITCODE"
+    Remove-Item -LiteralPath (Join-Path $rt 'session-state.json') -Force
+    [IO.File]::WriteAllText((Join-Path $rt 'test-status.json'), '{"cardId":"AB-601","passed":true,"reason":null,"secretScan":{"status":"clean"}}', $Utf8)
+
+    # Case 7: Custom production/protected branch declared in AGENTS.md must fail with exit 10
+    & git -C $TempRoot checkout -- src/App.cs
+    [IO.File]::WriteAllText((Join-Path $TempRoot 'AGENTS.md'), @"
+# Project
+- Branch principal (produção): prod-branch
+- Branches protegidas (harness): prod-branch, hom-branch
+"@, $Utf8)
+    & git -C $TempRoot add AGENTS.md
+    & git -C $TempRoot -c user.name="Test" -c user.email="test@example.com" commit -q -m "add agents"
+    & git -C $TempRoot checkout -b prod-branch -q
+    $null = & $Verifier -Repo $TempRoot 2>&1
+    Assert-True ($LASTEXITCODE -eq 10) "Expected exit 10 on custom protected branch declared in AGENTS.md, got $LASTEXITCODE"
 
     Write-Host 'test-verify-envelope.ps1 passed.'
 }
