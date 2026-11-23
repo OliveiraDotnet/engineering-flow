@@ -58,7 +58,7 @@ while IFS= read -r skill; do
 done < <(find "$SKILLS_ROOT" -mindepth 2 -maxdepth 2 -type f -name SKILL.md | sort)
 
 {
-  printf '# Índice de skills — Engineering Flow %s\n' "$major_minor"
+  printf '# Índice de skills — SpecGuard %s\n' "$major_minor"
   printf '\n'
   printf '%s\n' 'Gerado por `tools/generate-skills-index.sh` a partir do frontmatter `name`/`description` de `repo-template/.agents/skills/*/SKILL.md`. O implementador lê este índice e carrega apenas a skill escolhida.'
   printf '\n'

@@ -224,7 +224,7 @@ while IFS= read -r rel_file; do
     close $fh;
     exit 1 if !defined($data) || index($data, "\0") >= 0;
     utf8::decode($data);
-    if ($data =~ /(?:Engineering Flow [345]\.0|\bv5\.0\b(?!\.)|padr[aã]o 5\.0\b(?!\.)|pack 5\.0\b(?!\.)|instala[cç][aã]o limpa(?: da)? v?5\.0\b(?!\.))/i) {
+    if ($data =~ /(?:Engineering Flow [345]\.[01]|\bv5\.[01]\b(?!\.)|padr[aã]o 5\.[01]\b(?!\.)|pack 5\.[01]\b(?!\.)|instala[cç][aã]o limpa(?: da)? v?5\.[01]\b(?!\.))/i) {
       exit 0;
     }
     exit 1;
@@ -233,7 +233,7 @@ while IFS= read -r rel_file; do
   fi
 done < <(cd "$PACK_ROOT" && find . -path './.git' -prune -o -type f -print | sed 's|^\./||' | sort)
 if [ -n "$stale_version_hits" ]; then
-  fail "Obsolete version title (3.0/4.0/5.0) found in: $stale_version_hits"
+  fail "Obsolete version title (3.0/4.0/5.0/5.1) found in: $stale_version_hits"
 fi
 
 encoding_checker="$TEMPLATE_ROOT/.agents/skills/check-text-encoding/scripts/check-mojibake.sh"
@@ -244,4 +244,4 @@ else
 fi
 
 [ "$errors" -eq 0 ] || exit 1
-echo "Pack validation passed: manifest, shared skills, Grok agents and generic-content checks are valid."
+echo "Pack validation passed: manifest, shared skills, specialist agents and generic-content checks are valid."

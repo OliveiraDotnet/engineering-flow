@@ -1,5 +1,17 @@
 # SpecGuard 6 (Engineering Flow) changelog
 
+## 6.2.0 — 2026-11-23 (Espelhamento Multi-Harness `-Harness`/`-SkillsDir` e Faxina de Versões Antigas)
+
+- **Espelhamento de skills para o diretório nativo de cada harness (`-Harness` / `-SkillsDir`):**
+  - `install-agent-pack.{ps1,sh}` passa a aceitar `-Harness` / `--harness` (`agents`, `claude` → `.claude/skills` + `.claude/agents`, `cursor` → `.cursor/skills`, `copilot` → `.github/skills`, `dsh` → `.dsh/skills`) e `-SkillsDir` / `--skills-dir` (qualquer caminho relativo dentro do repositório, aceitando múltiplos separados por vírgula) — permitindo que o próprio harness que executa a instalação coloque as skills onde seu IntelliSense/autocomplete as enxerga, mantendo `repo-template/.agents/skills/` como fonte única sem duplicação no pack.
+  - `protect-engineering-flow-files.{ps1,sh}` passa a aceitar `-ExtraPatterns` / `--extra-pattern`, ignorando automaticamente no `.gitignore` todos os diretórios espelhados pelo harness (preservando o desacoplamento 99,9% com apenas `AGENTS.md` versionado), e usa comentários neutros `# SpecGuard:` sem número de versão fixo.
+  - `verify-envelope.{ps1,sh}` passa a barrar staging acidental de `.claude/skills/`, `.claude/agents/`, `.cursor/skills/`, `.github/skills/` e `.dsh/skills/` (`exit 12`).
+  - Adicionada orientação explícita para o harness instalador em `README.md`, `INSTRUCOES_DETALHADAS.md`, `update-agent-pack/SKILL.md` e dica automática no `--discover-only` quando detecta pastas/variáveis de harness no workspace.
+- **Faxina completa de resquícios de versões anteriores (`5.1`, `6.0.0`, `"Grok agents"`):**
+  - Removidas todas as menções residuais a `Engineering Flow 5.1` / `v5.1` / `Pack 5.1` em `repo-template/docs/engineering-flow/{workflow,roles-and-handoffs}.md`, `README.md`, `INSTRUCOES_DETALHADAS.md`, `MANUAL_DE_USO.md`, `ASSISTENTE_OPCIONAL.md`, `ASSISTENTE_WORKFLOW.md`, `diretrizes/DIRETRIZ-entrega-pelo-bot-de-projeto.md` e `install-agent-pack.ps1`, além de corrigir a mensagem residual `"Grok agents"` em `validate-pack.sh`.
+  - `validate-pack.{ps1,sh}` endurecido para barrar também `5.1` (`Engineering Flow 5.1`, `v5.1`, `padrão 5.1`, `Pack 5.1`).
+- **Testes automatizados ampliados:** `scripts/test-install-agent-pack.ps1` cobre `-Harness claude,dsh` e `-SkillsDir` customizado (verificando cópia de skills/agents, `.gitignore` automático e rejeição de path traversal).
+
 ## 6.1.2 — 2026-11-23 (Fim do Falso Positivo `cache_key` no `ef_scan` e Proteção de `docs/ai/*` no `-Force`)
 
 - **Correção crítica de falso positivo no `ef_scan` com `repo-map.txt` (`SECRET_IN_LOG` bloqueando Gate 2):**

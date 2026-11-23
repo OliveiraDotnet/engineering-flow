@@ -1,4 +1,4 @@
-# Índice de skills — Engineering Flow 6.1
+# Índice de skills — SpecGuard 6.2
 
 Gerado por `tools/generate-skills-index.sh` a partir do frontmatter `name`/`description` de `repo-template/.agents/skills/*/SKILL.md`. O implementador lê este índice e carrega apenas a skill escolhida.
 

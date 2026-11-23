@@ -77,7 +77,7 @@ if ($ProtectedBranches.Contains($Branch)) {
 }
 
 # 2. Operational file staging leak check (99.9% decoupling: ONLY AGENTS.md may be versioned from SpecGuard)
-$OperationalRegex = '^(?:\.agent-pack/|\.agents/|\.grok/|docs/engineering-flow/|docs/ai/|prompts/|Planejamento/|planejamento/|\.engineering-flow-evidence/|\.ai-memory\.toml$)|\.agent-pack\.new$|\.agent-pack\.backup-'
+$OperationalRegex = '^(?:\.agent-pack/|\.agents/|\.grok/|\.claude/skills/|\.claude/agents/|\.cursor/skills/|\.github/skills/|\.dsh/skills/|docs/engineering-flow/|docs/ai/|prompts/|Planejamento/|planejamento/|\.engineering-flow-evidence/|\.ai-memory\.toml$)|\.agent-pack\.new$|\.agent-pack\.backup-'
 $StagedFiles = @(& git -C $RepoRoot diff --cached --name-only 2>$null | Where-Object { $_ -and $_.Trim() } | ForEach-Object { Normalize-RelPath $_ })
 $LeakedOperational = @($StagedFiles | Where-Object { $_ -match $OperationalRegex })
 if ($LeakedOperational.Count -gt 0) {

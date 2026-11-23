@@ -1,4 +1,4 @@
-# Manual do Engineering Flow 5.1
+# Manual do SpecGuard 6 (Engineering Flow)
 
 O fluxo é definido por papéis em hierarquia clara: **aprovador humano → planejador/engenheiro-chefe → revisor/entrega por repositório → Implementor + Tester (no harness) → publicador/validador opcional** (veja a seção Papéis do [workflow.md](repo-template/docs/engineering-flow/workflow.md)). O fluxo não depende de nenhuma ferramenta específica: o desenvolvedor pode operar **com um único harness acumulando todos os papéis** (modo standalone) ou **distribuir os papéis entre agentes/bots independentes**. O fluxo completo está em [workflow.md](repo-template/docs/engineering-flow/workflow.md). Escolha a skill pelo [índice](SKILLS-INDEX.md).
 

@@ -1,6 +1,6 @@
 # Papéis, Fronteiras e Passagem de Bastão (Cada Um no Seu Quadrado)
 
-Documento de referência operacional do Engineering Flow 5.1 para separar responsabilidades entre sessões/conversas independentes, sem dependência de ferramenta específica. O contrato de execução e os Gates permanecem em [workflow.md](workflow.md).
+Documento de referência operacional do SpecGuard 6 para separar responsabilidades entre sessões/conversas independentes, sem dependência de ferramenta específica. O contrato de execução e os Gates permanecem em [workflow.md](workflow.md).
 
 ## 1. Modos de operação
 

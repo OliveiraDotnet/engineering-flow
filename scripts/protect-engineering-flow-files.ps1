@@ -4,13 +4,22 @@ param(
     [Parameter(Mandatory=$true)][string]$RepoPath,
     [switch]$CheckOnly,
     [switch]$DryRun,
-    [switch]$UnignoreAgentsMd
+    [switch]$UnignoreAgentsMd,
+    [string[]]$ExtraPatterns = @()
 )
 $ErrorActionPreference='Stop'
 $root=(Resolve-Path -LiteralPath $RepoPath).Path
 $path=Join-Path $root '.gitignore'
 $utf8=[Text.UTF8Encoding]::new($false,$true)
-$patterns=@('*.agent-pack.new','*.agent-pack.backup-*','.agent-pack/','.agent-pack/.runtime/','.agent-pack/.runtime/task.lock','.agent-pack/*.tmp','.agent-pack/*.lock','.agent-pack/logs/','.agent-pack/cache/','.agent-pack/tmp/','.agent-pack/sessions/','.agent-pack/worktrees/','.agent-pack/evidencias/','.agents/','.grok/','.grok/sessions/','.grok/worktrees/','.ai-memory.toml','docs/engineering-flow/','docs/ai/','prompts/','.engineering-flow-evidence/','Planejamento/','planejamento/')
+$patterns=[System.Collections.Generic.List[string]]::new()
+foreach ($p in @('*.agent-pack.new','*.agent-pack.backup-*','.agent-pack/','.agent-pack/.runtime/','.agent-pack/.runtime/task.lock','.agent-pack/*.tmp','.agent-pack/*.lock','.agent-pack/logs/','.agent-pack/cache/','.agent-pack/tmp/','.agent-pack/sessions/','.agent-pack/worktrees/','.agent-pack/evidencias/','.agents/','.grok/','.grok/sessions/','.grok/worktrees/','.ai-memory.toml','docs/engineering-flow/','docs/ai/','prompts/','.engineering-flow-evidence/','Planejamento/','planejamento/')) {
+    [void]$patterns.Add($p)
+}
+foreach ($ep in $ExtraPatterns) {
+    if ([string]::IsNullOrWhiteSpace($ep)) { continue }
+    $clean = $ep.Trim().Replace('\', '/')
+    if ($clean -and -not $patterns.Contains($clean)) { [void]$patterns.Add($clean) }
+}
 $bytes=[byte[]]@()
 $text=''
 if (Test-Path -LiteralPath $path) {
@@ -52,7 +61,7 @@ if ($UnignoreAgentsMd) {
  if ((Test-Path -LiteralPath $path) -and ((Get-Item -LiteralPath $path -Force).Attributes -band [IO.FileAttributes]::ReadOnly)) { throw '.gitignore is read-only; protection requires a reviewed permission change.' }
  $newline=if ($text.Contains("`r`n")) {"`r`n"} else {"`n"}
  $prefix=if ($text -and -not $text.EndsWith("`n")) {$newline} else {''}
- $addition=$prefix+'# Engineering Flow: AGENTS.md must stay versionable'+$newline+'!AGENTS.md'+$newline
+ $addition=$prefix+'# SpecGuard: AGENTS.md must stay versionable'+$newline+'!AGENTS.md'+$newline
  $stream=[IO.File]::Open($path,[IO.FileMode]::Append,[IO.FileAccess]::Write,[IO.FileShare]::Read)
  try { $extra=$utf8.GetBytes($addition); $stream.Write($extra,0,$extra.Length) } finally { $stream.Dispose() }
 
@@ -77,7 +86,7 @@ if ($CheckOnly) { exit 0 }
 if ($DryRun) { Write-Host "IGNORE    $path ($($missing.Count) rules, dry-run)"; exit 0 }
 $newline=if ($text.Contains("`r`n")) {"`r`n"} else {"`n"}
 $prefix=if ($text -and -not $text.EndsWith("`n")) {$newline} else {''}
-$addition=$prefix+$newline+'# Engineering Flow: clean install; only AGENTS.md stays versionable.'+$newline+($missing -join $newline)+$newline
+$addition=$prefix+$newline+'# SpecGuard: clean install; only AGENTS.md stays versionable.'+$newline+($missing -join $newline)+$newline
 # Append retains original bytes (including UTF-8 BOM), content and custom rules.
 $stream=[IO.File]::Open($path,[IO.FileMode]::Append,[IO.FileAccess]::Write,[IO.FileShare]::Read)
 try { $extra=$utf8.GetBytes($addition); $stream.Write($extra,0,$extra.Length) } finally { $stream.Dispose() }

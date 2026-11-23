@@ -83,7 +83,7 @@ for pb in "${protected_branches[@]}"; do
   fi
 done
 
-op_regex='^(\.agent-pack/|\.agents/|\.grok/|docs/engineering-flow/|docs/ai/|prompts/|Planejamento/|planejamento/|\.engineering-flow-evidence/|\.ai-memory\.toml$)|\.agent-pack\.new$|\.agent-pack\.backup-'
+op_regex='^(\.agent-pack/|\.agents/|\.grok/|\.claude/skills/|\.claude/agents/|\.cursor/skills/|\.github/skills/|\.dsh/skills/|docs/engineering-flow/|docs/ai/|prompts/|Planejamento/|planejamento/|\.engineering-flow-evidence/|\.ai-memory\.toml$)|\.agent-pack\.new$|\.agent-pack\.backup-'
 leaked="$(git -C "$REPO_ROOT" diff --cached --name-only 2>/dev/null | grep -E "$op_regex" || true)"
 if [ -n "$leaked" ]; then
   fail_envelope 12 "Operational SpecGuard files staged in Git (must stay gitignored): $(printf '%s' "$leaked" | tr '\n' ', ')"

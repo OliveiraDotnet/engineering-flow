@@ -294,7 +294,7 @@ foreach ($term in @("Aptos", "M & Y TECH", "Portal de Vendas", "projetos/")) {
     if ($allText -match [regex]::Escape($term)) { Add-Error "Obsolete organization-specific reference found: $term" }
 }
 
-$staleVersionPattern = '(?i)(?:Engineering Flow [345]\.0|\bv5\.0\b(?!\.)|padr[aã]o 5\.0\b(?!\.)|pack 5\.0\b(?!\.)|instala[cç][aã]o limpa(?: da)? v?5\.0\b(?!\.))'
+$staleVersionPattern = '(?i)(?:Engineering Flow [345]\.[01]|\bv5\.[01]\b(?!\.)|padr[aã]o 5\.[01]\b(?!\.)|pack 5\.[01]\b(?!\.)|instala[cç][aã]o limpa(?: da)? v?5\.[01]\b(?!\.))'
 $staleVersionHits = New-Object System.Collections.Generic.List[string]
 $allPackFiles = @(Get-ChildItem -LiteralPath $PackRoot -File -Recurse -Force)
 foreach ($packFile in $allPackFiles) {
@@ -309,7 +309,7 @@ foreach ($packFile in $allPackFiles) {
     }
 }
 if ($staleVersionHits.Count -gt 0) {
-    Add-Error ("Obsolete version title (3.0/4.0/5.0) found in: " + (($staleVersionHits | Sort-Object) -join ', '))
+    Add-Error ("Obsolete version title (3.0/4.0/5.0/5.1) found in: " + (($staleVersionHits | Sort-Object) -join ', '))
 }
 
 foreach ($path in @("AGENTS.md", "docs/ai/runbook.md")) {

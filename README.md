@@ -2,7 +2,7 @@
 
 > **Governança determinística de engenharia assistida por IA: agnóstico de ferramenta, 99,9% desacoplado do projeto, com cache estruturado de contexto, arquitetura verificável e entrega por card.**
 
-Versão atual: **`6.1.2`** · [Releases no GitHub](https://github.com/OliveiraDotnet/engineering-flow/releases) · [Índice de Skills](SKILLS-INDEX.md) · [Manual de Uso](MANUAL_DE_USO.md) · [Guia Detalhado](INSTRUCOES_DETALHADAS.md) · [Changelog](CHANGELOG.md)
+Versão atual: **`6.2.0`** · [Releases no GitHub](https://github.com/OliveiraDotnet/engineering-flow/releases) · [Índice de Skills](SKILLS-INDEX.md) · [Manual de Uso](MANUAL_DE_USO.md) · [Guia Detalhado](INSTRUCOES_DETALHADAS.md) · [Changelog](CHANGELOG.md)
 
 ---
 
@@ -30,7 +30,7 @@ O **SpecGuard 6** (evolução do **Engineering Flow**) é um framework operacion
 
 ## Hierarquia de Papéis, Porta de Entrada Única e Delegação Híbrida
 
-> **Primeiro Prompt (Porta de Entrada Única):** após instalar o Engineering Flow 5.1 (em repositório existente ou projeto do zero), qualquer conversa iniciada **sem papel explícito** assume automaticamente o papel de **`Engenheiro-Chefe`**. Ele inspeciona o repositório em modo somente leitura, conduz até 6 perguntas objetivas (cobrindo demanda com Card `AB-<ID>`, pedido informal via Teams/e-mail ou iniciativa própria sem Card) e delega ao **`Tech Lead`** via `.agent-pack/.runtime/NEXT_PROMPT.md` — perguntando ao usuário se prefere delegar para um **subagente nativo** (com retorno obrigatório ao topo da cadeia) ou enviar o bloco `PROMPT PARA:` manualmente. Veja [roles-and-handoffs.md](repo-template/docs/engineering-flow/roles-and-handoffs.md).
+> **Primeiro Prompt (Porta de Entrada Única):** após instalar o SpecGuard 6 (em repositório existente ou projeto do zero), qualquer conversa iniciada **sem papel explícito** assume automaticamente o papel de **`Engenheiro-Chefe`**. Ele inspeciona o repositório em modo somente leitura, conduz até 6 perguntas objetivas (cobrindo demanda com Card `AB-<ID>`, pedido informal via Teams/e-mail ou iniciativa própria sem Card) e delega ao **`Tech Lead`** via `.agent-pack/.runtime/NEXT_PROMPT.md` — perguntando ao usuário se prefere delegar para um **subagente nativo** (com retorno obrigatório ao topo da cadeia) ou enviar o bloco `PROMPT PARA:` manualmente. Veja [roles-and-handoffs.md](repo-template/docs/engineering-flow/roles-and-handoffs.md).
 
 ```mermaid
 flowchart TD
@@ -82,20 +82,20 @@ Modos de execução: **Trivial** (1 critério observável, sem risco a dados/mig
 
 ---
 
-## Instalação Limpa 6.0 (99,9% Desacoplado — Apenas `AGENTS.md` Versionado)
+## Instalação Limpa (99,9% Desacoplado — Apenas `AGENTS.md` Versionado)
 
-No **SpecGuard 6 (`6.0.0`)**, instalar o fluxo em um repositório de equipe é limpo por padrão:
+No **SpecGuard 6**, instalar o fluxo em um repositório de equipe é limpo por padrão:
 
 - **Não gera arquivos de versão/estado (`.agent-pack/state.txt`)** no repositório destino e consolida arquivos equivalentes sem resquícios de instalações anteriores.
-- **Atualiza o `.gitignore` automaticamente** para ignorar todas as pastas e arquivos operacionais (`.agents/`, `.grok/`, `.agent-pack/`, `.ai-memory.toml`, `docs/engineering-flow/`, `docs/ai/`, `prompts/`, `Planejamento/`, `planejamento/`, `.engineering-flow-evidence/`, `*.agent-pack.new`, `*.agent-pack.backup-*`).
+- **Atualiza o `.gitignore` automaticamente** para ignorar todas as pastas e arquivos operacionais (`.agents/`, `.grok/`, `.agent-pack/`, `.ai-memory.toml`, `docs/engineering-flow/`, `docs/ai/`, `prompts/`, `Planejamento/`, `planejamento/`, `.engineering-flow-evidence/`, `*.agent-pack.new`, `*.agent-pack.backup-*`, além de quaisquer diretórios espelho de skills do harness escolhidos via `-Harness`/`-SkillsDir`).
 - **Somente `AGENTS.md` permanece versionável no Git** — e quando já existir, **é sempre consolidado via blocos gerenciados (`ef:managed`), nunca apagado ou recriado do zero**.
 
 ### Baixar ou Clonar
 
-Baixe o pacote da [Release `v6.1.2`](https://github.com/OliveiraDotnet/engineering-flow/releases/tag/v6.1.2) ou clone o repositório:
+Baixe o pacote da [Release `v6.2.0`](https://github.com/OliveiraDotnet/engineering-flow/releases/tag/v6.2.0) ou clone o repositório:
 
 ```bash
-git clone --branch v6.1.2 https://github.com/OliveiraDotnet/engineering-flow.git
+git clone --branch v6.2.0 https://github.com/OliveiraDotnet/engineering-flow.git
 ```
 
 ### Instalar em um Repositório Alvo
@@ -107,6 +107,9 @@ Execute a partir da raiz do `engineering-flow`, apontando para o repositório Gi
 bash ./scripts/install-agent-pack.sh /caminho/do/repositorio --discover-only
 bash ./scripts/install-agent-pack.sh /caminho/do/repositorio --profile web,sqlserver --dry-run
 bash ./scripts/install-agent-pack.sh /caminho/do/repositorio --profile web,sqlserver
+# Opcional: espelhar skills no diretório nativo do harness (para autocomplete/IntelliSense)
+bash ./scripts/install-agent-pack.sh /caminho/do/repositorio --profile web,sqlserver --harness claude
+bash ./scripts/install-agent-pack.sh /caminho/do/repositorio --profile web,sqlserver --skills-dir .dsh/skills
 ```
 
 ```powershell
@@ -114,7 +117,23 @@ bash ./scripts/install-agent-pack.sh /caminho/do/repositorio --profile web,sqlse
 .\scripts\install-agent-pack.ps1 -RepoPath 'C:\src\Sistema' -DiscoverOnly
 .\scripts\install-agent-pack.ps1 -RepoPath 'C:\src\Sistema' -Profile web,sqlserver -DryRun
 .\scripts\install-agent-pack.ps1 -RepoPath 'C:\src\Sistema' -Profile web,sqlserver
+# Opcional: espelhar skills no diretório nativo do harness (para autocomplete/IntelliSense)
+.\scripts\install-agent-pack.ps1 -RepoPath 'C:\src\Sistema' -Profile web,sqlserver -Harness claude
+.\scripts\install-agent-pack.ps1 -RepoPath 'C:\src\Sistema' -Profile web,sqlserver -SkillsDir '.dsh/skills'
 ```
+
+#### Diretórios nativos de skills por Harness (`-Harness` / `-SkillsDir`)
+
+A fonte canônica continua sendo `.agents/skills/` (sempre instalada). Quando o harness que está instalando lê skills de outro diretório para exibir no autocomplete/IntelliSense, basta passar `-Harness` (atalho) ou `-SkillsDir` (qualquer caminho relativo) — o instalador copia as skills do perfil selecionado e protege esse diretório automaticamente no `.gitignore`:
+
+| Preset (`-Harness` / `--harness`) | Diretório(s) espelhado(s) e ignorado(s) no Git |
+| :--- | :--- |
+| `agents` *(padrão)* | `.agents/skills` e `.agents/agents` (canônico) |
+| `claude` | `.claude/skills` e `.claude/agents` |
+| `cursor` | `.cursor/skills` |
+| `copilot` | `.github/skills` |
+| `dsh` | `.dsh/skills` |
+| *Qualquer outro harness* | Passe `-SkillsDir '<dir-relativo>'` (ex.: `.meu-harness/skills`), aceitando múltiplos separados por vírgula |
 
 > Para pastas deliberadamente sem Git, use `--allow-non-git` / `-AllowNonGit`. Sem `--force`, divergências geram sidecars `*.agent-pack.new` para revisão sem sobrescrever customizações. Use `--force` / `-Force` para **merge por blocos gerenciados** (`ef:managed`) no `AGENTS.md` e atualização dos arquivos `managed` (com backup `*.agent-pack.backup-*`); arquivos `seed` (`docs/ai/*`) **nunca são sobrescritos** mesmo com `--force` (mantêm o conteúdo local e geram sidecar `*.agent-pack.new` se o template mudou). Se o `AGENTS.md` atual não tiver marcadores `ef:managed`, o instalador preserva o arquivo e o sidecar e sai com código `7` para migração única.
 
@@ -132,7 +151,7 @@ bash ./scripts/update-agent-pack.sh /caminho/do/repositorio --apply
 .\scripts\update-agent-pack.ps1 -RepoPath 'C:\src\Sistema' -Apply -Confirm:$false
 ```
 
-`pack-manifest.txt`, `pack-artifacts.txt` e `pack-version.txt` definem artefatos e propriedade (`managed`, `merge`, `seed`). Catálogos de compatibilidade permanecem em `compat/releases/` (`1.1.0` a `6.1.2`).
+`pack-manifest.txt`, `pack-artifacts.txt` e `pack-version.txt` definem artefatos e propriedade (`managed`, `merge`, `seed`). Catálogos de compatibilidade permanecem em `compat/releases/` (`1.1.0` a `6.2.0`).
 
 ---
 

@@ -66,7 +66,7 @@ Mudança material de escopo, comportamento, arquitetura/contratos, dependências
 
 **Gate 2:** commit e push exigem o ok explícito do aprovador humano, dado depois de ele ver as evidências. O commit é feito só pelo implementador (`Implementor`). O push é feito só pelo revisor/entrega (ou publicador) ou, quando indisponível, pelo aprovador humano manualmente. Nenhum outro agente comita ou dá push. Nunca na main ou na master, nunca force push.
 
-## Diretriz de entrega (versão 5.1)
+## Diretriz de entrega (SpecGuard 6)
 
 As regras detalhadas de entrega por card, promoção isolada para `main`, tag e convenções por projeto ficam na raiz do repositório engineering-flow, em `diretrizes/DIRETRIZ-entrega-pelo-bot-de-projeto.md`.
 
@@ -161,7 +161,7 @@ Para eliminar perda de contexto entre conversas/subagentes, maximizar *Prompt Ca
 
 ## Memória Persistente (`ai-memory` + `docs/ai` local) e Isolamento entre Papéis
 
-O Engineering Flow 5.1 utiliza o **`ai-memory` (`akitaonrails/ai-memory`)** quando disponível no ambiente, em conjunto com a documentação local em `docs/ai/` e os artefatos de handoff (`TASK_SPEC.md`, `Planejamento/DEMANDAS.md`, `EVIDENCIA.md`).
+O SpecGuard 6 utiliza o **`ai-memory` (`akitaonrails/ai-memory`)** quando disponível no ambiente, em conjunto com a documentação local em `docs/ai/` e os artefatos de handoff (`TASK_SPEC.md`, `Planejamento/DEMANDAS.md`, `EVIDENCIA.md`).
 
 - **Isolamento de Memória entre Bots e Harness:** Agentes externos (como bots de planejamento ou de revisão que rodam fora do harness) podem não compartilhar a mesma instância MCP do `ai-memory` do harness de execução. Por isso, toda passagem de bastão entre papéis deve ser explícita e autossuficiente via arquivos locais (`TASK_SPEC.md`, `EVIDENCIA.md`, `test-status.json`, `Planejamento/DEMANDAS.md` e `AGENTS.md`), garantindo que cada agente tenha sua função estritamente separada sem depender de estado implícito.
 - **Namespacing Multi-Repo (`.ai-memory.toml`):** Quando o `ai-memory` é utilizado, define-se `workspace = "<slug-do-projeto>"` e `project = "<slug-do-repositorio>"`.

@@ -1,8 +1,31 @@
 #!/usr/bin/env bash
 set -euo pipefail
 repo="${1:?repository path required}"
-mode="${2:-apply}"
-extra_flag="${3:-}"
+shift
+mode="apply"
+extra_flag=""
+extra_patterns=()
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --extra-pattern)
+      [ "$#" -ge 2 ] || { echo "Missing value for --extra-pattern" >&2; exit 1; }
+      extra_patterns+=("$2")
+      shift 2
+      ;;
+    apply|check|dry-run|unignore-agents-md|unignore-agents-md-dry-run)
+      mode="$1"
+      shift
+      ;;
+    --dry-run)
+      extra_flag="--dry-run"
+      shift
+      ;;
+    *)
+      if [ -z "$extra_flag" ]; then extra_flag="$1"; fi
+      shift
+      ;;
+  esac
+done
 path="$repo/.gitignore"
 [ ! -L "$path" ] && { [ ! -e "$path" ] || [ -f "$path" ]; } || { echo 'Linked/non-file .gitignore cannot be protected safely.' >&2; exit 1; }
 if [ -f "$path" ]; then
@@ -56,7 +79,7 @@ if [ "$mode" = "unignore-agents-md" ] || [ "$mode" = "unignore-agents-md-dry-run
   if [ -f "$path" ] && grep -q $'\r$' "$path"; then ending=$'\r\n'; fi
   {
     if [ -s "$path" ] && [ "$(tail -c 1 "$path" | od -An -tu1 | tr -d ' ')" != 10 ]; then printf '%s' "$ending"; fi
-    printf '# Engineering Flow: AGENTS.md must stay versionable%s!AGENTS.md%s' "$ending" "$ending"
+    printf '# SpecGuard: AGENTS.md must stay versionable%s!AGENTS.md%s' "$ending" "$ending"
   } >> "$path"
 
   printf 'UNIGNORE %s (!AGENTS.md appended; was ignored by %s)\n' "$path" "$source_line"
@@ -75,6 +98,15 @@ if [ "$mode" = "unignore-agents-md" ] || [ "$mode" = "unignore-agents-md-dry-run
 fi
 
 patterns=('*.agent-pack.new' '*.agent-pack.backup-*' '.agent-pack/' '.agent-pack/.runtime/' '.agent-pack/.runtime/task.lock' '.agent-pack/*.tmp' '.agent-pack/*.lock' '.agent-pack/logs/' '.agent-pack/cache/' '.agent-pack/tmp/' '.agent-pack/sessions/' '.agent-pack/worktrees/' '.agent-pack/evidencias/' '.agents/' '.grok/' '.grok/sessions/' '.grok/worktrees/' '.ai-memory.toml' 'docs/engineering-flow/' 'docs/ai/' 'prompts/' '.engineering-flow-evidence/' 'Planejamento/' 'planejamento/')
+for ep in ${extra_patterns[@]+"${extra_patterns[@]}"}; do
+  [ -n "$ep" ] || continue
+  ep="${ep//\\//}"
+  already=0
+  for existing in "${patterns[@]}"; do
+    if [ "$existing" = "$ep" ]; then already=1; break; fi
+  done
+  [ "$already" -eq 1 ] || patterns+=("$ep")
+done
 missing=()
 for pattern in "${patterns[@]}"; do
   if [ ! -f "$path" ] || ! grep -F -x -q "$pattern" <(sed $'s/\r$//' "$path"); then missing+=("$pattern"); fi
@@ -87,7 +119,7 @@ ending=$'\n'
 if [ -f "$path" ] && grep -q $'\r$' "$path"; then ending=$'\r\n'; fi
 {
   if [ -s "$path" ] && [ "$(tail -c 1 "$path" | od -An -tu1 | tr -d ' ')" != 10 ]; then printf '%s' "$ending"; fi
-  printf '%s# Engineering Flow: clean install; only AGENTS.md stays versionable.%s' "$ending" "$ending"
+  printf '%s# SpecGuard: clean install; only AGENTS.md stays versionable.%s' "$ending" "$ending"
   for pattern in "${missing[@]}"; do printf '%s%s' "$pattern" "$ending"; done
 } >> "$path"
 printf 'IGNORE    %s (%s generated-file rules added)\n' "$path" "${#missing[@]}"

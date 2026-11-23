@@ -95,6 +95,24 @@ try {
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo ".claude"))) "Default install created .claude."
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo "prompts\09-migrate-claude-to-codex-grok.md"))) "Removed migration prompt was installed."
 
+    # Multi-harness skills mirroring (-Harness claude,dsh + custom -SkillsDir) with automatic .gitignore protection
+    $mirrorRepo = Join-Path $TempRoot "mirror-harness"
+    New-Item -ItemType Directory -Force -Path $mirrorRepo | Out-Null
+    & git -C $mirrorRepo init -q
+    & $Installer -RepoPath $mirrorRepo -Profile core -Harness claude,dsh -SkillsDir '.custom-ide/skills' -Confirm:$false
+    Assert-True (Test-Path -LiteralPath (Join-Path $mirrorRepo ".agents\skills\bugfix\SKILL.md")) "Canonical .agents/skills missing."
+    Assert-True (Test-Path -LiteralPath (Join-Path $mirrorRepo ".claude\skills\bugfix\SKILL.md")) "Claude skills mirror missing."
+    Assert-True (Test-Path -LiteralPath (Join-Path $mirrorRepo ".claude\agents\repo-explorer.md")) "Claude agents mirror missing."
+    Assert-True (Test-Path -LiteralPath (Join-Path $mirrorRepo ".dsh\skills\bugfix\SKILL.md")) "DSH skills mirror missing."
+    Assert-True (Test-Path -LiteralPath (Join-Path $mirrorRepo ".custom-ide\skills\bugfix\SKILL.md")) "Custom SkillsDir mirror missing."
+    foreach ($igPath in @('.claude/skills/bugfix/SKILL.md', '.claude/agents/repo-explorer.md', '.dsh/skills/bugfix/SKILL.md', '.custom-ide/skills/bugfix/SKILL.md')) {
+        & git -C $mirrorRepo check-ignore -q -- $igPath
+        Assert-True ($LASTEXITCODE -eq 0) "Mirrored harness path was not added to .gitignore: $igPath"
+    }
+    $traversalRejected = $false
+    try { & $Installer -RepoPath $mirrorRepo -SkillsDir '../escape' -Confirm:$false } catch { $traversalRejected = $true }
+    Assert-True $traversalRejected "Installer accepted escaping -SkillsDir."
+
     & $Installer -RepoPath $Repo -Confirm:$false
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo "AGENTS.md.agent-pack.new"))) "Idempotent install created a sidecar."
 
