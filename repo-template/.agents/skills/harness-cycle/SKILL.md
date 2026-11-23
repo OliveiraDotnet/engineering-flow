@@ -16,7 +16,7 @@ SpecGuard 6 (Engineering Flow) is role-based and 100% tool-agnostic. A single st
 1. **Implementor (`prompts/12-implementor-harness.md`):**
    - Modifies only files authorized in the Gate 1 envelope on the card branch (`feat/AB-<ID>-<slug>` or `fix/AB-<ID>-<slug>`).
    - Reads `.agent-pack/.runtime/test-status.json` and `.agent-pack/evidencias/<CardId>/EVIDENCIA.md` when retrying after a test failure.
-   - Never pushes. Does not create or validate `.agent-pack/.runtime/task.lock` (whoever opens the task acquires it beforehand via `tools/task-lock.{sh,ps1} acquire`); executes `git commit` only after explicit human approval at **Gate 2** (`--commit-gate2` / `-CommitGate2`), removing the lock only after a successful Gate 2 commit.
+   - Never pushes. Does not create or validate `.agent-pack/.runtime/task.lock` (whoever opens the task acquires it beforehand via `.agents/tools/task-lock.{sh,ps1} acquire`); executes `git commit` only after explicit human approval at **Gate 2** (`--commit-gate2` / `-CommitGate2`), removing the lock only after a successful Gate 2 commit.
 2. **Tester (`prompts/13-tester-harness.md`):**
    - Never modifies application business code.
    - In bugs, verifies `r0-red` (the regression test must fail before the fix) and `validate` (`R0-GREEN` + approved suites must pass after the fix).
@@ -78,7 +78,7 @@ pwsh -File ./.agents/skills/harness-cycle/scripts/run-implementor.ps1 `
   - Read `docs/ai/external-boundaries.md` before creating any external output (HTTP, CDN, telemetry, upload).
   - Stop with `BLOCKED_BY_DECISION` whenever a decision is missing or an external output is not listed in the inventory.
 - **Gate 2 staging, deterministic envelope verification and architectural fitness functions:**
-  - Before presenting Gate 2 (or running `--commit-gate2`), run `tools/verify-envelope.{ps1,sh}` to deterministically block: protected branches (`exit 10`), any modified/untracked file outside `TASK_SPEC.md` `ef:paths` (`exit 11`), any operational SpecGuard file staged in Git (`exit 12`), dirty `secretScan`/`SECRET_IN_LOG` (`exit 13`), or unpassed `test-status.json` (`exit 14`).
+  - Before presenting Gate 2 (or running `--commit-gate2`), run `.agents/tools/verify-envelope.{ps1,sh}` to deterministically block: protected branches including `AGENTS.md` declared production/protected branches (`exit 10`), any modified/untracked file outside `TASK_SPEC.md` `ef:paths` (`exit 11`), any operational SpecGuard file staged in Git (`exit 12`), dirty `secretScan`/`SECRET_IN_LOG` (`exit 13`), or unpassed/stale-card `test-status.json` (`exit 14`).
   - **Architectural Fitness Functions (optional — Tier 2):** when configured in `docs/ai/architecture.md` (e.g., `NetArchTest` in .NET, `dependency-cruiser` in JS/TS, or `ArchUnit` in Java), include the architecture test command inside `--test-cmd` so boundary/layer violations break the closed loop deterministically and return exact feedback to `Implementor` before Gate 2.
   - `--commit-gate2` stages only `--paths` or the `<!-- ef:paths:begin -->`...`<!-- ef:paths:end -->` block of `--task-spec` (default `.agent-pack/.runtime/TASK_SPEC.md`); missing/empty/forbidden paths exit `5`.
   - `--paths` / `-Paths` (and `ef:paths`) entries must be individual file paths; a directory entry is refused with exit `5`.

@@ -102,7 +102,7 @@ flowchart TD
 |---|---|
 | Bootstrap (`$bootstrap-repo` / `$new-project`), manutenção de `AGENTS.md` e `docs/ai/*` (`decisions-and-pendencies.md`, `external-boundaries.md`, etc.) | Implementar código da demanda no mesmo papel em que planejou/revisou |
 | Avaliar saúde de testes no legado (unit/int vs. Playwright E2E) e montar o plano do **Gate 1** | Executar `git commit` do card ou rodar os runners (`supervise-harness`, `run-*`, `--commit-gate2`) |
-| Criar branch do card (`feat/AB-<ID>-<slug>` ou `fix/AB-<ID>-<slug>` a partir da `main`/`master`), adquirir `task.lock` (`tools/task-lock acquire`) e atualizar `Planejamento/DEMANDAS.md` | Alterar escopo, dependências ou saídas externas sem retornar ao Aprovador Humano (`BLOCKED_BY_DECISION`) |
+| Criar branch do card (`feat/AB-<ID>-<slug>` ou `fix/AB-<ID>-<slug>` a partir da `main`/`master`), adquirir `task.lock` (`.agents/tools/task-lock.{sh,ps1} acquire`) e atualizar `Planejamento/DEMANDAS.md` | Alterar escopo, dependências ou saídas externas sem retornar ao Aprovador Humano (`BLOCKED_BY_DECISION`) |
 | Gravar `.agent-pack/.runtime/TASK_SPEC.md` com o bloco explícito `ef:paths` (somente caminhos de arquivos individuais autorizados) | Dar por aprovado critério sem `EVIDENCIA.md` e `test-status.json` reais e sem `SECRET_IN_LOG` limpo |
 | Revisar `git diff` + `EVIDENCIA.md`, apresentar o **Gate 2** ao Aprovador Humano, fazer `git push`, PR, merge em homologação, promoção isolada para `main`, Tag `vX.Y.Z`, SQL consolidado e `OS-INFRA` | Excluir branch do card antes do merge na `main` e da Tag |
 
@@ -146,7 +146,7 @@ flowchart TD
 | `.agent-pack/.runtime/task.lock` | `Tech Lead` cria (`acquire`); `Implementor` remove após commit Gate 2 | Não editar manualmente |
 | `.agent-pack/.runtime/TASK_SPEC.md` (com `ef:paths`) | `Tech Lead` | `Implementor` e `Tester` seguem estritamente |
 | `.agent-pack/.runtime/NEXT_PROMPT.md` | `Engenheiro-Chefe` / `Tech Lead` (ou papel emissor) | Arquivo runtime (ignorado no Git) com o último `PROMPT PARA: <Papel>` para envio manual ou delegação a subagente |
-| `.agent-pack/.runtime/session-state.json` | Todos os papéis via `tools/session-state.{ps1,sh}` | Checkpoint estruturado da sessão (`phase`, `criteria`, `deadEnds`, `nextAction`), 100% ignorado no Git |
+| `.agent-pack/.runtime/session-state.json` | Todos os papéis via `.agents/tools/session-state.{ps1,sh}` | Checkpoint estruturado da sessão (`phase`, `criteria`, `deadEnds`, `nextAction`), 100% ignorado no Git |
 | `.agent-pack/.runtime/repo-map.txt` | `Tech Lead` via `inspect-repo.{ps1,sh} -GenerateRepoMap` | Cache estrutural de símbolos por commit, 100% ignorado no Git; todos consultam antes de varrer arquivos |
 | `.agent-pack/.runtime/metrics.jsonl` | `Tech Lead` / `complete-task` via `session-state close` | Telemetria local append-only (1 linha JSON/card), 100% ignorada no Git |
 | Código de produção (`src/`), migrations e scripts do card | `Implementor` | `Tech Lead` revisa `git diff`; `Tester` não edita |
@@ -159,7 +159,7 @@ flowchart TD
 
 Ao finalizar qualquer turno em modo `sessao-por-papel` (ou ao parar em `BLOCKED_BY_DECISION` / `UNABLE_TO_VALIDATE`), o agente deve:
 
-1. **Persistir o estado nos arquivos de disco** sob sua responsabilidade e atualizar `.agent-pack/.runtime/session-state.json` (via `tools/session-state.{ps1,sh} update`), registrando obrigatoriamente em `deadEnds` qualquer abordagem tentada que falhou (para que a próxima sessão nunca repita o mesmo erro).
+1. **Persistir o estado nos arquivos de disco** sob sua responsabilidade e atualizar `.agent-pack/.runtime/session-state.json` (via `.agents/tools/session-state.{ps1,sh} update`), registrando obrigatoriamente em `deadEnds` qualquer abordagem tentada que falhou (para que a próxima sessão nunca repita o mesmo erro).
 2. **Seguir a ordem Estático-Primeiro (Prompt Caching) + Compaction de Logs:** mantenha o prefixo de papel/contrato fixo no topo, referencie `docs/ai/*` no meio e deixe dados dinâmicos (`session-state.json`, `TASK_SPEC.md`, diff) no final. Nunca cole logs brutos extensos no prompt — inclua no máximo **20–40 linhas do erro raiz** + o caminho do log mascarado.
 3. **Gravar o bloco de passagem em `.agent-pack/.runtime/NEXT_PROMPT.md`** (ignorado no Git) **e emitir exatamente o mesmo bloco copiável** ao final da resposta no formato abaixo, com no máximo **5 caminhos de arquivo** para manter a próxima conversa leve e econômica:
 

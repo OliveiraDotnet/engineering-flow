@@ -1,5 +1,21 @@
 # SpecGuard 6 (Engineering Flow) changelog
 
+## 6.1.1 — 2026-11-23 (Ferramentas Operacionais Instaláveis, Proteção Dinâmica e Limpeza de Runtime)
+
+- **Ferramentas operacionais instaladas no destino em `.agents/tools/` (`core` / `managed`):**
+  - Movidos `verify-envelope.{ps1,sh}`, `session-state.{ps1,sh}` e `task-lock.{ps1,sh}` para `repo-template/.agents/tools/` e registrados em `pack-manifest.txt` (`core`), `pack-artifacts.txt` (`managed`) e `compat/releases/6.1.1.txt`, garantindo instalação automática em todo repositório destino sem colidir com pasta `tools/` própria do projeto e 100% protegidos no `.gitignore` (`.agents/`).
+  - Mantidos wrappers finos de compatibilidade em `tools/{verify-envelope,session-state,task-lock}.{ps1,sh}` na raiz do pack e atualizadas todas as referências de `repo-template/` e docs para `.agents/tools/...`.
+- **`verify-envelope.{ps1,sh}` alinhado a branches protegidas customizadas e anti-evidência obsoleta:**
+  - Passa a ler `Branches protegidas (harness):` e `Branch principal (produção):` de `AGENTS.md`, além de `EF_PROTECTED_BRANCHES`, bloqueando commits/entregas em branches de produção customizadas com `exit 10`.
+  - Passa a bloquear (`exit 14`) quando `test-status.json` (`cardId`) pertence a outro card diferente do card ativo em `.agent-pack/.runtime/session-state.json`.
+- **Limpeza automática de artefatos transitórios no encerramento do card (`session-state close`):**
+  - `session-state.{ps1,sh} close` passa a remover `TASK_SPEC.md`, `test-status.json`, `NEXT_PROMPT.md`, `implementor-prompt-*.md` e `tester-prompt-*.md` de `.agent-pack/.runtime/` (preservando `metrics.jsonl`, `repo-map.txt` e `task.lock`; opt-out com `-KeepRuntime` / `--keep-runtime`).
+- **Diretriz explícita para commit de adoção/upgrade e higiene no `bootstrap-repo`:**
+  - Documentada em `workflow.md`, `AGENTS.md`, `bootstrap-repo/SKILL.md`, `update-agent-pack/SKILL.md` e `INSTRUCOES_DETALHADAS.md` a exceção de branch de manutenção (`chore/specguard-vX.Y.Z`) para versionar apenas `AGENTS.md`/`.gitignore` sem exigir Card `AB-<ID>` (mantendo Gate 2 humano).
+  - `bootstrap-repo/SKILL.md` passa a orientar conferência de `.gitignore` na branch ativa (`git check-ignore`, incluindo `.ai-memory.toml`) e limpeza de artefatos órfãos em `.agent-pack/.runtime/` quando não há `task.lock` ativo.
+- **Correção de falso positivo em `check-mojibake.sh`:** Alinhada a detecção de `misdecoded-utf8-c3`/`c2` e `double-encoded-utf8` ao `check-mojibake.ps1`, evitando falso positivo em palavras válidas em português com `Ã`/`Â` maiúsculos (ex.: `NÃO`).
+- **Testes automatizados ampliados:** `test-install-agent-pack.ps1`, `test-verify-envelope.ps1` e `test-session-state.ps1` passam a cobrir instalação de `.agents/tools/*`, branches protegidas lidas de `AGENTS.md`, detecção de `test-status.json` obsoleto de outro card e limpeza de runtime no `close`.
+
 ## 6.1.0 — 2026-11-22 (Faxina 100% Agnóstica)
 
 - **Remoção total de acoplamento ao Grok Build e OpenAI/Codex:**

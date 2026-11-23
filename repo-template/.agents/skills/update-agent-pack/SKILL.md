@@ -24,7 +24,7 @@ Follow docs/engineering-flow/workflow.md in the target repository. Understand de
 6. Rerun check mode with the explicit artifact resolutions. Apply only when the plan has no unresolved conflicts:
    - PowerShell: replace `-Check` with `-Apply`; pass `-AcceptMerge`, `-AcceptPack`, or `-KeepLocal` artifact IDs as needed. In a non-interactive agent shell, add `-Confirm:$false` only after the reviewed plan is conflict-free.
    - Shell: replace `--check` with `--apply`; repeat `--accept-merge`, `--accept-pack`, or `--keep-local` for the required IDs.
-7. Inspect the resulting diff. Confirm that repository-owned files and production code were not changed unintentionally.
+7. Inspect the resulting diff. Confirm that repository-owned files and production code were not changed unintentionally, and verify on the active branch (`git check-ignore`) that `.ai-memory.toml` and operational SpecGuard directories stay ignored. To version updated `AGENTS.md` and/or `.gitignore` without a product card, use a maintenance branch (`chore/specguard-vX.Y.Z` from the project's primary branch) and request human Gate 2 approval before committing/pushing — never commit directly to production branches.
 8. Run the pack validation requested by the plan and the installed `check-text-encoding` skill. Start a new harness session after persistent instructions change.
 
 Never use the installer's broad force option as an update strategy. If the updater cannot prove ownership from state or a trusted compatibility catalog, preserve the file and report the required decision.
