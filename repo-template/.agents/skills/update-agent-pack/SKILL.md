@@ -14,7 +14,7 @@ Follow docs/engineering-flow/workflow.md in the target repository. Understand de
 3. For clean SpecGuard 6 repositories (without `.agent-pack/state.txt`), reinstall without `--force` and consolidate `AGENTS.md` via `ef:managed` blocks (never wiping project rules); for legacy repositories with `.agent-pack/state.txt`, run the updater in check mode:
    - Windows: `pwsh -File "$env:AGENT_PACK_HOME\scripts\update-agent-pack.ps1" -RepoPath . -Check`
    - Linux/macOS: `bash "$AGENT_PACK_HOME/scripts/update-agent-pack.sh" . --check`
-   - SpecGuard 6 is 100% tool-agnostic (`.agents/` only, zero vendor mirrors).
+   - SpecGuard 6 keeps `.agents/skills/` as canonical source; if the active harness reads skills from another native directory for autocomplete/IntelliSense (e.g., `.claude/skills`, `.cursor/skills`, `.github/skills`, `.dsh/skills`, or any custom path), pass `-Harness <claude|cursor|copilot|dsh>` / `--harness ...` or `-SkillsDir <relative-dir>` / `--skills-dir ...` to the installer so it mirrors the profile's skills there and automatically adds that directory to `.gitignore`.
 4. Review every planned action and its evidence. The deterministic updater owns file selection; do not invent extra files or profiles.
 5. Resolve conflicts by artifact:
    - Preserve confirmed project facts, commands and rules.

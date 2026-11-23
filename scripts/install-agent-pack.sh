@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: bash ./scripts/install-agent-pack.sh REPO_PATH [--profile core,web,sqlserver,quality,mobile] [--install-global] [--allow-non-git] [--force] [--dry-run] [--discover-only]"
+  echo "Usage: bash ./scripts/install-agent-pack.sh REPO_PATH [--profile core,web,sqlserver,quality,mobile] [--harness agents,claude,cursor,copilot,dsh] [--skills-dir dir1,dir2] [--install-global] [--allow-non-git] [--force] [--dry-run] [--discover-only]"
 }
 
 if [ "$#" -lt 1 ]; then
@@ -14,6 +14,8 @@ repo_input="$1"
 shift
 requested_profiles=()
 requested_integrations=()
+requested_harnesses=()
+requested_skills_dirs=()
 install_global=false
 allow_non_git=false
 force=false
@@ -36,6 +38,22 @@ while [ "$#" -gt 0 ]; do
       IFS=',' read -r -a requested <<< "$2"
       for profile in "${requested[@]}"; do
         [ -n "$profile" ] && requested_profiles+=("$profile")
+      done
+      shift 2
+      ;;
+    --harness)
+      [ "$#" -ge 2 ] || { echo "Missing value for --harness" >&2; exit 1; }
+      IFS=',' read -r -a requested <<< "$2"
+      for h in "${requested[@]}"; do
+        [ -n "$h" ] && requested_harnesses+=("$h")
+      done
+      shift 2
+      ;;
+    --skills-dir)
+      [ "$#" -ge 2 ] || { echo "Missing value for --skills-dir" >&2; exit 1; }
+      IFS=',' read -r -a requested <<< "$2"
+      for d in "${requested[@]}"; do
+        [ -n "$d" ] && requested_skills_dirs+=("$d")
       done
       shift 2
       ;;
@@ -281,12 +299,76 @@ write_state() {
   printf '%-9s %s\n' "STATE" "$state_path"
 }
 
+extra_skills_dirs=()
+extra_agents_dirs=()
+extra_ignore_args=()
+
+add_unique_dir() {
+  local target_arr="$1" val="$2" existing
+  if [ "$target_arr" = "skills" ]; then
+    for existing in "${extra_skills_dirs[@]}"; do [ "$existing" = "$val" ] && return 0; done
+    extra_skills_dirs+=("$val")
+  else
+    for existing in "${extra_agents_dirs[@]}"; do [ "$existing" = "$val" ] && return 0; done
+    extra_agents_dirs+=("$val")
+  fi
+}
+
+normalize_mirror_dir() {
+  local raw="$1" clean
+  clean="$(printf '%s' "$raw" | sed -E 's/^[[:space:]]+|[[:space:]]+$//g; s#\\#/#g; s#^(\./)+##; s#/+$##')"
+  [ -n "$clean" ] && [ "$clean" != "." ] || { echo "Invalid skills directory: $raw" >&2; exit 1; }
+  case "$clean" in
+    /*|//*|[A-Za-z]:*) echo "Skills directory must be a relative path inside the repository: $raw" >&2; exit 1 ;;
+    ..|../*|*/..|*/../*|.git|.git/*) echo "Skills directory escapes repository or targets .git: $raw" >&2; exit 1 ;;
+  esac
+  printf '%s' "$clean"
+}
+
+for h in ${requested_harnesses[@]+"${requested_harnesses[@]}"}; do
+  h_low="$(printf '%s' "$h" | tr '[:upper:]' '[:lower:]' | sed -E 's/^[[:space:]]+|[[:space:]]+$//g')"
+  [ -n "$h_low" ] || continue
+  case "$h_low" in
+    agents) ;;
+    claude)
+      add_unique_dir skills ".claude/skills"
+      add_unique_dir agents ".claude/agents"
+      ;;
+    cursor) add_unique_dir skills ".cursor/skills" ;;
+    copilot) add_unique_dir skills ".github/skills" ;;
+    dsh) add_unique_dir skills ".dsh/skills" ;;
+    *) echo "Unknown harness preset '$h'. Valid presets: agents, claude, cursor, copilot, dsh (or pass any custom relative path via --skills-dir)." >&2; exit 1 ;;
+  esac
+done
+
+for d in ${requested_skills_dirs[@]+"${requested_skills_dirs[@]}"}; do
+  norm="$(normalize_mirror_dir "$d")"
+  [ "$(printf '%s' "$norm" | tr '[:upper:]' '[:lower:]')" = ".agents/skills" ] && continue
+  add_unique_dir skills "$norm"
+done
+
+for d in ${extra_skills_dirs[@]+"${extra_skills_dirs[@]}"} ${extra_agents_dirs[@]+"${extra_agents_dirs[@]}"}; do
+  extra_ignore_args+=(--extra-pattern "${d}/")
+done
+
 install_one() {
   local REPO_ROOT="$1"
   resolve_profiles "$REPO_ROOT"
   echo
   echo "Target: $REPO_ROOT"
   echo "Profiles: ${resolved_profiles[*]}"
+  if [ "${#extra_skills_dirs[@]}" -gt 0 ] || [ "${#extra_agents_dirs[@]}" -gt 0 ]; then
+    echo "Harness mirrors: ${extra_skills_dirs[*]} ${extra_agents_dirs[*]} (gitignored)"
+  else
+    hints=()
+    if [ -n "${CLAUDECODE:-}" ] || [ -d "$REPO_ROOT/.claude" ]; then hints+=("claude (.claude/skills)"); fi
+    if [ -n "${CURSOR_TRACE_ID:-}" ] || [ -d "$REPO_ROOT/.cursor" ]; then hints+=("cursor (.cursor/skills)"); fi
+    if [ -d "$REPO_ROOT/.dsh" ]; then hints+=("dsh (.dsh/skills)"); fi
+    if [ -d "$REPO_ROOT/.github" ]; then hints+=("copilot (.github/skills)"); fi
+    if [ "${#hints[@]}" -gt 0 ]; then
+      echo "Hint: detected harness workspace(s): ${hints[*]}. Pass --harness <claude|cursor|copilot|dsh> or --skills-dir <dir> to mirror skills into your harness native directory."
+    fi
+  fi
   if [ "$dry_run" = true ]; then
     echo "Dry-run enabled: no files will be written."
   fi
@@ -375,6 +457,24 @@ install_one() {
     is_within "$REPO_ROOT" "$destination" || { echo "Manifest destination path escapes repository: $destination_relative" >&2; exit 1; }
     add_action "$source" "$destination" "$destination_relative" "${artifact_ownership[$destination_relative]:-managed}"
     installed_destinations["$destination_relative"]=1
+
+    if [ "${#extra_skills_dirs[@]}" -gt 0 ] && [[ "$destination_relative" == .agents/skills/* ]]; then
+      skill_sub="${destination_relative#.agents/skills/}"
+      for extra_skill_dir in "${extra_skills_dirs[@]}"; do
+        mirror_rel="$extra_skill_dir/$skill_sub"
+        mirror_dest="$REPO_ROOT/$mirror_rel"
+        is_within "$REPO_ROOT" "$mirror_dest" || { echo "Mirror skills path escapes repository: $mirror_rel" >&2; exit 1; }
+        add_action "$source" "$mirror_dest" "$mirror_rel" "managed"
+      done
+    elif [ "${#extra_agents_dirs[@]}" -gt 0 ] && [[ "$destination_relative" == .agents/agents/* ]]; then
+      agent_sub="${destination_relative#.agents/agents/}"
+      for extra_agent_dir in "${extra_agents_dirs[@]}"; do
+        mirror_rel="$extra_agent_dir/$agent_sub"
+        mirror_dest="$REPO_ROOT/$mirror_rel"
+        is_within "$REPO_ROOT" "$mirror_dest" || { echo "Mirror agents path escapes repository: $mirror_rel" >&2; exit 1; }
+        add_action "$source" "$mirror_dest" "$mirror_rel" "managed"
+      done
+    fi
   done < "$MANIFEST"
 
   assert_no_linked_path "$REPO_ROOT/.agent-pack"
@@ -382,7 +482,7 @@ install_one() {
   assert_no_linked_path "$REPO_ROOT/.agent-pack/state.txt.tmp"
 
   copy_count=0
-  bash "$SCRIPT_DIR/protect-engineering-flow-files.sh" "$REPO_ROOT" check
+  bash "$SCRIPT_DIR/protect-engineering-flow-files.sh" "$REPO_ROOT" check ${extra_ignore_args[@]+"${extra_ignore_args[@]}"}
   if [ "$allow_non_git" != true ]; then
     if [ "$dry_run" = true ]; then
       bash "$SCRIPT_DIR/protect-engineering-flow-files.sh" "$REPO_ROOT" unignore-agents-md --dry-run
@@ -460,8 +560,8 @@ install_one() {
     copy_count=$((copy_count + 1))
   done
 
-  if [ "$dry_run" = true ]; then bash "$SCRIPT_DIR/protect-engineering-flow-files.sh" "$REPO_ROOT" dry-run
-  else bash "$SCRIPT_DIR/protect-engineering-flow-files.sh" "$REPO_ROOT"; fi
+  if [ "$dry_run" = true ]; then bash "$SCRIPT_DIR/protect-engineering-flow-files.sh" "$REPO_ROOT" dry-run ${extra_ignore_args[@]+"${extra_ignore_args[@]}"}
+  else bash "$SCRIPT_DIR/protect-engineering-flow-files.sh" "$REPO_ROOT" apply ${extra_ignore_args[@]+"${extra_ignore_args[@]}"}; fi
   echo "Summary: copied=$copy_count skipped=$skip_count conflicts=$conflict_count"
   [ "$conflict_count" -eq 0 ] || echo "Warning: conflicting .agent-pack.new files were preserved; review them before retrying." >&2
 }

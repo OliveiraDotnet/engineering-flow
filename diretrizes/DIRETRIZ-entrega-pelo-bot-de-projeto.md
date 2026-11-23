@@ -1,22 +1,22 @@
-# Diretriz: hierarquia de papéis, instalação limpa, ciclo de harness e entrega (Engineering Flow 5.1, tag v5.1.0)
+# Diretriz: hierarquia de papéis, instalação limpa, ciclo de harness e entrega (SpecGuard 6)
 
-Revisão 6 (5.1.0, reemissão de 18/11/2026) (Engineering Flow 5.1): generaliza todos os papéis removendo nomes pessoais e acoplamento a ferramentas específicas, introduz o ciclo fechado `Implementor` ↔ `Tester` (`harness-cycle`) na base da pirâmide e estabelece que a instalação nos repositórios destino é limpa, sem gerar arquivos de versão (`.agent-pack/state.txt`) e versionando **apenas o arquivo `AGENTS.md`**.
+Revisão atual (SpecGuard 6): fluxo 100% agnóstico de ferramenta com ciclo fechado `Implementor` ↔ `Tester` (`harness-cycle`), ferramentas operacionais em `.agents/tools/` e instalação limpa sem gerar `.agent-pack/state.txt`, versionando **apenas o arquivo `AGENTS.md`**.
 
 ## Papéis e Hierarquia
-As diretrizes seguem o Engineering Flow 5.1. O fluxo pode ser operado por um único harness acumulando papéis ou por agentes separados em hierarquia:
+As diretrizes seguem o SpecGuard 6. O fluxo pode ser operado por um único harness acumulando papéis ou por agentes separados em hierarquia:
 1. **Aprovador humano**: autoridade máxima e intransferível (`sole decision authority`). Dá o ok explícito no Gate 1 (plano), no Gate 2 (commit e push) e na promoção para produção (`main`/`master`).
-2. **Planejador / Engenheiro-Chefe**: está hierarquicamente **acima** dos revisores de repositório. Recebe e tria demandas (cards, chat ou e-mails), garante que toda demanda tenha Card (`AB-<ID>`), fecha o envelope do Gate 1 com o aprovador humano, acompanha o `Planejamento/DEMANDAS.md` (cobrando demandas em andamento e demandas paradas em homologação) e delega ordens de serviço ou instalações da v5.1 para os revisores de repositório.
-3. **Revisor/entrega (Tech Lead de Repositório, um por projeto/repositório)**: dono operacional do(s) repositório(s) do projeto. Executa a instalação limpa da v5.1, mantém `.ai-memory.toml` (quando aplicável) e `Planejamento/DEMANDAS.md`, cria o LOCK (`.agent-pack/.runtime/task.lock` via `tools/task-lock.{sh,ps1} acquire`, a cargo de quem abre a tarefa), escreve o `TASK_SPEC.md` (com o bloco `ef:paths`), acompanha o status do loop `Implementor` ↔ `Tester` (executado exclusivamente pelo harness), revisa diff e evidências, confere o commit do Gate 2 e conduz push, PR, merge em homologação, promoção isolada para produção, Tag `vX.Y.Z`, pacote SQL e OS da Infra.
+2. **Planejador / Engenheiro-Chefe**: está hierarquicamente **acima** dos revisores de repositório. Recebe e tria demandas (cards, chat ou e-mails), garante que toda demanda tenha Card (`AB-<ID>`), fecha o envelope do Gate 1 com o aprovador humano, acompanha o `Planejamento/DEMANDAS.md` (cobrando demandas em andamento e demandas paradas em homologação) e delega ordens de serviço ou instalações do SpecGuard para os revisores de repositório.
+3. **Revisor/entrega (Tech Lead de Repositório, um por projeto/repositório)**: dono operacional do(s) repositório(s) do projeto. Executa a instalação limpa do SpecGuard, mantém `.ai-memory.toml` (quando aplicável) e `Planejamento/DEMANDAS.md`, cria o LOCK (`.agent-pack/.runtime/task.lock` via `.agents/tools/task-lock.{sh,ps1} acquire`, a cargo de quem abre a tarefa), escreve o `TASK_SPEC.md` (com o bloco `ef:paths`), acompanha o status do loop `Implementor` ↔ `Tester` (executado exclusivamente pelo harness), revisa diff e evidências, confere o commit do Gate 2 e conduz push, PR, merge em homologação, promoção isolada para produção, Tag `vX.Y.Z`, pacote SQL e OS da Infra.
 4. **Implementor (Harness de Código)**: executa o envelope aprovado na branch do card (`feat/AB-<ID>-<slug>` ou `fix/AB-<ID>-<slug>`), corrige apontamentos do `Tester`, nunca faz push e é o **único** que faz `git commit`, depois do Gate 2 (`--commit-gate2`).
 5. **Tester (Harness de Validação / QA)**: nunca altera código de negócio; avalia e executa os testes aprovados (`R0-RED` antes do fix e `R0-GREEN` depois do fix em bugs: unitário/integração se saudável no legado, ou Playwright E2E completo se acoplado) e grava `.agent-pack/evidencias/<CardId>/EVIDENCIA.md` e `.agent-pack/.runtime/test-status.json`.
 6. **Publicador / Validador opcional**: audita branches/releases ou apoia mediante confirmação explícita do aprovador humano.
 
-## Rito de Instalação Limpa do Engineering Flow 5.1 (Apenas `AGENTS.md` Versionado)
-Na instalação ou atualização para o Engineering Flow 5.1 em um projeto (com 1 ou múltiplos repositórios), executa-se em cada repositório:
-1. **Instalação limpa do Pack 5.1:**
-   - Linux/WSL: `bash <caminho-engineering-flow>/scripts/install-agent-pack.sh <caminho-repo> --profile <perfis>`
-   - Windows (PowerShell 7): `pwsh -File <caminho-engineering-flow>\scripts\install-agent-pack.ps1 -RepoPath <caminho-repo> -Profile <perfis>`
-   - Sem `--force`/`-Force` (padrão recomendado), o instalador preserva `AGENTS.md` e arquivos divergentes gerando sidecars `*.agent-pack.new` para revisão. Use `--force`/`-Force` apenas para executar merge por blocos gerenciados (`ef:managed`) em `AGENTS.md` (com backup `*.agent-pack.backup-*`; se `AGENTS.md` não tiver marcadores ou estiver malformado, mantém o arquivo, preserva `AGENTS.md.agent-pack.new` e sai com código `7`) ou reset explícito com backup dos demais arquivos. O instalador **não gera `.agent-pack/state.txt`** e adiciona todas as pastas operacionais do Engineering Flow ao `.gitignore` para que **somente `AGENTS.md` seja versionado** no repositório.
+## Rito de Instalação Limpa do SpecGuard 6 (Apenas `AGENTS.md` Versionado)
+Na instalação ou atualização do SpecGuard 6 em um projeto (com 1 ou múltiplos repositórios), executa-se em cada repositório:
+1. **Instalação limpa do SpecGuard:**
+   - Linux/WSL: `bash <caminho-engineering-flow>/scripts/install-agent-pack.sh <caminho-repo> --profile <perfis> [--harness <claude|cursor|copilot|dsh|agents>] [--skills-dir <dir>]`
+   - Windows (PowerShell 7): `pwsh -File <caminho-engineering-flow>\scripts\install-agent-pack.ps1 -RepoPath <caminho-repo> -Profile <perfis> [-Harness <claude|cursor|copilot|dsh|agents>] [-SkillsDir <dir>]`
+   - Sem `--force`/`-Force` (padrão recomendado), o instalador preserva `AGENTS.md` e arquivos divergentes gerando sidecars `*.agent-pack.new` para revisão. Com `--force`/`-Force`, executa merge por blocos gerenciados (`ef:managed`) em `AGENTS.md` (se não tiver marcadores, mantém intacto e sai com código `7`), atualiza arquivos `managed` com backup `*.agent-pack.backup-*` e **sempre preserva `docs/ai/*` (`seed`)**. O instalador **não gera `.agent-pack/state.txt`** e adiciona todas as pastas operacionais (incluindo diretórios extras de skills por harness) ao `.gitignore` para que **somente `AGENTS.md` seja versionado** no repositório.
 2. **Configuração opcional do `ai-memory`:**
    - Quando o ambiente utilizar `ai-memory`, criar ou validar `.ai-memory.toml` com `workspace = "<slug-do-projeto>"` e `project = "<slug-do-repositorio>"`.
    - Como bots externos não compartilham necessariamente o MCP do harness, toda comunicação entre papéis utiliza artefatos explícitos em disco (`TASK_SPEC.md`, `EVIDENCIA.md`, `test-status.json`, `Planejamento/DEMANDAS.md` e `AGENTS.md`).
@@ -34,7 +34,7 @@ Na instalação ou atualização para o Engineering Flow 5.1 em um projeto (com 
 Cada revisor/entrega conduz o ciclo completo no seu repositório:
 1. **Triagem e Branch por Card:**
    - Confere se a demanda possui número de card (`AB-<ID>`). Sem card, registra ou solicita ao planejador/aprovador antes de iniciar.
-   - Registra a demanda como `EM_DEV` em `Planejamento/DEMANDAS.md` e cria o LOCK (`.agent-pack/.runtime/task.lock`) via `tools/task-lock.{sh,ps1} acquire` (a cargo de quem abre a tarefa).
+   - Registra a demanda como `EM_DEV` em `Planejamento/DEMANDAS.md` e cria o LOCK (`.agent-pack/.runtime/task.lock`) via `.agents/tools/task-lock.{sh,ps1} acquire` (a cargo de quem abre a tarefa).
    - Cria a branch da tarefa com o número do card (`feat/AB-<ID>-<slug>` ou `fix/AB-<ID>-<slug>`) **sempre a partir da `main`/`master`** (salvo exceção explícita documentada em `AGENTS.md` do projeto).
 2. **Loop Fechado de Harness (`Implementor` ↔ `Tester`) e Conferência do Gate 2:**
    - O revisor/entrega gera `.agent-pack/.runtime/TASK_SPEC.md` com o escopo aprovado no Gate 1 (incluindo o bloco `ef:paths`).

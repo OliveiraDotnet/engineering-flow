@@ -7,6 +7,8 @@ param(
 
     [string[]]$Profile = @(),
     [string[]]$Integration = @(),
+    [string[]]$Harness = @(),
+    [string[]]$SkillsDir = @(),
 
     [switch]$InstallGlobal,
     [switch]$AllowNonGit,
@@ -477,6 +479,81 @@ function Write-InstallState {
     Write-Host ("STATE     {0}" -f $statePath)
 }
 
+function Resolve-MirrorDirectories {
+    param(
+        [string[]]$RequestedHarness = @(),
+        [string[]]$RequestedSkillsDir = @()
+    )
+
+    $extraSkills = New-Object System.Collections.Generic.List[string]
+    $extraAgents = New-Object System.Collections.Generic.List[string]
+
+    $normalizeRelDir = {
+        param([string]$raw)
+        $clean = $raw.Trim().Replace('\', '/')
+        while ($clean.StartsWith('./')) { $clean = $clean.Substring(2) }
+        $clean = $clean.TrimEnd('/')
+        if (-not $clean -or $clean -eq '.') { throw "Invalid skills directory: '$raw'." }
+        if ($clean.StartsWith('/') -or $clean -match '^[A-Za-z]:' -or $clean.StartsWith('//')) {
+            throw "Skills directory must be a relative path inside the repository: '$raw'."
+        }
+        $segs = $clean.Split('/', [StringSplitOptions]::RemoveEmptyEntries)
+        if (($segs -contains '..') -or ($segs -contains '.') -or ($segs[0] -eq '.git')) {
+            throw "Skills directory escapes repository or targets .git: '$raw'."
+        }
+        return $clean
+    }
+
+    foreach ($value in $RequestedHarness) {
+        foreach ($item in ($value -split ',')) {
+            $h = $item.Trim().ToLowerInvariant()
+            if (-not $h) { continue }
+            switch ($h) {
+                'agents'  { }
+                'claude'  {
+                    if (-not $extraSkills.Contains('.claude/skills')) { $extraSkills.Add('.claude/skills') | Out-Null }
+                    if (-not $extraAgents.Contains('.claude/agents')) { $extraAgents.Add('.claude/agents') | Out-Null }
+                }
+                'cursor'  { if (-not $extraSkills.Contains('.cursor/skills')) { $extraSkills.Add('.cursor/skills') | Out-Null } }
+                'copilot' { if (-not $extraSkills.Contains('.github/skills')) { $extraSkills.Add('.github/skills') | Out-Null } }
+                'dsh'     { if (-not $extraSkills.Contains('.dsh/skills')) { $extraSkills.Add('.dsh/skills') | Out-Null } }
+                default   { throw "Unknown harness preset '$item'. Valid presets: agents, claude, cursor, copilot, dsh (or pass any custom relative path via -SkillsDir)." }
+            }
+        }
+    }
+
+    foreach ($value in $RequestedSkillsDir) {
+        foreach ($item in ($value -split ',')) {
+            if ([string]::IsNullOrWhiteSpace($item)) { continue }
+            $norm = & $normalizeRelDir $item
+            if ($norm.Equals('.agents/skills', [StringComparison]::OrdinalIgnoreCase)) { continue }
+            if (-not $extraSkills.Contains($norm)) { $extraSkills.Add($norm) | Out-Null }
+        }
+    }
+
+    $ignorePatterns = New-Object System.Collections.Generic.List[string]
+    foreach ($d in @($extraSkills.ToArray()) + @($extraAgents.ToArray())) {
+        $pat = "$d/"
+        if (-not $ignorePatterns.Contains($pat)) { $ignorePatterns.Add($pat) | Out-Null }
+    }
+
+    return [pscustomobject]@{
+        SkillsDirs     = @($extraSkills.ToArray())
+        AgentsDirs     = @($extraAgents.ToArray())
+        IgnorePatterns = @($ignorePatterns.ToArray())
+    }
+}
+
+function Get-HarnessHints {
+    param([Parameter(Mandatory = $true)][string]$TargetRoot)
+    $hints = New-Object System.Collections.Generic.List[string]
+    if ($env:CLAUDECODE -or (Test-Path -LiteralPath (Join-Path $TargetRoot '.claude') -PathType Container)) { $hints.Add('claude (.claude/skills)') | Out-Null }
+    if ($env:CURSOR_TRACE_ID -or (Test-Path -LiteralPath (Join-Path $TargetRoot '.cursor') -PathType Container)) { $hints.Add('cursor (.cursor/skills)') | Out-Null }
+    if (Test-Path -LiteralPath (Join-Path $TargetRoot '.dsh') -PathType Container) { $hints.Add('dsh (.dsh/skills)') | Out-Null }
+    if (Test-Path -LiteralPath (Join-Path $TargetRoot '.github') -PathType Container) { $hints.Add('copilot (.github/skills)') | Out-Null }
+    return @($hints.ToArray())
+}
+
 function Install-ToRepository {
     param(
         [Parameter(Mandatory = $true)][string]$TargetRoot,
@@ -488,6 +565,7 @@ function Install-ToRepository {
     )
 
     $profiles = Resolve-InstallProfiles -TargetRoot $TargetRoot -RequestedProfile $Profile
+    $mirrors = Resolve-MirrorDirectories -RequestedHarness $Harness -RequestedSkillsDir $SkillsDir
     $integrations = New-Object System.Collections.Generic.List[string]
     foreach ($value in $Integration) {
         foreach ($item in ($value -split ',')) {
@@ -504,6 +582,16 @@ function Install-ToRepository {
     Write-Host "Workspace: $Kind"
     Write-Host "Profiles: $($profiles -join ', ')"
     Write-Host "Mode: tool-agnostic (.agents/)"
+    if ($mirrors.SkillsDirs.Count -gt 0 -or $mirrors.AgentsDirs.Count -gt 0) {
+        $mirrorList = (@($mirrors.SkillsDirs) + @($mirrors.AgentsDirs)) -join ', '
+        Write-Host "Harness mirrors: $mirrorList (gitignored)"
+    }
+    else {
+        $hints = @(Get-HarnessHints -TargetRoot $TargetRoot)
+        if ($hints.Count -gt 0) {
+            Write-Host ("Hint: detected harness workspace(s): {0}. Pass -Harness <claude|cursor|copilot|dsh> or -SkillsDir <dir> to mirror skills into your harness native directory." -f ($hints -join ', '))
+        }
+    }
     if ($DryRun) {
         Write-Host "Dry-run enabled: no files will be written."
     }
@@ -538,6 +626,29 @@ function Install-ToRepository {
         }
         $ownership = if ($ownershipByDestination.ContainsKey($entry.Destination)) { $ownershipByDestination[$entry.Destination] } else { "managed" }
         Add-CopyAction -Actions $actions -Source $source -Destination $destination -RelativeDestination $entry.Destination -Ownership $ownership
+
+        if ($mirrors.SkillsDirs.Count -gt 0 -and $entry.Destination.StartsWith('.agents/skills/', [StringComparison]::Ordinal)) {
+            $skillSub = $entry.Destination.Substring('.agents/skills/'.Length)
+            foreach ($extraSkillDir in $mirrors.SkillsDirs) {
+                $mirrorRel = "$extraSkillDir/$skillSub"
+                $mirrorDest = [IO.Path]::GetFullPath((Join-Path $TargetRoot $mirrorRel))
+                if (-not (Test-PathWithin $TargetRoot $mirrorDest)) {
+                    throw "Mirror skills path escapes the repository root: $mirrorRel"
+                }
+                Add-CopyAction -Actions $actions -Source $source -Destination $mirrorDest -RelativeDestination $mirrorRel -Ownership "managed"
+            }
+        }
+        elseif ($mirrors.AgentsDirs.Count -gt 0 -and $entry.Destination.StartsWith('.agents/agents/', [StringComparison]::Ordinal)) {
+            $agentSub = $entry.Destination.Substring('.agents/agents/'.Length)
+            foreach ($extraAgentDir in $mirrors.AgentsDirs) {
+                $mirrorRel = "$extraAgentDir/$agentSub"
+                $mirrorDest = [IO.Path]::GetFullPath((Join-Path $TargetRoot $mirrorRel))
+                if (-not (Test-PathWithin $TargetRoot $mirrorDest)) {
+                    throw "Mirror agents path escapes the repository root: $mirrorRel"
+                }
+                Add-CopyAction -Actions $actions -Source $source -Destination $mirrorDest -RelativeDestination $mirrorRel -Ownership "managed"
+            }
+        }
     }
 
     Assert-NoLinkedPath (Join-Path $TargetRoot '.agent-pack')
@@ -545,7 +656,9 @@ function Install-ToRepository {
     Assert-NoLinkedPath (Join-Path $TargetRoot '.agent-pack/state.txt.tmp')
 
     $ignoreHelper = Join-Path $ScriptDir 'protect-engineering-flow-files.ps1'
-    & $ignoreHelper -RepoPath $TargetRoot -CheckOnly
+    $extraIgnoreParams = @{}
+    if ($mirrors.IgnorePatterns.Count -gt 0) { $extraIgnoreParams['ExtraPatterns'] = $mirrors.IgnorePatterns }
+    & $ignoreHelper -RepoPath $TargetRoot -CheckOnly @extraIgnoreParams
     if (-not $AllowNonGit) {
         if ($DryRun -or $WhatIfPreference) {
             & $ignoreHelper -RepoPath $TargetRoot -UnignoreAgentsMd -DryRun
@@ -561,9 +674,9 @@ function Install-ToRepository {
         Invoke-CopyAction -Action $action
     }
 
-    # Clean install in 5.1: state.txt is not generated in target repositories.
-    if ($DryRun -or $WhatIfPreference) { & $ignoreHelper -RepoPath $TargetRoot -DryRun }
-    elseif ($PSCmdlet.ShouldProcess($TargetRoot, 'Protect generated Engineering Flow files in .gitignore')) { & $ignoreHelper -RepoPath $TargetRoot }
+    # Clean install (SpecGuard 6): state.txt is not generated in target repositories.
+    if ($DryRun -or $WhatIfPreference) { & $ignoreHelper -RepoPath $TargetRoot -DryRun @extraIgnoreParams }
+    elseif ($PSCmdlet.ShouldProcess($TargetRoot, 'Protect generated SpecGuard files in .gitignore')) { & $ignoreHelper -RepoPath $TargetRoot @extraIgnoreParams }
 
     $summary = $actions | Group-Object State | Sort-Object Name | ForEach-Object { "{0}={1}" -f $_.Name, $_.Count }
     Write-Host ("Summary: {0}" -f ($summary -join ", "))
