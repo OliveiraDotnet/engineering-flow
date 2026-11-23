@@ -78,6 +78,15 @@ export async function fetchInvoices() { return "AnotherSecretBody999"; }
     Assert-True ($r3.repoMapStatus -eq 'generated') "Expected generated after commit, got $($r3.repoMapStatus)"
     $mapContent2 = [IO.File]::ReadAllText($mapPath, $Utf8)
     Assert-True ($mapContent2.Contains('record TaxResult')) 'New symbol missing after cache invalidation.'
+    Assert-True ($mapContent2.Contains('cache_revision:')) 'Expected cache_revision header in repo-map.txt.'
+    Assert-True (-not $mapContent2.Contains('cache_key:')) 'Legacy cache_key header should not be emitted.'
+
+    # 4. ef_scan must NOT flag repo-map.txt (neither cache_revision nor legacy cache_key) as SECRET_IN_LOG
+    . (Join-Path $PackRoot 'repo-template/.agents/skills/harness-cycle/scripts/ef-secrets.ps1')
+    $loadRc = ef_load_secrets -RepoRoot $TempRoot
+    Assert-True ($loadRc -eq 0) "ef_load_secrets failed with $loadRc"
+    $scanRc = ef_scan -RepoRoot $TempRoot -CardId 'AB-612'
+    Assert-True ($scanRc -eq 0) "ef_scan falsely flagged repo-map.txt (exit $scanRc)."
 
     Write-Host 'test-repo-map.ps1 passed.'
 }

@@ -1,4 +1,4 @@
-# Shared secret masking, scanning, and runner-block helpers for Engineering Flow harness scripts.
+﻿# Shared secret masking, scanning, and runner-block helpers for Engineering Flow harness scripts.
 
 $script:EfSecretValues = @()
 $script:EfSecretNames = @()
@@ -12,7 +12,7 @@ $script:EfUtf8NoBom = [Text.UTF8Encoding]::new($false)
 $script:EfBearerRegex = [regex]::new('\b(Bearer\s+)([A-Za-z0-9._~+/=-]+)', [Text.RegularExpressions.RegexOptions]::IgnoreCase -bor [Text.RegularExpressions.RegexOptions]::Compiled)
 $script:EfTokenPrefixRegex = [regex]::new('(?:gho_|ghp_|github_pat_)[A-Za-z0-9_]{10,}|AKIA[0-9A-Z]{16}', [Text.RegularExpressions.RegexOptions]::IgnoreCase -bor [Text.RegularExpressions.RegexOptions]::Compiled)
 $script:EfConnStrRegex = [regex]::new('(\b(?:Password|User\s+ID)\s*=\s*["'']?)([^;"''\r\n]+)(?=["'']?\s*;)', [Text.RegularExpressions.RegexOptions]::IgnoreCase -bor [Text.RegularExpressions.RegexOptions]::Compiled)
-$script:EfFixedKeyPrefix = '[A-Za-z0-9_.-]*(?:password|pwd|key|token|secret)'
+$script:EfFixedKeyPrefix = '(?<![A-Za-z0-9_.-])(?!(?:cache_key|primary_key|foreign_key|sort_key|partition_key)(?![A-Za-z0-9_.-]))[A-Za-z0-9_.-]*(?:password|pwd|key|token|secret)'
 
 function Resolve-EfCanonicalPath([string]$Path) {
     $full = [IO.Path]::GetFullPath($Path)

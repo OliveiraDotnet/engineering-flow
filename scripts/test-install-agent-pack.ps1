@@ -119,9 +119,13 @@ try {
     Assert-True ((Get-Content -LiteralPath (Join-Path $Repo ".agents\skills\bugfix-dotnet\SKILL.md") -Raw) -match 'local customization') "Local customization was overwritten."
 
     # I5: --force on AGENTS.md merges managed blocks, preserves outside content, removes sidecar, keeps backup
+    # Also verify seed files (docs/ai/*) are NEVER overwritten by -Force
+    Add-Content -LiteralPath (Join-Path $Repo "docs\ai\project-map.md") -Value "`n# project-specific bootstrap map"
     & $Installer -RepoPath $Repo -Force -Confirm:$false
     Assert-True ($LASTEXITCODE -eq 0) "Force merge install failed."
     Assert-True ((Get-Content -LiteralPath (Join-Path $Repo "AGENTS.md") -Raw) -match '# local change') "Force install overwrote content outside managed blocks."
+    Assert-True ((Get-Content -LiteralPath (Join-Path $Repo "docs\ai\project-map.md") -Raw) -match 'project-specific bootstrap map') "Force install overwrote seed file docs/ai/project-map.md."
+    Assert-True (Test-Path -LiteralPath (Join-Path $Repo "docs\ai\project-map.md.agent-pack.new")) "Force install did not write sidecar for customized seed file."
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $Repo "AGENTS.md.agent-pack.new"))) "Force merge left sidecar behind."
     Assert-True ((Get-ChildItem -LiteralPath $Repo -Filter "AGENTS.md.agent-pack.backup-*" -File).Count -gt 0) "Force install did not preserve a backup."
 

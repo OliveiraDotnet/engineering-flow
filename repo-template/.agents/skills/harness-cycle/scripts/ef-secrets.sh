@@ -301,7 +301,7 @@ ef_mask() {
     my @vals = map { pack("H*", $_) } grep { length($_) } split(/:/, $ENV{EF_INT_VALS_HEX} // "");
     my @names = map { pack("H*", $_) } grep { length($_) } split(/:/, $ENV{EF_INT_NAMES_HEX} // "");
     my $custom_alt = @names ? "|" . join("|", map { quotemeta($_) } @names) : "";
-    my $key_re = qr/(?i)((?:[A-Za-z0-9_.-]*(?:password|pwd|key|token|secret)$custom_alt)(?:\\?["'\''])?\s*[=:]\s*(?:\\?["'\''])?)((?:(?!\\["'\''])[^\s;"'\''&,])+)/;
+    my $key_re = qr/(?i)((?:(?<![A-Za-z0-9_.-])(?!(?:cache_key|primary_key|foreign_key|sort_key|partition_key)(?![A-Za-z0-9_.-]))[A-Za-z0-9_.-]*(?:password|pwd|key|token|secret)$custom_alt)(?:\\?["'\''])?\s*[=:]\s*(?:\\?["'\''])?)((?:(?!\\["'\''])[^\s;"'\''&,])+)/;
 
     my $total = 0;
     while (my $line = <STDIN>) {
@@ -363,7 +363,7 @@ ef_scan() {
       my @vals = map { pack("H*", $_) } grep { length($_) } split(/:/, $ENV{EF_INT_VALS_HEX} // "");
       my @names = map { pack("H*", $_) } grep { length($_) } split(/:/, $ENV{EF_INT_NAMES_HEX} // "");
       my $custom_alt = @names ? "|" . join("|", map { quotemeta($_) } @names) : "";
-      my $key_re = qr/(?i)((?:[A-Za-z0-9_.-]*(?:password|pwd|key|token|secret)$custom_alt)(?:\\?["'\''])?\s*[=:]\s*(?:\\?["'\''])?)((?:(?!\\["'\''])[^\s;"'\''&,])+)/;
+      my $key_re = qr/(?i)((?:(?<![A-Za-z0-9_.-])(?!(?:cache_key|primary_key|foreign_key|sort_key|partition_key)(?![A-Za-z0-9_.-]))[A-Za-z0-9_.-]*(?:password|pwd|key|token|secret)$custom_alt)(?:\\?["'\''])?\s*[=:]\s*(?:\\?["'\''])?)((?:(?!\\["'\''])[^\s;"'\''&,])+)/;
 
       my @roots = (
         $logdir,
