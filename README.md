@@ -2,7 +2,7 @@
 
 > **Governança determinística de engenharia assistida por IA: agnóstico de ferramenta, 99,9% desacoplado do projeto, com cache estruturado de contexto, arquitetura verificável e entrega por card.**
 
-Versão atual: **`6.1.1`** · [Releases no GitHub](https://github.com/OliveiraDotnet/engineering-flow/releases) · [Índice de Skills](SKILLS-INDEX.md) · [Manual de Uso](MANUAL_DE_USO.md) · [Guia Detalhado](INSTRUCOES_DETALHADAS.md) · [Changelog](CHANGELOG.md)
+Versão atual: **`6.1.2`** · [Releases no GitHub](https://github.com/OliveiraDotnet/engineering-flow/releases) · [Índice de Skills](SKILLS-INDEX.md) · [Manual de Uso](MANUAL_DE_USO.md) · [Guia Detalhado](INSTRUCOES_DETALHADAS.md) · [Changelog](CHANGELOG.md)
 
 ---
 
@@ -92,10 +92,10 @@ No **SpecGuard 6 (`6.0.0`)**, instalar o fluxo em um repositório de equipe é l
 
 ### Baixar ou Clonar
 
-Baixe o pacote da [Release `v6.1.1`](https://github.com/OliveiraDotnet/engineering-flow/releases/tag/v6.1.1) ou clone o repositório:
+Baixe o pacote da [Release `v6.1.2`](https://github.com/OliveiraDotnet/engineering-flow/releases/tag/v6.1.2) ou clone o repositório:
 
 ```bash
-git clone --branch v6.1.1 https://github.com/OliveiraDotnet/engineering-flow.git
+git clone --branch v6.1.2 https://github.com/OliveiraDotnet/engineering-flow.git
 ```
 
 ### Instalar em um Repositório Alvo
@@ -116,7 +116,7 @@ bash ./scripts/install-agent-pack.sh /caminho/do/repositorio --profile web,sqlse
 .\scripts\install-agent-pack.ps1 -RepoPath 'C:\src\Sistema' -Profile web,sqlserver
 ```
 
-> Para pastas deliberadamente sem Git, use `--allow-non-git` / `-AllowNonGit`. Sem `--force`, divergências geram sidecars `*.agent-pack.new` para revisão sem sobrescrever customizações. Use `--force` / `-Force` apenas para **merge por blocos gerenciados** (`ef:managed`) no `AGENTS.md` (ou reset explícito dos demais arquivos com backup `*.agent-pack.backup-*`); se o `AGENTS.md` atual não tiver marcadores `ef:managed`, o instalador preserva o arquivo e o sidecar e sai com código `7` para migração única.
+> Para pastas deliberadamente sem Git, use `--allow-non-git` / `-AllowNonGit`. Sem `--force`, divergências geram sidecars `*.agent-pack.new` para revisão sem sobrescrever customizações. Use `--force` / `-Force` para **merge por blocos gerenciados** (`ef:managed`) no `AGENTS.md` e atualização dos arquivos `managed` (com backup `*.agent-pack.backup-*`); arquivos `seed` (`docs/ai/*`) **nunca são sobrescritos** mesmo com `--force` (mantêm o conteúdo local e geram sidecar `*.agent-pack.new` se o template mudou). Se o `AGENTS.md` atual não tiver marcadores `ef:managed`, o instalador preserva o arquivo e o sidecar e sai com código `7` para migração única.
 
 ### Atualização Reconciliada (Repositórios com `state.txt` da linha 3.x / 4.x)
 
@@ -132,7 +132,7 @@ bash ./scripts/update-agent-pack.sh /caminho/do/repositorio --apply
 .\scripts\update-agent-pack.ps1 -RepoPath 'C:\src\Sistema' -Apply -Confirm:$false
 ```
 
-`pack-manifest.txt`, `pack-artifacts.txt` e `pack-version.txt` definem artefatos e propriedade (`managed`, `merge`, `seed`). Catálogos de compatibilidade permanecem em `compat/releases/` (`1.1.0` a `6.1.1`).
+`pack-manifest.txt`, `pack-artifacts.txt` e `pack-version.txt` definem artefatos e propriedade (`managed`, `merge`, `seed`). Catálogos de compatibilidade permanecem em `compat/releases/` (`1.1.0` a `6.1.2`).
 
 ---
 

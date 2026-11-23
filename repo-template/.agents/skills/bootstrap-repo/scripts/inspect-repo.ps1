@@ -212,7 +212,7 @@ if ($GenerateRepoMap) {
     $cacheHit = $false
     if (-not $ForceRepoMap -and -not $isDirty -and (Test-Path -LiteralPath $repoMapPath -PathType Leaf)) {
         $firstLines = @(Get-Content -LiteralPath $repoMapPath -TotalCount 3 -ErrorAction SilentlyContinue)
-        if (@($firstLines | Where-Object { $_ -eq "cache_key: $cacheKey" }).Count -gt 0) {
+        if (@($firstLines | Where-Object { $_ -eq "cache_revision: $cacheKey" }).Count -gt 0) {
             $cacheHit = $true
         }
     }
@@ -269,7 +269,7 @@ if ($GenerateRepoMap) {
         $nowUtc = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
         $mapLines = @(
             '# SpecGuard 6 Repo Map (auto-generated structural cache — gitignored)'
-            "cache_key: $cacheKey"
+            "cache_revision: $cacheKey"
             "generated_at: $nowUtc | files_indexed: $indexedCount"
             ''
         ) + @($entries.ToArray())

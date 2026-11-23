@@ -302,9 +302,19 @@ install_one() {
   action_destination=()
   action_original=()
   declare -A installed_destinations=()
+  declare -A artifact_ownership=()
+  while IFS= read -r _art_line || [ -n "$_art_line" ]; do
+    _art_line="$(trim "$_art_line")"
+    [ -n "$_art_line" ] || continue
+    [[ "$_art_line" = \#* ]] && continue
+    IFS='|' read -r _art_id _art_dest _art_own <<< "$_art_line"
+    _art_dest="$(trim "$_art_dest")"
+    _art_own="$(trim "$_art_own")"
+    [ -n "$_art_dest" ] && artifact_ownership["$_art_dest"]="$_art_own"
+  done < "$ARTIFACTS"
 
   add_action() {
-    local source="$1" destination="$2" dest_rel="${3:-}" state="COPY" effective="$2" sidecar
+    local source="$1" destination="$2" dest_rel="${3:-}" ownership="${4:-managed}" state="COPY" effective="$2" sidecar
     [ -f "$source" ] || { echo "Manifest source is missing: $source" >&2; exit 1; }
     assert_no_linked_path "$destination"
     assert_no_linked_path "$destination.agent-pack.new"
@@ -313,7 +323,7 @@ install_one() {
     if [ -e "$destination" ]; then
       if same_content "$source" "$destination"; then
         state="SKIP"
-      elif [ "$force" = true ]; then
+      elif [ "$force" = true ] && [ "$ownership" != "seed" ]; then
         if [ "$dest_rel" = "AGENTS.md" ]; then
           state="MERGE"
         else
@@ -363,7 +373,7 @@ install_one() {
     destination="$REPO_ROOT/$destination_relative"
     is_within "$TEMPLATE_ROOT" "$source" || { echo "Manifest source path escapes template: $source_relative" >&2; exit 1; }
     is_within "$REPO_ROOT" "$destination" || { echo "Manifest destination path escapes repository: $destination_relative" >&2; exit 1; }
-    add_action "$source" "$destination" "$destination_relative"
+    add_action "$source" "$destination" "$destination_relative" "${artifact_ownership[$destination_relative]:-managed}"
     installed_destinations["$destination_relative"]=1
   done < "$MANIFEST"
 

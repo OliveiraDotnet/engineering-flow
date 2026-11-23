@@ -259,7 +259,8 @@ function Add-CopyAction {
         [Parameter(Mandatory = $true)]$Actions,
         [Parameter(Mandatory = $true)][string]$Source,
         [Parameter(Mandatory = $true)][string]$Destination,
-        [string]$RelativeDestination = ""
+        [string]$RelativeDestination = "",
+        [string]$Ownership = "managed"
     )
 
     if (-not (Test-Path -LiteralPath $Source -PathType Leaf)) {
@@ -281,7 +282,7 @@ function Add-CopyAction {
         if (Test-SameContent $Source $Destination) {
             $state = "SKIP"
         }
-        elseif ($Force) {
+        elseif ($Force -and $Ownership -ne "seed") {
             if ($RelativeDestination -eq "AGENTS.md") {
                 $state = "MERGE"
             }
@@ -516,6 +517,11 @@ function Install-ToRepository {
         $requestedComponents.Add($requestedProfile)
     }
 
+    $ownershipByDestination = @{}
+    foreach ($artifact in $ArtifactEntries) {
+        $ownershipByDestination[$artifact.Destination] = $artifact.Ownership
+    }
+
     $actions = New-Object System.Collections.Generic.List[object]
     foreach ($entry in $ManifestEntries) {
         if ($requestedComponents -notcontains $entry.Component) {
@@ -530,7 +536,8 @@ function Install-ToRepository {
         if (-not (Test-PathWithin $TargetRoot $destination)) {
             throw "Manifest destination path escapes the repository root: $($entry.Destination)"
         }
-        Add-CopyAction -Actions $actions -Source $source -Destination $destination -RelativeDestination $entry.Destination
+        $ownership = if ($ownershipByDestination.ContainsKey($entry.Destination)) { $ownershipByDestination[$entry.Destination] } else { "managed" }
+        Add-CopyAction -Actions $actions -Source $source -Destination $destination -RelativeDestination $entry.Destination -Ownership $ownership
     }
 
     Assert-NoLinkedPath (Join-Path $TargetRoot '.agent-pack')

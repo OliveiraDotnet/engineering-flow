@@ -1,5 +1,14 @@
 # SpecGuard 6 (Engineering Flow) changelog
 
+## 6.1.2 — 2026-11-23 (Fim do Falso Positivo `cache_key` no `ef_scan` e Proteção de `docs/ai/*` no `-Force`)
+
+- **Correção crítica de falso positivo no `ef_scan` com `repo-map.txt` (`SECRET_IN_LOG` bloqueando Gate 2):**
+  - Renomeado o cabeçalho do cache estrutural em `inspect-repo.{ps1,sh}` de `cache_key:` para **`cache_revision:`**.
+  - Atualizada a regex de detecção genérica em `ef-secrets.{ps1,sh}` para ignorar identificadores não-sensíveis conhecidos (`cache_key`, `primary_key`, `foreign_key`, `sort_key`, `partition_key`) mantendo proteção integral para `api_key`, `access_key`, `secret_key`, `token`, `password`, `pwd` e `secret` — eliminando falso positivo inclusive em `repo-map.txt` gerados anteriormente.
+- **Proteção de artefatos `seed` (`docs/ai/*`) mesmo com `-Force` / `--force`:**
+  - Atualizados `install-agent-pack.{ps1,sh}` para nunca sobrescrever arquivos com ownership `seed` (`docs/ai/*`) durante reinstalação com `-Force`/`--force`: a memória local do projeto permanece intacta e diferenças de template geram apenas sidecar `*.agent-pack.new` para revisão (sem criar backups desnecessários nem exigir restauração manual).
+- **Testes automatizados ampliados:** adicionados asserts em `scripts/test-repo-map.ps1` (verificando `ef_scan` limpo sobre `repo-map.txt` e `cache_key:` legado) e `scripts/test-install-agent-pack.ps1` (verificando preservação de `docs/ai/project-map.md` sob `-Force`).
+
 ## 6.1.1 — 2026-11-23 (Ferramentas Operacionais Instaláveis, Proteção Dinâmica e Limpeza de Runtime)
 
 - **Ferramentas operacionais instaladas no destino em `.agents/tools/` (`core` / `managed`):**

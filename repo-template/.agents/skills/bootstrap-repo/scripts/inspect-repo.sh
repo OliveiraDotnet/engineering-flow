@@ -106,7 +106,7 @@ if [ "$generate_repo_map" -eq 1 ]; then
   cache_key="$head_hash"
   [ "$is_dirty" -eq 1 ] && cache_key="${head_hash}-dirty"
   repo_map_status="generated"
-  if [ "$force_repo_map" -eq 0 ] && [ "$is_dirty" -eq 0 ] && [ -f "$repo_map_path" ] && grep -Fxq "cache_key: $cache_key" "$repo_map_path"; then
+  if [ "$force_repo_map" -eq 0 ] && [ "$is_dirty" -eq 0 ] && [ -f "$repo_map_path" ] && grep -Fxq "cache_revision: $cache_key" "$repo_map_path"; then
     repo_map_status="cache-hit"
   else
     mkdir -p "$runtime_dir"
@@ -130,7 +130,7 @@ if [ "$generate_repo_map" -eq 1 ]; then
     done <<< "$(printf '%s\n' "$scoped_files" | sort)"
     {
       printf '# SpecGuard 6 Repo Map (auto-generated structural cache — gitignored)\n'
-      printf 'cache_key: %s\n' "$cache_key"
+      printf 'cache_revision: %s\n' "$cache_key"
       printf 'generated_at: %s | files_indexed: %s\n\n' "$now_utc" "$indexed"
       cat "$tmp_entries"
     } > "$repo_map_path"
